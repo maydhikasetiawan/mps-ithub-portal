@@ -1,5 +1,0 @@
-994a717 Task 5c: tickets table mobile fix
-77771c8 fix: wrap assets header actions on mobile
-181f6f1 feat: wrap assets table in responsive container for mobile
-70b189f feat: mobile responsive shell (hamburger, off-canvas sidebar, touch targets)
-43bd30b feat: add login brute-force protection (rate limit + lockout)

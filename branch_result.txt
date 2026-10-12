@@ -1,3 +1,0 @@
-  origin/HEAD -> origin/main
-  origin/main
-  origin/task-5c
