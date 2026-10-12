@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
 {% block title %}Uptime Monitor - MPS-ITHub{% endblock %}
-
 {% block header_title %}Service Uptime & Health Monitor{% endblock %}
 
 {% block content %}
 <style>
 .btn-secondary { background: #334155; color: #cbd5e1; padding: 10px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; border: none; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
 .btn-secondary:hover { background: #475569; }
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
 @media (max-width: 768px) {
     .stats-grid { grid-template-columns: 1fr; }
 }
@@ -15,7 +15,9 @@
 
 <!-- RINGKASAN STATISTIK HEALTH -->
 
-<div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+
+<div class="stats-grid">
+
 
     <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155;">
 

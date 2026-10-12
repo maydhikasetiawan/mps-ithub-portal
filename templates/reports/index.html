@@ -3,16 +3,20 @@
 {% block header_title %}Reports & Analytics Center{% endblock %}
 {% block content %}
 <style>
+.reports-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start; }
+.date-filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 768px) {
     .reports-grid { grid-template-columns: 1fr; }
     .date-filter-grid { grid-template-columns: 1fr; }
 }
 </style>
 
-<div class="reports-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start;">
+
+<div class="reports-grid">
 
 
     <!-- 1. Form Filter Export Aset IT -->
+
 
     <div class="form-card" style="max-width: 100%;">
 
@@ -80,7 +84,7 @@
         <p style="color: #94a3b8; font-size: 13px; margin-bottom: 20px;">Rekap riwayat gangguan, performa penanganan tiket, dan laporan solusi perbaikan.</p>
 
         <form action="{{ url_for('reports.export_tickets') }}" method="GET">
-            <div class="date-filter-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="form-group">
+            <div class="date-filter-grid form-group">
                 <div>
                     <label>Dari Tanggal</label>
                     <input type="date" name="start_date" class="form-control">
