@@ -1,20 +1,35 @@
 {% extends 'base.html' %}
-
 {% block title %}Pusat Laporan - MPS-ITHub{% endblock %}
 {% block header_title %}Reports & Analytics Center{% endblock %}
-
 {% block content %}
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start;">
+<style>
+@media (max-width: 768px) {
+    .reports-grid { grid-template-columns: 1fr; }
+    .date-filter-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="reports-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start;">
+
 
     <!-- 1. Form Filter Export Aset IT -->
+
     <div class="form-card" style="max-width: 100%;">
+
         <h3 style="color: #38bdf8; margin-bottom: 5px; display: flex; align-items: center; gap: 8px;">
+
             🖥️ Laporan Inventaris Aset (IPAM)
+
         </h3>
+
         <p style="color: #94a3b8; font-size: 13px; margin-bottom: 20px;">Unduh rekap data fisik perangkat, status, lokasi, dan IPAM ke format Excel CSV.</p>
 
+
+
         <form action="{{ url_for('reports.export_assets') }}" method="GET">
+
             <div class="form-group">
+
                 <label>Filter Kategori Perangkat</label>
                 <select name="category" class="form-control">
                     <option value="">-- Semua Kategori --</option>
@@ -24,9 +39,11 @@
                     <option value="Docker Container">Docker Container</option>
                     <option value="Printer/Peripherals">Printer / Peripheral</option>
                 </select>
+
             </div>
 
             <div class="form-group">
+
                 <label>Filter Status Operasional</label>
                 <select name="status" class="form-control">
                     <option value="">-- Semua Status --</option>
@@ -34,18 +51,26 @@
                     <option value="Under Repair">Under Repair</option>
                     <option value="Retired">Retired</option>
                 </select>
+
             </div>
 
             <div class="form-group" style="margin-bottom: 25px;">
+
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #cbd5e1;">
                     <input type="checkbox" name="include_deleted" value="true" style="width: auto;">
                     Sertakan data Aset Terhapus / Archived
                 </label>
+
             </div>
 
             <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">📥 Download Laporan Aset (.CSV)</button>
+
         </form>
+
     </div>
+
+
+
 
     <!-- 2. Form Filter Export Service Desk (Tickets) -->
     <div class="form-card" style="max-width: 100%;">
@@ -55,7 +80,7 @@
         <p style="color: #94a3b8; font-size: 13px; margin-bottom: 20px;">Rekap riwayat gangguan, performa penanganan tiket, dan laporan solusi perbaikan.</p>
 
         <form action="{{ url_for('reports.export_tickets') }}" method="GET">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="form-group">
+            <div class="date-filter-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="form-group">
                 <div>
                     <label>Dari Tanggal</label>
                     <input type="date" name="start_date" class="form-control">
@@ -67,7 +92,7 @@
             </div>
 
             <div class="form-group">
-                <label>Filter Kategori Masalah</label>
+                <label>Filter Kategori Tiket</label>
                 <select name="category" class="form-control">
                     <option value="">-- Semua Kategori --</option>
                     {% for cat in ticket_categories %}
@@ -88,8 +113,14 @@
             </div>
 
             <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; background: #10b981; color: #0f172a;">📥 Download Laporan Tiket (.CSV)</button>
+
         </form>
+
     </div>
 
+
+
+
 </div>
+
 {% endblock %}
