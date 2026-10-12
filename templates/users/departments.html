@@ -1,50 +1,101 @@
 {% extends 'base.html' %}
-
 {% block title %}Kelola Departemen - MPS-ITHub{% endblock %}
 {% block header_title %}Kelola Departemen (Modular){% endblock %}
-
 {% block content %}
+<style>
+.manage-grid { display: grid; grid-template-columns: 1fr 2fr; }
+@media (max-width: 768px) {
+    .manage-grid { grid-template-columns: 1fr; }
+}
+</style>
+
 <div style="margin-bottom: 20px;">
+
     <a href="{{ url_for('users.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke User Management</a>
+
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: start;">
+
+
+<div class="manage-grid" style="gap: 20px; align-items: start;">
+
     <div class="form-card">
+
         <h4 style="color: #38bdf8; margin-bottom: 15px;">Tambah Departemen</h4>
+
         <form method="POST">
+
             <div class="form-group">
+
                 <label>Nama Departemen *</label>
+
                 <input type="text" name="department_name" class="form-control" required placeholder="Contoh: Logistics / Marketing">
+
             </div>
+
             <button type="submit" class="btn-primary" style="width: 100%;">+ Tambah Departemen</button>
+
         </form>
+
     </div>
+
+
+
 
     <div>
+
+        <div class="table-responsive">
         <table class="data-table" style="margin-top: 0;">
+
             <thead>
+
                 <tr>
+
                     <th>ID</th>
+
                     <th>NAMA DEPARTEMEN</th>
+
                     <th>AKSI</th>
+
                 </tr>
+
             </thead>
+
             <tbody>
+
                 {% for d in departments %}
+
                 <tr>
+
                     <td><code>#{{ d.id }}</code></td>
+
                     <td><strong>{{ d.name }}</strong></td>
+
                     <td>
+
                         <a href="{{ url_for('users.delete_department', dept_id=d.id) }}" class="btn-danger" onclick="return confirm('Hapus departemen ini?')">Hapus</a>
+
                     </td>
+
                 </tr>
+
                 {% else %}
+
                 <tr>
+
                     <td colspan="3" style="text-align: center; color: #64748b;">Belum ada departemen.</td>
+
                 </tr>
+
                 {% endfor %}
+
             </tbody>
+
         </table>
+        </div>
+
     </div>
+
 </div>
+
 {% endblock %}
