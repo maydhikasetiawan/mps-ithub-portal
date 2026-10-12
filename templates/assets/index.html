@@ -20,6 +20,7 @@
     </div>
 </div>
 
+<div class="table-responsive">
 <table class="data-table">
     <thead>
         <tr>
@@ -64,8 +65,8 @@
             </td>
             <td>
                 {% if session['role'] != 'guest' %}
-                <a href="{{ url_for('assets.edit', asset_id=a.id) }}" style="color:#38bdf8; text-decoration:none; margin-right:10px; font-weight:bold;">Edit</a>
-                <a href="{{ url_for('assets.delete', asset_id=a.id) }}" class="btn-danger">Hapus</a>
+                <a href="{{ url_for('assets.edit', asset_id=a.id) }}" class="btn-primary" style="font-size:14px; padding:8px 12px; margin-right:8px;">Edit</a>
+                <a href="{{ url_for('assets.delete', asset_id=a.id) }}" class="btn-danger" style="font-size:14px; padding:8px 12px;">Hapus</a>
                 {% else %}
                 -
                 {% endif %}
@@ -78,4 +79,5 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}
