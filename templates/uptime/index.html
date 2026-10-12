@@ -1,74 +1,147 @@
 {% extends 'base.html' %}
 
 {% block title %}Uptime Monitor - MPS-ITHub{% endblock %}
+
 {% block header_title %}Service Uptime & Health Monitor{% endblock %}
 
 {% block content %}
+<style>
+.btn-secondary { background: #334155; color: #cbd5e1; padding: 10px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; border: none; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
+.btn-secondary:hover { background: #475569; }
+@media (max-width: 768px) {
+    .stats-grid { grid-template-columns: 1fr; }
+}
+</style>
+
 <!-- RINGKASAN STATISTIK HEALTH -->
-<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+
+<div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+
     <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155;">
+
         <span style="color: #94a3b8; font-size: 12px; font-weight: bold;">TOTAL SERVICE DIPANTAU</span>
+
         <h2 style="color: #f8fafc; margin-top: 5px;">{{ total }}</h2>
+
     </div>
+
     <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #10b98140;">
+
         <span style="color: #10b981; font-size: 12px; font-weight: bold;">🟢 ONLINE (UP)</span>
+
         <h2 style="color: #34d399; margin-top: 5px;">{{ up_count }}</h2>
+
     </div>
+
     <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #ef444440;">
+
         <span style="color: #ef4444; font-size: 12px; font-weight: bold;">🔴 OFFLINE (DOWN)</span>
+
         <h2 style="color: #f87171; margin-top: 5px;">{{ down_count }}</h2>
+
     </div>
+
 </div>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+
     <h3 style="color: #38bdf8;">Daftar Layanan & Server</h3>
-    <div style="display: flex; gap: 10px; align-items: center;">
-        <a href="{{ url_for('uptime.check_all') }}" style="background: #334155; color: #cbd5e1; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;">🔄 Check All Services</a>
+
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+
+        <a href="{{ url_for('uptime.check_all') }}" class="btn-secondary">🔄 Check All Services</a>
+
         {% if session['role'] in ['admin', 'it'] %}
+
         <a href="{{ url_for('uptime.add') }}" class="btn-primary">+ Tambah Target Monitor</a>
+
         {% endif %}
+
     </div>
+
 </div>
 
+<div class="table-responsive">
 <table class="data-table">
+
     <thead>
+
         <tr>
+
             <th>NAMA SERVICE</th>
+
             <th>TARGET / HOST</th>
+
             <th>TIPE CHECK</th>
+
             <th>STATUS</th>
+
             <th>LATENCY</th>
+
             <th>TERAKHIR DICEK</th>
+
             <th>AKSI</th>
+
         </tr>
+
     </thead>
+
     <tbody>
+
         {% for m in monitors %}
+
         <tr>
+
             <td><strong>{{ m.name }}</strong></td>
+
             <td><code>{{ m.target }}{% if m.port %}:{{ m.port }}{% endif %}</code></td>
+
             <td><span class="badge badge-active">{{ m.type }}</span></td>
+
             <td>
+
                 <span class="badge {% if m.status == 'UP' %}badge-green{% elif m.status == 'DOWN' %}badge-red{% else %}badge-yellow{% endif %}">
+
                     {% if m.status == 'UP' %}🟢 ONLINE{% elif m.status == 'DOWN' %}🔴 OFFLINE{% else %}🟡 UNKNOWN{% endif %}
+
                 </span>
+
             </td>
+
             <td><strong style="color: #38bdf8;">{{ m.latency }} ms</strong></td>
+
             <td><small style="color: #94a3b8;">{{ m.last_check.strftime('%Y-%m-%d %H:%M:%S') if m.last_check else '-' }}</small></td>
+
             <td>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" style="color: #38bdf8; font-size: 12px; font-weight: bold; text-decoration: none;">🔄 Cek Now</a>
+
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+
+                    <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="btn-primary">��� Cek Now</a>
+
                     {% if session['role'] in ['admin', 'it'] %}
-                    <a href="{{ url_for('uptime.delete', monitor_id=m.id) }}" class="btn-danger" style="font-size: 11px; padding: 3px 8px;" onclick="return confirm('Hapus target ini?')">Hapus</a>
+
+                    <a href="{{ url_for('uptime.delete', monitor_id=m.id) }}" class="btn-danger" onclick="return confirm('Hapus target ini?')">Hapus</a>
+
                     {% endif %}
+
                 </div>
+
             </td>
+
         </tr>
+
         {% else %}
+
         <tr>
+
             <td colspan="7" style="text-align: center; color: #64748b;">Belum ada target monitor yang dipantau.</td>
+
         </tr>
+
         {% endfor %}
+
     </tbody>
+
 </table>
+</div>
 {% endblock %}
