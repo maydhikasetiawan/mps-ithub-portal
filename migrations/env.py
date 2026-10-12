@@ -12,11 +12,14 @@ if config.config_file_name is not None:
 target_metadata = None
 
 def get_db_url():
-    host = os.getenv('DB_HOST', 'postgres-server')
-    name = os.getenv('DB_NAME', 'db_monitoring')
-    user = os.getenv('DB_USER', 'admin_server')
-    password = os.getenv('DB_PASS', 'PasswordSuperAman123')
+    host = os.getenv('DB_HOST')
+    name = os.getenv('DB_NAME')
+    user = os.getenv('DB_USER')
+    password = os.getenv('DB_PASS')
     port = os.getenv('DB_PORT', '5432')
+    missing = [k for k, v in {'DB_HOST': host, 'DB_NAME': name, 'DB_USER': user, 'DB_PASS': password}.items() if not v]
+    if missing:
+        raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
     return f"postgresql://{user}:{password}@{host}:{port}/{name}"
 
 def run_migrations_offline() -> None:

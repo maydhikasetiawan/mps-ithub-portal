@@ -11,7 +11,10 @@ from flask import session, redirect, url_for, request, flash
 from routes.uptime import uptime_bp
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'mps-ithub-super-secret-key-2026')
+secret_key = os.getenv('SECRET_KEY')
+if not secret_key:
+    raise RuntimeError("Missing required environment variable: SECRET_KEY")
+app.secret_key = secret_key
 
 # Register Blueprints
 app.register_blueprint(auth_bp)
