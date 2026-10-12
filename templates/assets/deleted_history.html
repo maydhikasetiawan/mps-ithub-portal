@@ -1,106 +1,61 @@
 {% extends 'base.html' %}
 
-
 {% block title %}Riwayat Aset Terhapus - MPS-ITHub{% endblock %}
-
 {% block header_title %}Riwayat Aset Terhapus{% endblock %}
 
-
 {% block content %}
-
 <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-
     <a href="{{ url_for('assets.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Inventaris Utama</a>
-
     <form method="GET" style="display:flex; gap:8px;">
-
         <input type="text" name="q" class="filter-input" placeholder="Cari aset terhapus..." value="{{ search_query }}">
-
         <button type="submit" class="btn-primary">Cari</button>
-
     </form>
-
 </div>
-
-
-
 
 <div class="table-responsive">
 <table class="data-table">
-
     <thead>
-
         <tr>
-
             <th>ASSET TAG</th>
-
-            <th>NAMA ASET</th>
-
-            <th>IP ADDRESS</th>
-
+            <th>NAMA PERANGKAT</th>
             <th>KATEGORI</th>
-
-            <th>ALASAN HAPUS</th>
-
-            <th>TANGGAL HAPUS</th>
-
+            <th>ALASAN PENGHAPUSAN</th>
+            <th>WAKTU DIHAPUS</th>
             <th>DIHAPUS OLEH</th>
-
             <th>AKSI</th>
-
         </tr>
-
     </thead>
-
     <tbody>
-
-        {% for a in deleted_assets %}
-
+        {% for a in assets %}
         <tr>
-
-            <td><code>{{ a.asset_tag }}</code></td>
-
-            <td><strong>{{ a.name }}</strong></td>
-
-            <td><code>{{ a.ip_address }}</code></td>
-
-            <td>{{ a.category }}</td>
-
-            <td style="color: #fca5a5;"><em>{{ a.delete_reason or 'Tidak ada alasan' }}</em></td>
-
-            <td><small style="color:#94a3b8;">{{ a.deleted_at.strftime('%Y-%m-%d %H:%M') if a.deleted_at else '-' }}</small></td>
-
-            <td><strong>{{ a.deleted_by or '-' }}</strong></td>
-
             <td>
-
-                {% if session['role'] != 'guest' %}
-
-                <a href="{{ url_for('assets.hard_delete', asset_id=a.id) }}" class="btn-danger">Hapus Permanen</a>
-
-                {% else %}
-
-                -
-
-                {% endif %}
-
+                <a href="{{ url_for('assets.deleted_detail', asset_id=a.id) }}" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
+                    {{ a.asset_tag }}
+                </a>
             </td>
-
+            <td>
+                <a href="{{ url_for('assets.deleted_detail', asset_id=a.id) }}" style="color:#f8fafc; font-weight:600; text-decoration:none;">
+                    {{ a.name }}
+                </a>
+            </td>
+            <td>{{ a.category }}</td>
+            <td style="color: #fca5a5;"><em>{{ a.delete_reason or 'Tidak ada alasan' }}</em></td>
+            <td><small style="color:#94a3b8;">{{ a.deleted_at.strftime('%Y-%m-%d %H:%M') if a.deleted_at else '-' }}</small></td>
+            <td><strong>{{ a.deleted_by or '-' }}</strong></td>
+            <td>
+                {% if session['role'] != 'guest' %}
+                <a href="{{ url_for('assets.hard_delete', asset_id=a.id) }}" class="btn-danger">Hapus Permanen</a>
+                {% else %}
+                -
+                {% endif %}
+            </td>
         </tr>
-
         {% else %}
-
         <tr>
-
-            <td colspan="8" style="text-align:center; color:#64748b;">Belum ada riwayat aset yang dihapus.</td>
-
+            <td colspan="7" style="text-align:center; color:#64748b;">Belum ada riwayat aset yang dihapus.</td>
         </tr>
-
         {% endfor %}
-
     </tbody>
-
 </table>
 </div>
-
 {% endblock %}
