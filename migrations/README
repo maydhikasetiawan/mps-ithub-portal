@@ -1,0 +1,13 @@
+This directory contains Alembic database migration scripts.
+
+To create a new migration:
+  alembic revision -m "description"
+
+To apply migrations:
+  alembic upgrade head
+
+To generate a migration from model changes (requires SQLAlchemy models):
+  alembic revision --autogenerate -m "description"
+
+Note: This project uses raw psycopg2, not SQLAlchemy models, so autogenerate
+is not available. Migrations must be written manually.
