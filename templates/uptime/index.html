@@ -116,7 +116,7 @@
 
                 <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
 
-                    <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="btn-primary">��� Cek Now</a>
+                    <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="btn-primary">🔄 Cek Now</a>
 
                     {% if session['role'] in ['admin', 'it'] %}
 
