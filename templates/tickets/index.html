@@ -72,10 +72,9 @@
             </td>
             <td>
                 {% if session['role'] == 'admin' %}
-                <a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn-primary">Detail</a>
                 <a href="{{ url_for('tickets.delete_permanent', ticket_id=t.id) }}" class="btn-danger">Hapus</a>
                 {% else %}
-                <a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="btn-primary">Detail</a>
+                -
                 {% endif %}
             </td>
         </tr>
