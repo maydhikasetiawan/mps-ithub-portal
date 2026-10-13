@@ -82,8 +82,15 @@ def add():
         try:
             cur.execute("""
                 INSERT INTO tickets (ticket_code, title, category, priority, status, description, created_by, department)
-                VALUES (%s, %s, %s, %s, 'Open', %s, %s, %s);
+                VALUES (%s, %s, %s, %s, 'Open', %s, %s, %s)
+                RETURNING id;
             """, (ticket_code, title, category, priority, description, created_by, user_dept))
+            ticket_row = cur.fetchone()
+            new_ticket_id = ticket_row['id']
+            cur.execute("""
+                INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                VALUES (%s, %s, 'created', %s);
+            """, (new_ticket_id, created_by, f"Ticket created by {created_by}"))
             conn.commit()
             cur.close()
             conn.close()
@@ -129,52 +136,94 @@ def detail(ticket_id):
         return redirect(url_for('tickets.index'))
 
     if request.method == 'POST':
-        if user_role not in ['admin', 'it']:
-            flash("Akses ditolak! Hanya Tim IT & Admin yang dapat memperbarui status tiket.", "danger")
+        action = request.form.get('action', 'update_status')
+
+        if action == 'comment':
+            if user_role == 'guest':
+                cur.close()
+                conn.close()
+                flash("Akses ditolak! Guest tidak diizinkan menambahkan komentar.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            comment_text = request.form.get('comment', '').strip()
+            if comment_text:
+                cur.execute("""
+                    INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                    VALUES (%s, %s, 'comment', %s);
+                """, (ticket_id, username, comment_text))
+                conn.commit()
+                flash("Komentar berhasil ditambahkan!", "success")
+
             cur.close()
             conn.close()
             return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
-        if ticket['status'] in ['Resolved', 'Closed']:
-            flash("Tiket ini telah selesai/ditutup dan tidak dapat diubah lagi!", "danger")
-            cur.close()
-            conn.close()
-            return redirect(url_for('tickets.detail', ticket_id=ticket_id))
-
-        new_status = request.form.get('status')
-        resolution_note = request.form.get('resolution_note', '').strip()
-        user_now = session.get('username')
-        raw_assigned = request.form.get('assigned_to', '').strip()
-        assigned_to = raw_assigned if raw_assigned and raw_assigned.lower() != 'unassigned' else None
-
-        if new_status in ['Resolved', 'Closed']:
-            cur.execute("""
-                UPDATE tickets
-                SET status = %s, resolution_note = %s, resolved_by = %s, resolved_at = CURRENT_TIMESTAMP,
-                    assigned_to = %s
-                WHERE id = %s;
-            """, (new_status, resolution_note, user_now, assigned_to, ticket_id))
         else:
-            cur.execute("""
-                UPDATE tickets
-                SET status = %s, resolution_note = %s, assigned_to = %s
-                WHERE id = %s;
-            """, (new_status, resolution_note, assigned_to, ticket_id))
+            if user_role not in ['admin', 'it']:
+                flash("Akses ditolak! Hanya Tim IT & Admin yang dapat memperbarui status tiket.", "danger")
+                cur.close()
+                conn.close()
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash("Status dan laporan penyelesaian tiket berhasil diperbarui!", "success")
-        return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+            if ticket['status'] in ['Resolved', 'Closed']:
+                flash("Tiket ini telah selesai/ditutup dan tidak dapat diubah lagi!", "danger")
+                cur.close()
+                conn.close()
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            new_status = request.form.get('status')
+            resolution_note = request.form.get('resolution_note', '').strip()
+            user_now = session.get('username')
+            raw_assigned = request.form.get('assigned_to', '').strip()
+            assigned_to = raw_assigned if raw_assigned and raw_assigned.lower() != 'unassigned' else None
+
+            old_status = ticket['status']
+            old_assigned_to = ticket['assigned_to']
+
+            if new_status and new_status != old_status:
+                cur.execute("""
+                    INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                    VALUES (%s, %s, 'status', %s);
+                """, (ticket_id, user_now, f"Status changed from {old_status} to {new_status}"))
+
+            if assigned_to != old_assigned_to:
+                assign_content = f"Assigned to {assigned_to}" if assigned_to else "Assignment cleared (Unassigned)"
+                cur.execute("""
+                    INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                    VALUES (%s, %s, 'assignment', %s);
+                """, (ticket_id, user_now, assign_content))
+
+            if new_status in ['Resolved', 'Closed']:
+                cur.execute("""
+                    UPDATE tickets
+                    SET status = %s, resolution_note = %s, resolved_by = %s, resolved_at = CURRENT_TIMESTAMP,
+                        assigned_to = %s
+                    WHERE id = %s;
+                """, (new_status, resolution_note, user_now, assigned_to, ticket_id))
+            else:
+                cur.execute("""
+                    UPDATE tickets
+                    SET status = %s, resolution_note = %s, assigned_to = %s
+                    WHERE id = %s;
+                """, (new_status, resolution_note, assigned_to, ticket_id))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Status dan laporan penyelesaian tiket berhasil diperbarui!", "success")
+            return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
     assignees = []
     if user_role in ['admin', 'it']:
         cur.execute("SELECT username FROM users WHERE role IN ('admin', 'it') ORDER BY username ASC;")
         assignees = cur.fetchall()
 
+    cur.execute("SELECT * FROM ticket_activities WHERE ticket_id = %s ORDER BY created_at DESC, id DESC;", (ticket_id,))
+    activities = cur.fetchall()
+
     cur.close()
     conn.close()
-    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, active_page='tickets')
+    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, active_page='tickets')
 
 # --- KELOLA KATEGORI (KHUSUS ADMIN) ---
 @tickets_bp.route('/categories', methods=['GET', 'POST'])
