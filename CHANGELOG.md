@@ -5,6 +5,11 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 ---
 
 ## [Unreleased]
+- Penambahan notifikasi webhook generik (*generic webhook notifications*) untuk Service Desk:
+  - Pengiriman HTTP POST JSON ke URL webhook (`WEBHOOK_URL`) saat tiket dibuat (`ticket.created`), status berubah (`ticket.status_changed`), dan penugasan diperbarui (`ticket.assigned`).
+  - Desain fail-open sinkron dengan timeout maksimal 5 detik menggunakan pustaka standar Python `urllib` (tanpa dependensi eksternal).
+  - Dipicu setelah transaksi basis data di-commit; kegagalan webhook tidak mempengaruhi atau menggagalkan operasi tiket.
+  - Notifikasi email secara eksplisit ditunda (*deferred*).
 - Penambahan target dan peringatan SLA (*SLA targets & warnings*) pada modul Service Desk:
   - Target respon dan resolusi otomatis berbasis prioritas: Critical (1h/4h), High (2h/8h), Medium (4h/24h), Low (8h/72h).
   - Evaluasi status SLA otomatis (*state machine*): 'SLA Terpenuhi' (hijau), 'Mendekati SLA' (kuning), dan 'SLA Terlewati' (merah).
