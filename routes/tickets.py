@@ -6,6 +6,121 @@ from datetime import datetime
 
 tickets_bp = Blueprint('tickets', __name__, url_prefix='/tickets')
 
+# SLA Target Constants (calendar hours from created_at)
+SLA_TARGETS = {
+    'Critical': {'response': 1, 'resolution': 4},
+    'High': {'response': 2, 'resolution': 8},
+    'Medium': {'response': 4, 'resolution': 24},
+    'Low': {'response': 8, 'resolution': 72},
+}
+
+def format_duration(seconds):
+    if seconds is None:
+        return "-"
+    total_minutes = int(seconds // 60)
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    if hours > 0:
+        return f"{hours} jam {minutes} menit"
+    return f"{minutes} menit"
+
+def compute_sla(ticket, activities=None, has_response=None, now=None):
+    if not ticket or not ticket.get('created_at'):
+        return None
+
+    if now is None:
+        now = datetime.now()
+
+    priority = ticket.get('priority', 'Medium')
+    targets = SLA_TARGETS.get(priority, SLA_TARGETS['Medium'])
+    status = ticket.get('status', 'Open')
+    created_at = ticket['created_at']
+    resolved_at = ticket.get('resolved_at')
+
+    # 1. Tiket Resolved/Closed: bandingkan (resolved_at - created_at) terhadap target resolusi
+    if status in ['Resolved', 'Closed']:
+        target_hours = targets['resolution']
+        target_label = f"Target resolusi: {target_hours} jam"
+        end_time = resolved_at if resolved_at else now
+        elapsed = end_time - created_at
+        elapsed_hours = max(0.0, elapsed.total_seconds() / 3600.0)
+
+        if elapsed_hours <= target_hours:
+            state = 'met'
+            badge_text = 'SLA Terpenuhi'
+        else:
+            state = 'breached'
+            badge_text = 'SLA Terlewati'
+
+        return {
+            'state': state,
+            'badge_text': badge_text,
+            'target_type': 'resolution',
+            'target_hours': target_hours,
+            'target_label': target_label,
+            'elapsed_hours': elapsed_hours,
+            'elapsed_text': format_duration(elapsed.total_seconds()),
+            'elapsed_label': 'Waktu penyelesaian' if resolved_at else 'Waktu berjalan',
+        }
+
+    # 2. Tiket Open / In Progress
+    if has_response is None:
+        if activities is not None:
+            has_response = any(
+                act.get('type') in ['comment', 'status', 'assignment'] and act.get('actor_role') in ['admin', 'it']
+                for act in activities
+            )
+        else:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT 1 FROM ticket_activities ta
+                JOIN users u ON ta.actor = u.username
+                WHERE ta.ticket_id = %s
+                  AND ta.type IN ('comment', 'status', 'assignment')
+                  AND u.role IN ('admin', 'it')
+                LIMIT 1;
+            """, (ticket['id'],))
+            has_response = bool(cur.fetchone())
+            cur.close()
+            conn.close()
+
+    elapsed = now - created_at
+    elapsed_hours = max(0.0, elapsed.total_seconds() / 3600.0)
+
+    # 3. Not yet responded vs Responded
+    if not has_response:
+        target_hours = targets['response']
+        target_label = f"Target respon: {target_hours} jam"
+        target_type = 'response'
+        elapsed_label = 'Waktu respon berjalan'
+    else:
+        target_hours = targets['resolution']
+        target_label = f"Target resolusi: {target_hours} jam"
+        target_type = 'resolution'
+        elapsed_label = 'Waktu resolusi berjalan'
+
+    if elapsed_hours > target_hours:
+        state = 'breached'
+        badge_text = 'SLA Terlewati'
+    elif elapsed_hours >= 0.8 * target_hours:
+        state = 'approaching'
+        badge_text = 'Mendekati SLA'
+    else:
+        state = 'ok'
+        badge_text = None
+
+    return {
+        'state': state,
+        'badge_text': badge_text,
+        'target_type': target_type,
+        'target_hours': target_hours,
+        'target_label': target_label,
+        'elapsed_hours': elapsed_hours,
+        'elapsed_text': format_duration(elapsed.total_seconds()),
+        'elapsed_label': elapsed_label,
+    }
+
 def generate_ticket_code():
     today_str = datetime.now().strftime('%Y%m%d')
     conn = get_db_connection()
@@ -55,6 +170,24 @@ def index():
     query += " ORDER BY id DESC;"
     cur.execute(query, tuple(params))
     tickets_list = cur.fetchall()
+
+    open_ticket_ids = [t['id'] for t in tickets_list if t['status'] not in ['Resolved', 'Closed']]
+    responded_ids = set()
+    if open_ticket_ids:
+        cur.execute("""
+            SELECT DISTINCT ta.ticket_id
+            FROM ticket_activities ta
+            JOIN users u ON ta.actor = u.username
+            WHERE ta.ticket_id = ANY(%s)
+              AND ta.type IN ('comment', 'status', 'assignment')
+              AND u.role IN ('admin', 'it');
+        """, (open_ticket_ids,))
+        responded_ids = {row['ticket_id'] for row in cur.fetchall()}
+
+    now = datetime.now()
+    for t in tickets_list:
+        has_resp = (t['id'] in responded_ids) if t['status'] not in ['Resolved', 'Closed'] else False
+        t['sla'] = compute_sla(t, has_response=has_resp, now=now)
 
     cur.close()
     conn.close()
@@ -218,8 +351,16 @@ def detail(ticket_id):
         cur.execute("SELECT username FROM users WHERE role IN ('admin', 'it') ORDER BY username ASC;")
         assignees = cur.fetchall()
 
-    cur.execute("SELECT * FROM ticket_activities WHERE ticket_id = %s ORDER BY created_at DESC, id DESC;", (ticket_id,))
+    cur.execute("""
+        SELECT ta.*, u.role as actor_role
+        FROM ticket_activities ta
+        LEFT JOIN users u ON ta.actor = u.username
+        WHERE ta.ticket_id = %s
+        ORDER BY ta.created_at DESC, ta.id DESC;
+    """, (ticket_id,))
     activities = cur.fetchall()
+
+    ticket['sla'] = compute_sla(ticket, activities=activities)
 
     cur.close()
     conn.close()

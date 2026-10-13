@@ -5,6 +5,10 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 ---
 
 ## [Unreleased]
+- Penambahan target dan peringatan SLA (*SLA targets & warnings*) pada modul Service Desk:
+  - Target respon dan resolusi otomatis berbasis prioritas: Critical (1h/4h), High (2h/8h), Medium (4h/24h), Low (8h/72h).
+  - Evaluasi status SLA otomatis (*state machine*): 'SLA Terpenuhi' (hijau), 'Mendekati SLA' (kuning), dan 'SLA Terlewati' (merah).
+  - Perhitungan waktu berjalan dinamis tanpa modifikasi skema maupun migrasi basis data.
 - Penambahan fitur komentar dan riwayat aktivitas tiket (*ticket comments & activity history*):
   - Tabel baru `ticket_activities` melalui migrasi Alembic `003_add_ticket_activities.py` dan `init_db()`.
   - Form komentar pada detail tiket untuk role `admin`, `it`, dan `user` (pada tiket miliknya sendiri).

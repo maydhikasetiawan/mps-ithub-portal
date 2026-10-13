@@ -68,14 +68,22 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET, POST /assets/hard-delete/<int:asset_id>` — Hapus permanen dari basis data (konfirmasi nama dan kata sandi admin).
 
 ### d. `tickets` (`routes/tickets.py`, URL prefix: `/tickets`)
-- **Tujuan**: Layanan helpdesk/service desk internal. Pembuatan kode tiket otomatis (`TCK-YYYYMMDD-XXX`), filter status, penyelesaian masalah (*resolution note*), penugasan staf, penambahan komentar, serta pencatatan linimasa aktivitas terpadu dan manajemen kategori dinamis.
+- **Tujuan**: Layanan helpdesk/service desk internal. Pembuatan kode tiket otomatis (`TCK-YYYYMMDD-XXX`), filter status, penyelesaian masalah (*resolution note*), penugasan staf, penambahan komentar, kalkulasi Service Level Agreement (SLA) otomatis, serta pencatatan linimasa aktivitas terpadu dan manajemen kategori dinamis.
 - **Rute Utama**:
-  - `GET /tickets/` — Daftar tiket (pengguna biasa hanya melihat tiket miliknya; mendukung filter status dan parameter `assignee`: `all`, `unassigned`, `me`).
+  - `GET /tickets/` — Daftar tiket (pengguna biasa hanya melihat tiket miliknya; mendukung filter status dan parameter `assignee`: `all`, `unassigned`, `me`; dilengkapi badge SLA).
   - `GET, POST /tickets/add` — Pembuatan laporan masalah baru beserta pencatatan otomatis aktivitas `created`.
-  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket beserta linimasa aktivitas; penanganan POST terbagi: penambahan komentar (`action=comment`, admin/it/user pada tiketnya) dan pembaruan status/assignee (`action=update_status`, admin/it) dengan auto-logging riwayat status dan penugasan.
+  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket beserta blok target/status SLA dan linimasa aktivitas; penanganan POST terbagi: penambahan komentar (`action=comment`, admin/it/user pada tiketnya) dan pembaruan status/assignee (`action=update_status`, admin/it) dengan auto-logging riwayat status dan penugasan.
   - `GET, POST /tickets/categories` — Manajemen kategori tiket (Admin).
   - `GET /tickets/categories/delete/<int:category_id>` — Hapus kategori tiket (Admin).
   - `GET, POST /tickets/delete-permanent/<int:ticket_id>` — Hapus permanen tiket (Admin).
+- **Aturan & State Machine SLA**:
+  - **Konstanta Target (Jam Kalender)**: `Critical` (respon 1j, resolusi 4j), `High` (respon 2j, resolusi 8j), `Medium` (respon 4j, resolusi 24j), `Low` (respon 8j, resolusi 72j).
+  - **Definisi Respon**: Entri aktivitas pertama bertipe `comment`, `status`, atau `assignment` oleh pengguna dengan role `admin` atau `it` (bergabung ke `users.role`). Entri `created` tidak dihitung sebagai respon.
+  - **Definisi Resolusi**: Waktu `resolved_at` pada tiket berstatus `Resolved` atau `Closed` (atau `now - created_at` untuk tiket yang masih berjalan).
+  - **State Machine**:
+    - Tiket `Resolved`/`Closed`: Evaluasi `resolved_at - created_at` terhadap target resolusi → `SLA Terpenuhi` (`met`) jika dalam target, atau `SLA Terlewati` (`breached`) jika melebihi target.
+    - Tiket `Open`/`In Progress` belum direspon: Evaluasi `now - created_at` terhadap target respon → `Mendekati SLA` (`approaching`) jika berjalan >= 80% target, `SLA Terlewati` (`breached`) jika > 100% target, tanpa badge jika < 80%.
+    - Tiket `Open`/`In Progress` sudah direspon: Evaluasi `now - created_at` terhadap target resolusi dengan ambang batas 80% (`approaching`) dan 100% (`breached`).
 
 ### e. `uptime` (`routes/uptime.py`, URL prefix: `/uptime`)
 - **Tujuan**: Pemantauan ketersediaan target server/layanan melalui pengecekan TCP port atau HTTP request beserta pencatatan latensi (ms).
