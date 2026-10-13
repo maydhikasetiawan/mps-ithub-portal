@@ -440,6 +440,12 @@ def detail(ticket_id):
     if request.method == 'POST':
         action = request.form.get('action', 'update_status')
 
+        if ticket['status'] in ['Resolved', 'Closed'] and action in ['comment', 'upload_attachment']:
+            cur.close()
+            conn.close()
+            flash("Tiket sudah terkunci!", "danger")
+            return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
         if action == 'comment':
             if user_role == 'guest':
                 cur.close()
@@ -498,6 +504,14 @@ def detail(ticket_id):
             user_now = session.get('username')
             raw_assigned = request.form.get('assigned_to', '').strip()
             assigned_to = raw_assigned if raw_assigned and raw_assigned.lower() != 'unassigned' else None
+
+            if assigned_to:
+                cur.execute("SELECT id FROM users WHERE username = %s AND role IN ('admin', 'it');", (assigned_to,))
+                if not cur.fetchone():
+                    cur.close()
+                    conn.close()
+                    flash("Assignee tidak valid!", "danger")
+                    return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
             old_status = ticket['status']
             old_assigned_to = ticket['assigned_to']
@@ -692,6 +706,22 @@ def delete_permanent(ticket_id):
         if not admin_data or not check_password_hash(admin_data['password_hash'], input_password):
             error = "Password Admin salah! Penghapusan permanen dibatalkan."
         else:
+            cur.execute("DELETE FROM ticket_activities WHERE ticket_id = %s;", (ticket_id,))
+
+            cur.execute("SELECT stored_filename FROM ticket_attachments WHERE ticket_id = %s;", (ticket_id,))
+            attachments = cur.fetchall()
+            upload_folder = get_upload_folder()
+            for att in attachments:
+                stored_name = att.get('stored_filename')
+                if stored_name:
+                    file_path = os.path.join(upload_folder, stored_name)
+                    if os.path.isfile(file_path):
+                        try:
+                            os.remove(file_path)
+                        except OSError:
+                            pass
+
+            cur.execute("DELETE FROM ticket_attachments WHERE ticket_id = %s;", (ticket_id,))
             cur.execute("DELETE FROM tickets WHERE id = %s;", (ticket_id,))
             conn.commit()
             cur.close()

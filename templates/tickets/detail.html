@@ -101,7 +101,7 @@
         <p style="color: #64748b; font-size: 13px; margin: 0 0 15px 0;">Belum ada lampiran file pada tiket ini.</p>
         {% endif %}
 
-        {% if session['role'] in ['admin', 'it', 'user'] and (attachments|length < 2) %}
+        {% if session['role'] in ['admin', 'it', 'user'] and ticket.status not in ['Resolved', 'Closed'] and (attachments|length < 2) %}
         <form method="POST" enctype="multipart/form-data" style="border-top: 1px solid #1e293b; padding-top: 15px;">
             <input type="hidden" name="action" value="upload_attachment">
             <div class="form-group" style="margin-bottom: 12px;">
@@ -168,7 +168,7 @@
 
 <!-- Bagian Komentar & Linimasa Aktivitas -->
 <div class="form-card" style="max-width: 800px; margin-top: 20px;">
-    {% if session['role'] in ['admin', 'it', 'user'] %}
+    {% if session['role'] in ['admin', 'it', 'user'] and ticket.status not in ['Resolved', 'Closed'] %}
     <div style="background: #0f172a; padding: 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
         <h4 style="color: #38bdf8; font-size: 13px; margin-bottom: 15px;">💬 TAMBAHKAN KOMENTAR</h4>
         <form method="POST">
