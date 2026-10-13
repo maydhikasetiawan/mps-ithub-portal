@@ -36,6 +36,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Penyelesaian Masalah**: Pembaruan status pengerjaan tiket dan input laporan solusi (*resolution note*). Tiket berstatus `Resolved` atau `Closed` dikunci dari modifikasi lebih lanjut.
 - **Komentar Tiket**: Penambahan catatan komunikasi atau komentar oleh Admin, IT, maupun pelapor (User pada tiket miliknya).
 - **Riwayat Aktivitas (Timeline)**: Pencatatan kronologis terpadu untuk pembuatan tiket, perubahan status, penugasan, dan komentar.
+- **Target & Peringatan SLA**: Perhitungan target waktu respon dan resolusi otomatis berbasis prioritas (Critical, High, Medium, Low) dengan indikator status otomatis (*SLA Terpenuhi*, *Mendekati SLA*, *SLA Terlewati*).
 - **Kategori Tiket Dinamis**: Penambahan dan penghapusan kategori tiket oleh Administrator.
 - **Hapus Permanen Tiket**: Penghapusan data tiket dari database dengan konfirmasi kata sandi Admin.
 
@@ -86,6 +87,7 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Update Status & Solusi | `/tickets/<id>` [POST] | Ya | Ya | Tidak | Tidak | Logika controller rute: role dibatasi ke `admin` dan `it` |
 | | Komentar Tiket | `/tickets/<id>` [POST action=comment] | Ya | Ya | Ya* | Tidak | Form komentar dibatasi untuk `admin`, `it`, dan `user` (*user: hanya tiket sendiri) |
 | | Riwayat Aktivitas | `/tickets/<id>` [GET] | Ya | Ya | Ya* | Ya | Linimasa tiket dapat dilihat oleh seluruh peran (*user: hanya tiket sendiri) |
+| | Target & Peringatan SLA | `/tickets/`, `/tickets/<id>` [GET] | Ya | Ya | Ya* | Ya | Indikator SLA otomatis dihitung dan tampil untuk seluruh peran (*user: hanya tiket sendiri) |
 | | Kelola Kategori Tiket | `/tickets/categories` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Kategori Tiket | `/tickets/categories/delete/<id>` [GET] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Tiket Permanen | `/tickets/delete-permanent/<id>` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |

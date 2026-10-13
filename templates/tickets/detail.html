@@ -20,6 +20,26 @@
         </div>
     </div>
 
+    <!-- Blok Informasi SLA -->
+    {% if ticket.sla %}
+    <div style="background: #0f172a; padding: 14px 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span style="color: #94a3b8; font-size: 12px; font-weight: 600;">SLA:</span>
+            {% if ticket.sla.badge_text %}
+            <span class="badge {% if ticket.sla.state == 'approaching' %}badge-yellow{% elif ticket.sla.state == 'breached' %}badge-red{% elif ticket.sla.state == 'met' %}badge-green{% endif %}">
+                {{ ticket.sla.badge_text }}
+            </span>
+            {% endif %}
+            <span style="color: #cbd5e1; font-size: 13px;">
+                {{ ticket.sla.target_label }}
+            </span>
+        </div>
+        <div style="color: #94a3b8; font-size: 12px;">
+            {{ ticket.sla.elapsed_label }}: <strong style="color: #f8fafc;">{{ ticket.sla.elapsed_text }}</strong>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Deskripsi Masalah & Pelapor (Disamakan Style-nya dengan Card Bawah) -->
     <div style="background: #0f172a; padding: 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
         <!-- Bagian Deskripsi Masalah -->
