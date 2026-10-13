@@ -111,6 +111,20 @@ def init_db():
             );
         ''')
 
+        # 7. Tabel Ticket Attachments
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS ticket_attachments (
+                id SERIAL PRIMARY KEY,
+                ticket_id INT NOT NULL,
+                stored_filename VARCHAR(255) NOT NULL,
+                original_filename VARCHAR(255) NOT NULL,
+                size_bytes INT NOT NULL,
+                mime_type VARCHAR(100),
+                uploader VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+
         # Insert Default Categories Jika Belum Ada
         default_categories = ['Hardware', 'Network', 'Software', 'Server', 'Request']
         for cat in default_categories:

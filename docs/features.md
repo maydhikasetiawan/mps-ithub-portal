@@ -38,6 +38,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Riwayat Aktivitas (Timeline)**: Pencatatan kronologis terpadu untuk pembuatan tiket, perubahan status, penugasan, dan komentar.
 - **Target & Peringatan SLA**: Perhitungan target waktu respon dan resolusi otomatis berbasis prioritas (Critical, High, Medium, Low) dengan indikator status otomatis (*SLA Terpenuhi*, *Mendekati SLA*, *SLA Terlewati*).
 - **Notifikasi Webhook**: Pengiriman notifikasi HTTP POST berformat JSON ke URL eksternal (`WEBHOOK_URL`) saat tiket dibuat (`ticket.created`), status berubah (`ticket.status_changed`), atau penugasan diperbarui (`ticket.assigned`). Penambahan komentar tidak memicu webhook, dan notifikasi email ditunda (*deferred*).
+- **Lampiran Berkas (Attachments)**: Fasilitas unggah berkas pendukung pada pembuatan dan detail tiket (maksimal 2 berkas per tiket, batas 5 MB per berkas; gambar, dokumen, log). Gambar dikompresi otomatis ke format JPEG (maksimal 1920px, kualitas 70 via Pillow), dan berkas dilindungi otorisasi saat diunduh.
 - **Kategori Tiket Dinamis**: Penambahan dan penghapusan kategori tiket oleh Administrator.
 - **Hapus Permanen Tiket**: Penghapusan data tiket dari database dengan konfirmasi kata sandi Admin.
 
@@ -90,6 +91,7 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Riwayat Aktivitas | `/tickets/<id>` [GET] | Ya | Ya | Ya* | Ya | Linimasa tiket dapat dilihat oleh seluruh peran (*user: hanya tiket sendiri) |
 | | Target & Peringatan SLA | `/tickets/`, `/tickets/<id>` [GET] | Ya | Ya | Ya* | Ya | Indikator SLA otomatis dihitung dan tampil untuk seluruh peran (*user: hanya tiket sendiri) |
 | | Notifikasi Webhook | Otomatis via `WEBHOOK_URL` | Ya | Ya | Ya* | Tidak | Dipicu otomatis pada `ticket.created`, `ticket.status_changed`, `ticket.assigned` (*user: hanya saat buat tiket; email ditunda) |
+| | Lampiran Berkas (Upload/Download) | `/tickets/<id>/attachments/*` | Ya | Ya | Ya* | Unduh | Unggah: `admin`, `it`, `user` (*tiket sendiri, guest dilarang); Unduh: semua peran yang berhak melihat tiket |
 | | Kelola Kategori Tiket | `/tickets/categories` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Kategori Tiket | `/tickets/categories/delete/<id>` [GET] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Tiket Permanen | `/tickets/delete-permanent/<id>` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |

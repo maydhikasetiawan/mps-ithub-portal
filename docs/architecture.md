@@ -76,6 +76,7 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET, POST /tickets/categories` — Manajemen kategori tiket (Admin).
   - `GET /tickets/categories/delete/<int:category_id>` — Hapus kategori tiket (Admin).
   - `GET, POST /tickets/delete-permanent/<int:ticket_id>` — Hapus permanen tiket (Admin).
+  - `GET /tickets/<int:ticket_id>/attachments/<int:att_id>/download` — Unduh berkas lampiran tiket dengan proteksi izin akses via `send_file`.
 - **Aturan & State Machine SLA**:
   - **Konstanta Target (Jam Kalender)**: `Critical` (respon 1j, resolusi 4j), `High` (respon 2j, resolusi 8j), `Medium` (respon 4j, resolusi 24j), `Low` (respon 8j, resolusi 72j).
   - **Definisi Respon**: Entri aktivitas pertama bertipe `comment`, `status`, atau `assignment` oleh pengguna dengan role `admin` atau `it` (bergabung ke `users.role`). Entri `created` tidak dihitung sebagai respon.
@@ -93,6 +94,11 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
     *(Catatan: Penambahan komentar tidak memicu webhook. Notifikasi email secara eksplisit ditunda / deferred).*
   - **Struktur Payload (JSON)**: Berisi kunci `event`, `ticket_code`, `ticket_id`, `title`, `status`, `priority`, `assigned_to` (username atau `null`), `actor` (username yang memicu aksi), `timestamp` (format ISO 8601 UTC), dan `url` (tautan tiket relatif, misal `/tickets/14`).
   - **Mekanisme Pengiriman**: HTTP POST sinkron berbasis pustaka standar Python `urllib` (tanpa dependensi eksternal). Bersifat *fail-open* dengan batas waktu (*timeout*) maksimal 5 detik di dalam penanganan `try/except: pass`; kegagalan pengiriman webhook tidak akan pernah menggagalkan operasi tiket.
+- **Lampiran Berkas (File Attachments)**:
+  - **Penyimpanan Berkas**: Disimpan di sistem berkas (*filesystem*) pada folder `uploads/` (dapat dikonfigurasi melalui variabel lingkungan `UPLOAD_FOLDER`, *default*: `uploads`). *Catatan Volume*: Perubahan kode ini tidak mempertahankan berkas saat container dibuat ulang; persistensi memerlukan volume mount permanen pada konfigurasi deployment server.
+  - **Batas Unggahan**: Maksimal 2 berkas per tiket (total eksisting + baru), maksimal 5 MB per berkas. Ekstensi yang diizinkan (*allowlist*): `png`, `jpg`, `jpeg`, `gif`, `webp`, `pdf`, `txt`, `log`, `doc`, `docx`, `xls`, `xlsx`, `csv`. Ekstensi di luar daftar ditolak otomatis dengan pesan error.
+  - **Aturan Kompresi**: Berkas gambar (`png`, `jpg`, `jpeg`, `webp`) otomatis diperkecil menggunakan Pillow (dimensi sisi terpanjang maksimal 1920px, hanya *downscale* tanpa memperbesar), dikonversi RGBA/palette ke RGB, dan disimpan dalam format JPEG kualitas 70 dengan ekstensi `.jpg`. Berkas `gif` dan non-gambar disimpan apa adanya (*as-is*).
+  - **Keamanan Nama Berkas**: Nama berkas di filesystem menggunakan `uuid4().hex` acak untuk mencegah *path traversal*. Nama asli diamankan via `secure_filename` dan disimpan di basis data untuk tampilan/unduhan. Akses unduh divalidasi via rute `send_file` (bukan static path).
 
 ### e. `uptime` (`routes/uptime.py`, URL prefix: `/uptime`)
 - **Tujuan**: Pemantauan ketersediaan target server/layanan melalui pengecekan TCP port atau HTTP request beserta pencatatan latensi (ms).
@@ -151,11 +157,15 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
 8. **`ticket_activities`**
    - Kolom: `id` (PK, Serial), `ticket_id` (INT, Not Null), `actor` (VARCHAR 50), `type` (VARCHAR 20), `content` (TEXT), `created_at` (TIMESTAMP).
    - Menyimpan seluruh linimasa peristiwa tiket: `'created'`, `'status'`, `'assignment'`, dan `'comment'`.
+9. **`ticket_attachments`**
+   - Kolom: `id` (PK, Serial), `ticket_id` (INT, Not Null), `stored_filename` (VARCHAR 255, Not Null), `original_filename` (VARCHAR 255, Not Null), `size_bytes` (INT, Not Null), `mime_type` (VARCHAR 100), `uploader` (VARCHAR 50), `created_at` (TIMESTAMP).
+   - Menyimpan seluruh metadata berkas lampiran tiket.
 
 *Relasi Relasional*:
 Hubungan antar-tabel dijaga secara logis di tingkat aplikasi:
 - `tickets.created_by`, `tickets.assigned_to`, `tickets.resolved_by`, `assets.updated_by`, `assets.deleted_by` berelasi logis ke `users.username`.
 - `ticket_activities.ticket_id` berelasi logis ke `tickets.id`; `ticket_activities.actor` berelasi logis ke `users.username`.
+- `ticket_attachments.ticket_id` berelasi logis ke `tickets.id`; `ticket_attachments.uploader` berelasi logis ke `users.username`.
 - `users.department` dan `tickets.department` berelasi logis ke `departments.name`.
 - `tickets.category` berelasi logis ke `ticket_categories.name`.
 

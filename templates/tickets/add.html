@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="form-card">
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         <div class="form-group">
             <label>Judul Tiket / Ringkasan Masalah *</label>
             <input type="text" name="title" class="form-control" required placeholder="Contoh: Koneksi internet server down / Printer error">
@@ -30,6 +30,11 @@
         <div class="form-group">
             <label>Deskripsi Detail Masalah *</label>
             <textarea name="description" class="form-control" rows="5" required placeholder="Jelaskan kronologi atau gejala gangguan secara rinci..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Lampiran File (Opsional)</label>
+            <input type="file" name="attachments" class="form-control" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.log,.doc,.docx,.xls,.xlsx,.csv">
+            <small style="color: #94a3b8; display: block; margin-top: 5px;">Maksimal 2 file, maksimal 5 MB per file (gambar, dokumen, log).</small>
         </div>
         <button type="submit" class="btn-primary">Kirim Tiket</button>
         <a href="{{ url_for('tickets.index') }}" style="color: #94a3b8; margin-left: 15px; font-size: 13px; text-decoration: none;">Batal</a>
