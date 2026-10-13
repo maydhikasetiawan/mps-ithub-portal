@@ -44,6 +44,9 @@
             <td><strong>{{ a.deleted_by or '-' }}</strong></td>
             <td>
                 {% if session['role'] != 'guest' %}
+                <form method="POST" action="{{ url_for('assets.restore', asset_id=a.id) }}" style="display:inline;">
+                    <button type="submit" class="btn-primary">Restore</button>
+                </form>
                 <a href="{{ url_for('assets.hard_delete', asset_id=a.id) }}" class="btn-danger">Hapus Permanen</a>
                 {% else %}
                 -
