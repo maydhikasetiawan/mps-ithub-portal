@@ -99,6 +99,18 @@ def init_db():
             );
         ''')
 
+        # 6. Tabel Ticket Activities
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS ticket_activities (
+                id SERIAL PRIMARY KEY,
+                ticket_id INT NOT NULL,
+                actor VARCHAR(50),
+                type VARCHAR(20) NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+
         # Insert Default Categories Jika Belum Ada
         default_categories = ['Hardware', 'Network', 'Software', 'Server', 'Request']
         for cat in default_categories:

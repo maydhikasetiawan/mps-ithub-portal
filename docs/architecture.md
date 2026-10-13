@@ -68,11 +68,11 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET, POST /assets/hard-delete/<int:asset_id>` — Hapus permanen dari basis data (konfirmasi nama dan kata sandi admin).
 
 ### d. `tickets` (`routes/tickets.py`, URL prefix: `/tickets`)
-- **Tujuan**: Layanan helpdesk/service desk internal. Pembuatan kode tiket otomatis (`TCK-YYYYMMDD-XXX`), filter status, penyelesaian masalah (*resolution note*), dan manajemen kategori dinamis.
+- **Tujuan**: Layanan helpdesk/service desk internal. Pembuatan kode tiket otomatis (`TCK-YYYYMMDD-XXX`), filter status, penyelesaian masalah (*resolution note*), penugasan staf, penambahan komentar, serta pencatatan linimasa aktivitas terpadu dan manajemen kategori dinamis.
 - **Rute Utama**:
   - `GET /tickets/` — Daftar tiket (pengguna biasa hanya melihat tiket miliknya; mendukung filter status dan parameter `assignee`: `all`, `unassigned`, `me`).
-  - `GET, POST /tickets/add` — Pembuatan laporan masalah baru.
-  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket, penugasan assignee (admin/it), dan pembaruan status pengerjaan.
+  - `GET, POST /tickets/add` — Pembuatan laporan masalah baru beserta pencatatan otomatis aktivitas `created`.
+  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket beserta linimasa aktivitas; penanganan POST terbagi: penambahan komentar (`action=comment`, admin/it/user pada tiketnya) dan pembaruan status/assignee (`action=update_status`, admin/it) dengan auto-logging riwayat status dan penugasan.
   - `GET, POST /tickets/categories` — Manajemen kategori tiket (Admin).
   - `GET /tickets/categories/delete/<int:category_id>` — Hapus kategori tiket (Admin).
   - `GET, POST /tickets/delete-permanent/<int:ticket_id>` — Hapus permanen tiket (Admin).
@@ -131,10 +131,14 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
    - Kolom: `id` (PK, Serial), `name` (VARCHAR 100), `target` (VARCHAR 255), `type` (VARCHAR 20, default 'PING'), `port` (INT), `status` (VARCHAR 20, default 'UNKNOWN'), `latency` (INT, default 0), `last_check` (TIMESTAMP), `created_at` (TIMESTAMP).
 7. **`service_monitors`** *(Tabel cadangan/inisial di db.py)*
    - Kolom: `id` (PK, Serial), `service_name` (VARCHAR 100), `target_url` (VARCHAR 255), `last_status` (VARCHAR 20), `response_time_ms` (INT), `last_checked` (TIMESTAMP). Catatan: Modul aktif `uptime` menggunakan tabel `monitors`.
+8. **`ticket_activities`**
+   - Kolom: `id` (PK, Serial), `ticket_id` (INT, Not Null), `actor` (VARCHAR 50), `type` (VARCHAR 20), `content` (TEXT), `created_at` (TIMESTAMP).
+   - Menyimpan seluruh linimasa peristiwa tiket: `'created'`, `'status'`, `'assignment'`, dan `'comment'`.
 
 *Relasi Relasional*:
 Hubungan antar-tabel dijaga secara logis di tingkat aplikasi:
 - `tickets.created_by`, `tickets.assigned_to`, `tickets.resolved_by`, `assets.updated_by`, `assets.deleted_by` berelasi logis ke `users.username`.
+- `ticket_activities.ticket_id` berelasi logis ke `tickets.id`; `ticket_activities.actor` berelasi logis ke `users.username`.
 - `users.department` dan `tickets.department` berelasi logis ke `departments.name`.
 - `tickets.category` berelasi logis ke `ticket_categories.name`.
 

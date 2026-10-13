@@ -5,6 +5,11 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 ---
 
 ## [Unreleased]
+- Penambahan fitur komentar dan riwayat aktivitas tiket (*ticket comments & activity history*):
+  - Tabel baru `ticket_activities` melalui migrasi Alembic `003_add_ticket_activities.py` dan `init_db()`.
+  - Form komentar pada detail tiket untuk role `admin`, `it`, dan `user` (pada tiket miliknya sendiri).
+  - Pencatatan otomatis peristiwa tiket: pembuatan (`created`), perubahan status (`status`), dan penugasan (`assignment`).
+  - Linimasa aktivitas terpadu terurut dari yang terbaru (*newest-first*) dengan proteksi escaping bawaan Jinja2.
 - Penambahan fitur penugasan tiket (*ticket assignment*):
   - Kolom `assigned_to` pada tabel `tickets` melalui migrasi Alembic `002_add_ticket_assigned_to.py` dan `init_db()`.
   - Form penugasan tiket untuk role `admin` dan `it` pada halaman detail tiket, serta tampilan teks assignee untuk semua role.
