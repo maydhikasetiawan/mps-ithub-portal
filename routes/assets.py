@@ -199,6 +199,39 @@ def delete(asset_id):
 
     return render_template('assets/delete_confirm.html', asset=asset, active_page='assets')
 
+# --- RESTORE ASET ---
+@assets_bp.route('/restore/<int:asset_id>', methods=['POST'])
+@login_required
+@roles_required('admin', 'it')
+def restore(asset_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = TRUE;", (asset_id,))
+    asset = cur.fetchone()
+
+    if not asset:
+        cur.close()
+        conn.close()
+        return "Asset terhapus tidak ditemukan", 404
+
+    user_now = session.get('username')
+    cur.execute("""
+        UPDATE assets
+        SET is_deleted = FALSE,
+            deleted_at = NULL,
+            deleted_by = NULL,
+            delete_reason = NULL,
+            updated_at = CURRENT_TIMESTAMP,
+            updated_by = %s
+        WHERE id = %s;
+    """, (user_now, asset_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash(f"Aset '{asset['name']}' ({asset['asset_tag']}) berhasil dikembalikan ke inventaris.", "success")
+    return redirect(url_for('assets.deleted_history'))
+
 # --- RIWAYAT ASET TERHAPUS ---
 @assets_bp.route('/deleted-history')
 @login_required
