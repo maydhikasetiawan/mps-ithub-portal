@@ -1,11 +1,15 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import check_password_hash
+from werkzeug.utils import secure_filename
 from routes.auth import login_required, roles_required
 from database.db import get_db_connection
 from datetime import datetime, timezone
 import os
 import json
 import urllib.request
+import uuid
+import mimetypes
+from PIL import Image
 
 tickets_bp = Blueprint('tickets', __name__, url_prefix='/tickets')
 
@@ -154,6 +158,124 @@ def send_webhook(event, ticket, actor):
     except Exception:
         pass
 
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'txt', 'log', 'doc', 'docx', 'xls', 'xlsx', 'csv'}
+MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_ATTACHMENTS_PER_TICKET = 2
+
+def get_upload_folder():
+    folder = os.environ.get('UPLOAD_FOLDER', 'uploads')
+    if not os.path.isabs(folder):
+        folder = os.path.abspath(folder)
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+def format_file_size(size_bytes):
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    else:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+
+def handle_ticket_attachments(ticket_id, files, uploader):
+    valid_files = [f for f in files if f and f.filename and f.filename.strip()]
+    if not valid_files:
+        return True
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) as count FROM ticket_attachments WHERE ticket_id = %s;", (ticket_id,))
+    existing_count = cur.fetchone()['count']
+
+    if existing_count + len(valid_files) > MAX_ATTACHMENTS_PER_TICKET:
+        cur.close()
+        conn.close()
+        flash(f"Maksimal {MAX_ATTACHMENTS_PER_TICKET} lampiran per tiket. Unggahan dibatalkan.", "danger")
+        return False
+
+    for f in valid_files:
+        filename = f.filename or ''
+        ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            cur.close()
+            conn.close()
+            flash(f"Ekstensi file '{filename}' tidak diizinkan.", "danger")
+            return False
+
+        f.seek(0, os.SEEK_END)
+        size = f.tell()
+        f.seek(0)
+        if size > MAX_ATTACHMENT_SIZE:
+            cur.close()
+            conn.close()
+            flash(f"File '{filename}' melebihi batas ukuran 5 MB.", "danger")
+            return False
+        if size == 0:
+            cur.close()
+            conn.close()
+            flash(f"File '{filename}' kosong.", "danger")
+            return False
+
+    upload_folder = get_upload_folder()
+
+    try:
+        for f in valid_files:
+            filename = f.filename or ''
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            orig_name = secure_filename(filename) or f"file.{ext}"
+
+            if ext in {'png', 'jpg', 'jpeg', 'webp'}:
+                try:
+                    img = Image.open(f)
+                    if img.mode in ('RGBA', 'LA', 'P'):
+                        img = img.convert('RGB')
+                    elif img.mode != 'RGB':
+                        img = img.convert('RGB')
+
+                    max_dim = 1920
+                    width, height = img.size
+                    if max(width, height) > max_dim:
+                        img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+
+                    stored_filename = f"{uuid.uuid4().hex}.jpg"
+                    dest_path = os.path.join(upload_folder, stored_filename)
+                    img.save(dest_path, format='JPEG', quality=70, optimize=True)
+                    stored_size = os.path.getsize(dest_path)
+                    mime_type = 'image/jpeg'
+                except Exception:
+                    cur.close()
+                    conn.close()
+                    flash(f"File gambar '{filename}' tidak dapat diproses atau rusak.", "danger")
+                    return False
+            elif ext == 'gif':
+                stored_filename = f"{uuid.uuid4().hex}.gif"
+                dest_path = os.path.join(upload_folder, stored_filename)
+                f.save(dest_path)
+                stored_size = os.path.getsize(dest_path)
+                mime_type = 'image/gif'
+            else:
+                stored_filename = f"{uuid.uuid4().hex}.{ext}"
+                dest_path = os.path.join(upload_folder, stored_filename)
+                f.save(dest_path)
+                stored_size = os.path.getsize(dest_path)
+                mime_type = mimetypes.guess_type(orig_name)[0] or 'application/octet-stream'
+
+            cur.execute("""
+                INSERT INTO ticket_attachments (ticket_id, stored_filename, original_filename, size_bytes, mime_type, uploader)
+                VALUES (%s, %s, %s, %s, %s, %s);
+            """, (ticket_id, stored_filename, orig_name, stored_size, mime_type, uploader))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except Exception as e:
+        conn.rollback()
+        cur.close()
+        conn.close()
+        flash(f"Terjadi kesalahan saat menyimpan lampiran: {e}", "danger")
+        return False
+
 def generate_ticket_code():
     today_str = datetime.now().strftime('%Y%m%d')
     conn = get_db_connection()
@@ -261,6 +383,9 @@ def add():
             cur.close()
             conn.close()
 
+            files = request.files.getlist('attachments')
+            handle_ticket_attachments(new_ticket_id, files, created_by)
+
             created_ticket = {
                 'id': new_ticket_id,
                 'ticket_code': ticket_code,
@@ -330,6 +455,26 @@ def detail(ticket_id):
                 """, (ticket_id, username, comment_text))
                 conn.commit()
                 flash("Komentar berhasil ditambahkan!", "success")
+
+            cur.close()
+            conn.close()
+            return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+        elif action == 'upload_attachment':
+            if user_role == 'guest':
+                cur.close()
+                conn.close()
+                flash("Akses ditolak! Guest tidak diizinkan mengunggah lampiran.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            files = request.files.getlist('attachments')
+            valid_files = [f for f in files if f and f.filename and f.filename.strip()]
+            if not valid_files:
+                flash("Pilih setidaknya satu file untuk diunggah.", "warning")
+            else:
+                success = handle_ticket_attachments(ticket_id, valid_files, username)
+                if success:
+                    flash("Lampiran berhasil diunggah!", "success")
 
             cur.close()
             conn.close()
@@ -419,11 +564,67 @@ def detail(ticket_id):
     """, (ticket_id,))
     activities = cur.fetchall()
 
+    cur.execute("""
+        SELECT * FROM ticket_attachments
+        WHERE ticket_id = %s
+        ORDER BY created_at ASC, id ASC;
+    """, (ticket_id,))
+    attachments = cur.fetchall()
+    for att in attachments:
+        att['formatted_size'] = format_file_size(att['size_bytes'])
+
     ticket['sla'] = compute_sla(ticket, activities=activities)
 
     cur.close()
     conn.close()
-    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, active_page='tickets')
+    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, active_page='tickets')
+
+# --- UNDUH LAMPIRAN TIKET ---
+@tickets_bp.route('/<int:ticket_id>/attachments/<int:att_id>/download')
+@login_required
+@roles_required('admin', 'it', 'user', 'guest')
+def download_attachment(ticket_id, att_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM tickets WHERE id = %s AND is_deleted = FALSE;", (ticket_id,))
+    ticket = cur.fetchone()
+
+    if not ticket:
+        cur.close()
+        conn.close()
+        return "Tiket tidak ditemukan", 404
+
+    user_role = session.get('role')
+    username = session.get('username')
+
+    # Proteksi: Regular User hanya bisa melihat tiket miliknya sendiri
+    if user_role == 'user' and ticket['created_by'] != username:
+        cur.close()
+        conn.close()
+        flash("Akses ditolak! Anda tidak berhak melihat tiket pengguna lain.", "danger")
+        return redirect(url_for('tickets.index'))
+
+    cur.execute("SELECT * FROM ticket_attachments WHERE id = %s AND ticket_id = %s;", (att_id, ticket_id))
+    attachment = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not attachment:
+        return "Lampiran tidak ditemukan", 404
+
+    upload_folder = get_upload_folder()
+    file_path = os.path.join(upload_folder, attachment['stored_filename'])
+
+    if not os.path.isfile(file_path):
+        return "File tidak ditemukan di server", 404
+
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=attachment['original_filename'],
+        mimetype=attachment['mime_type']
+    )
 
 # --- KELOLA KATEGORI (KHUSUS ADMIN) ---
 @tickets_bp.route('/categories', methods=['GET', 'POST'])

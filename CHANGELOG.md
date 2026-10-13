@@ -5,6 +5,12 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 ---
 
 ## [Unreleased]
+- Penambahan lampiran berkas (*file attachments*) untuk tiket Service Desk:
+  - Tabel baru `ticket_attachments` melalui migrasi Alembic `004_add_ticket_attachments.py` dan `init_db()`.
+  - Penyimpanan berkas di filesystem (`uploads/`, dikonfigurasi via `UPLOAD_FOLDER`) dengan nama acak UUID untuk mencegah kerentanan path traversal.
+  - Batasan server-side: maksimal 2 berkas per tiket, maksimal 5 MB per berkas, serta allowlist ekstensi dokumen, gambar, dan log.
+  - Kompresi gambar otomatis menggunakan Pillow ke format JPEG (maksimal 1920px, kualitas 70); berkas GIF dan dokumen disimpan apa adanya (*as-is*).
+  - Akses unduh terproteksi otorisasi peran via rute `send_file` (`as_attachment=True`).
 - Penambahan notifikasi webhook generik (*generic webhook notifications*) untuk Service Desk:
   - Pengiriman HTTP POST JSON ke URL webhook (`WEBHOOK_URL`) saat tiket dibuat (`ticket.created`), status berubah (`ticket.status_changed`), dan penugasan diperbarui (`ticket.assigned`).
   - Desain fail-open sinkron dengan timeout maksimal 5 detik menggunakan pustaka standar Python `urllib` (tanpa dependensi eksternal).
