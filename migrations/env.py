@@ -20,7 +20,7 @@ def get_db_url():
     missing = [k for k, v in {'DB_HOST': host, 'DB_NAME': name, 'DB_USER': user, 'DB_PASS': password}.items() if not v]
     if missing:
         raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
-    return f"postgresql://{user}:{password}@{host}:{port}/{name}"
+    return f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{name}"
 
 def run_migrations_offline() -> None:
     url = get_db_url()
