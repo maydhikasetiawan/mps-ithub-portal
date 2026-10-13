@@ -173,4 +173,4 @@ Otomatisasi pengiriman kode ke server produksi diatur melalui GitHub Actions pad
      - Melakukan `docker pull` image terbaru dari `ghcr.io`.
      - Menghentikan dan menghapus container lama `my-web-app`.
      - Menyiapkan jaringan docker `app-monitoring_default`.
-     - Menjalankan container baru di port `5000:5000` dengan kebijakan restart otomatis (`--restart always`) serta menginjeksikan secrets: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, dan `SECRET_KEY`.
+     - Menjalankan container baru di port `5000:5000` dengan kebijakan restart otomatis (`--restart always`) serta menginjeksikan secrets: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, dan `SECRET_KEY`. Container memulai proses via `entrypoint.sh` yang menjalankan migrasi otomatis `alembic upgrade head` (bersifat idempoten — no-op bila sudah di head) sebelum menjalankan aplikasi Flask.
