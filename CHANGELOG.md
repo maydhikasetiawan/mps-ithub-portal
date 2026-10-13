@@ -5,6 +5,10 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 ---
 
 ## [Unreleased]
+- Penambahan fitur penugasan tiket (*ticket assignment*):
+  - Kolom `assigned_to` pada tabel `tickets` melalui migrasi Alembic `002_add_ticket_assigned_to.py` dan `init_db()`.
+  - Form penugasan tiket untuk role `admin` dan `it` pada halaman detail tiket, serta tampilan teks assignee untuk semua role.
+  - Kolom Assignee pada tabel tiket serta filter dropdown `?assignee=` (`all`, `unassigned`, `me`).
 - Eksekusi otomatis migrasi basis data Alembic saat container dijalankan (*auto-run migrations on container start*) via `entrypoint.sh` sebelum aplikasi Flask berjalan.
 - Inisiasi fondasi dokumentasi proyek di direktori `docs/` (`README.md`, `architecture.md`, `setup.md`, `features.md`).
 

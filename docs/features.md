@@ -32,6 +32,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Daftar Tiket**: Menampilkan antrean tiket bantuan. Pengguna reguler (`user`) hanya melihat tiket miliknya sendiri.
 - **Buat Tiket**: Form pembuatan tiket masalah dengan penomoran otomatis (`TCK-YYYYMMDD-XXX`).
 - **Detail Tiket**: Rincian permasalahan, data pelapor, dan departemen pelapor.
+- **Penugasan Tiket (Assign Ticket)**: Penugasan tiket kepada staf IT atau Admin tertentu serta opsi mengosongkan penugasan (*Unassigned*).
 - **Penyelesaian Masalah**: Pembaruan status pengerjaan tiket dan input laporan solusi (*resolution note*). Tiket berstatus `Resolved` atau `Closed` dikunci dari modifikasi lebih lanjut.
 - **Kategori Tiket Dinamis**: Penambahan dan penghapusan kategori tiket oleh Administrator.
 - **Hapus Permanen Tiket**: Penghapusan data tiket dari database dengan konfirmasi kata sandi Admin.
@@ -79,6 +80,7 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | **Tickets** | Daftar Tiket | `/tickets/` [GET] | Ya | Ya | Ya* | Ya | `@roles_required('admin', 'it', 'user', 'guest')` (*user: hanya tiket sendiri) |
 | | Buat Tiket Baru | `/tickets/add` [GET, POST] | Ya | Ya | Ya | Tidak | `@roles_required('admin', 'it', 'user')` |
 | | Detail Tiket | `/tickets/<id>` [GET] | Ya | Ya | Ya* | Ya | `@roles_required('admin', 'it', 'user', 'guest')` (*user: hanya tiket sendiri) |
+| | Penugasan Tiket (Assignee) | `/tickets/<id>` [POST] | Ya | Ya | Tidak | Tidak | Logika controller: hanya `admin` dan `it` yang dapat menetapkan `assigned_to` |
 | | Update Status & Solusi | `/tickets/<id>` [POST] | Ya | Ya | Tidak | Tidak | Logika controller rute: role dibatasi ke `admin` dan `it` |
 | | Kelola Kategori Tiket | `/tickets/categories` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Kategori Tiket | `/tickets/categories/delete/<id>` [GET] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |

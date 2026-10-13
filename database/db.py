@@ -74,6 +74,7 @@ def init_db():
                 status VARCHAR(20) DEFAULT 'Open',
                 description TEXT,
                 created_by VARCHAR(50),
+                assigned_to VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         ''')

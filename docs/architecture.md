@@ -70,9 +70,9 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 ### d. `tickets` (`routes/tickets.py`, URL prefix: `/tickets`)
 - **Tujuan**: Layanan helpdesk/service desk internal. Pembuatan kode tiket otomatis (`TCK-YYYYMMDD-XXX`), filter status, penyelesaian masalah (*resolution note*), dan manajemen kategori dinamis.
 - **Rute Utama**:
-  - `GET /tickets/` — Daftar tiket (pengguna biasa hanya melihat tiket miliknya).
+  - `GET /tickets/` — Daftar tiket (pengguna biasa hanya melihat tiket miliknya; mendukung filter status dan parameter `assignee`: `all`, `unassigned`, `me`).
   - `GET, POST /tickets/add` — Pembuatan laporan masalah baru.
-  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket dan pembaruan status pengerjaan.
+  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket, penugasan assignee (admin/it), dan pembaruan status pengerjaan.
   - `GET, POST /tickets/categories` — Manajemen kategori tiket (Admin).
   - `GET /tickets/categories/delete/<int:category_id>` — Hapus kategori tiket (Admin).
   - `GET, POST /tickets/delete-permanent/<int:ticket_id>` — Hapus permanen tiket (Admin).
@@ -121,7 +121,7 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
 2. **`assets`**
    - Kolom: `id` (PK, Serial), `asset_tag` (VARCHAR 50, Unique), `name` (VARCHAR 100), `category` (VARCHAR 50), `ip_address` (VARCHAR 45), `mac_address` (VARCHAR 45), `status` (VARCHAR 20, default 'Active'), `location` (VARCHAR 100), `notes` (TEXT), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP), `updated_by` (VARCHAR 50).
 3. **`tickets`**
-   - Kolom: `id` (PK, Serial), `ticket_code` (VARCHAR 20, Unique), `title` (VARCHAR 150), `category` (VARCHAR 50), `priority` (VARCHAR 20, default 'Medium'), `status` (VARCHAR 20, default 'Open'), `description` (TEXT), `created_by` (VARCHAR 50), `department` (VARCHAR 50), `resolution_note` (TEXT), `resolved_by` (VARCHAR 50), `resolved_at` (TIMESTAMP), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP).
+   - Kolom: `id` (PK, Serial), `ticket_code` (VARCHAR 20, Unique), `title` (VARCHAR 150), `category` (VARCHAR 50), `priority` (VARCHAR 20, default 'Medium'), `status` (VARCHAR 20, default 'Open'), `description` (TEXT), `created_by` (VARCHAR 50), `assigned_to` (VARCHAR 50), `department` (VARCHAR 50), `resolution_note` (TEXT), `resolved_by` (VARCHAR 50), `resolved_at` (TIMESTAMP), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP).
 4. **`ticket_categories`**
    - Kolom: `id` (PK, Serial), `name` (VARCHAR 50, Unique).
    - Data bawaan: 'Hardware', 'Network', 'Software', 'Server', 'Request'.
@@ -134,7 +134,7 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
 
 *Relasi Relasional*:
 Hubungan antar-tabel dijaga secara logis di tingkat aplikasi:
-- `tickets.created_by`, `tickets.resolved_by`, `assets.updated_by`, `assets.deleted_by` berelasi logis ke `users.username`.
+- `tickets.created_by`, `tickets.assigned_to`, `tickets.resolved_by`, `assets.updated_by`, `assets.deleted_by` berelasi logis ke `users.username`.
 - `users.department` dan `tickets.department` berelasi logis ke `departments.name`.
 - `tickets.category` berelasi logis ke `ticket_categories.name`.
 

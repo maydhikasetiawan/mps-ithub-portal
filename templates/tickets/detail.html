@@ -16,7 +16,7 @@
                 {{ ticket.status | upper }}
             </span>
             <h2 style="color: #38bdf8; margin-top: 8px;">{{ ticket.title }}</h2>
-            <p style="color: #94a3b8; font-size: 13px;">Kode Tiket: <strong>{{ ticket.ticket_code }}</strong> | Kategori: <strong>{{ ticket.category }}</strong> | Prioritas: <strong>{{ ticket.priority }}</strong></p>
+            <p style="color: #94a3b8; font-size: 13px;">Kode Tiket: <strong>{{ ticket.ticket_code }}</strong> | Kategori: <strong>{{ ticket.category }}</strong> | Prioritas: <strong>{{ ticket.priority }}</strong> | Assignee: <strong>{{ ticket.assigned_to or 'Unassigned' }}</strong></p>
         </div>
     </div>
 
@@ -31,13 +31,21 @@
         </div>
 
         <!-- Bagian Pelapor & Departemen -->
-        <div>
-            <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 6px;">PELAPOR & DEPARTEMEN</h4>
-            <div style="font-size: 14px; font-weight: bold; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
-                👤 {{ ticket.created_by }}
-                <span style="color: #38bdf8; font-size: 13px; font-weight: normal;">
-                    ({{ ticket.department or 'IT' }})
-                </span>
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 6px;">PELAPOR & DEPARTEMEN</h4>
+                <div style="font-size: 14px; font-weight: bold; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                    👤 {{ ticket.created_by }}
+                    <span style="color: #38bdf8; font-size: 13px; font-weight: normal;">
+                        ({{ ticket.department or 'IT' }})
+                    </span>
+                </div>
+            </div>
+            <div>
+                <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 6px;">PETUGAS PENANGAN (ASSIGNEE)</h4>
+                <div style="font-size: 14px; font-weight: bold; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                    🛠️ {{ ticket.assigned_to or 'Unassigned' }}
+                </div>
             </div>
         </div>
     </div>
@@ -53,9 +61,18 @@
         </div>
         <p style="font-size: 13px; color: #cbd5e1; white-space: pre-line;">{{ ticket.resolution_note or 'Tidak ada catatan penyelesaian.' }}</p>
 
-        {% elif session['role'] != 'guest' %}
+        {% elif session['role'] in ['admin', 'it'] %}
         <!-- Form Pengisian Hanya Buka Jika Status Masih Open / In Progress -->
         <form method="POST">
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label style="color: #cbd5e1; font-size: 12px;">Tugaskan ke (Assignee):</label>
+                <select name="assigned_to" class="form-control" style="max-width: 250px;">
+                    <option value="" {% if not ticket.assigned_to %}selected{% endif %}>Unassigned</option>
+                    {% for u in assignees %}
+                    <option value="{{ u.username }}" {% if ticket.assigned_to == u.username %}selected{% endif %}>{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="form-group" style="margin-bottom: 15px;">
                 <label style="color: #cbd5e1; font-size: 12px;">Ubah Status Tiket:</label>
                 <select name="status" class="form-control" style="max-width: 250px;">
