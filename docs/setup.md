@@ -56,6 +56,9 @@ Lalu lengkapi nilai variabel sesuai kredensial server PostgreSQL lokal Anda.
    - Pengguna `admin` (kata sandi: `AdminPass123!`, role: `admin`)
    - Pengguna `guest` (kata sandi: `GuestPass123!`, role: `guest`)
 
+   > [!WARNING]
+   > Change the default admin/guest passwords immediately after first login — never run production with the seed passwords.
+
 3. **Menjalankan Migrasi Skema (Alembic)**:
    Eksekusi migrasi untuk membentuk tabel `departments`, `monitors`, dan penambahan kolom pelengkap:
    ```bash

@@ -10,12 +10,22 @@
 </style>
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
     <!-- Kelompok Tombol Filter Status (Kiri) -->
-    <div style="display:flex; gap:8px; flex-wrap: wrap;">
-        <a href="{{ url_for('tickets.index') }}" class="btn-primary" style="background:{% if not status_filter %}#38bdf8{% else %}#334155{% endif %}; color:{% if not status_filter %}#0f172a{% else %}#cbd5e1{% endif %};">Semua</a>
-        <a href="{{ url_for('tickets.index', status='Open') }}" class="btn-primary" style="background:{% if status_filter == 'Open' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'Open' %}#0f172a{% else %}#cbd5e1{% endif %};">Open</a>
-        <a href="{{ url_for('tickets.index', status='In Progress') }}" class="btn-primary" style="background:{% if status_filter == 'In Progress' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'In Progress' %}#0f172a{% else %}#cbd5e1{% endif %};">In Progress</a>
-        <a href="{{ url_for('tickets.index', status='Resolved') }}" class="btn-primary" style="background:{% if status_filter == 'Resolved' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'Resolved' %}#0f172a{% else %}#cbd5e1{% endif %};">Resolved</a>
-        <a href="{{ url_for('tickets.index', status='Closed') }}" class="btn-primary" style="background:{% if status_filter == 'Closed' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'Closed' %}#0f172a{% else %}#cbd5e1{% endif %};">Closed</a>
+    <div style="display:flex; gap:8px; flex-wrap: wrap; align-items: center;">
+        <a href="{{ url_for('tickets.index', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if not status_filter %}#38bdf8{% else %}#334155{% endif %}; color:{% if not status_filter %}#0f172a{% else %}#cbd5e1{% endif %};">Semua</a>
+        <a href="{{ url_for('tickets.index', status='Open', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if status_filter == 'Open' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'Open' %}#0f172a{% else %}#cbd5e1{% endif %};">Open</a>
+        <a href="{{ url_for('tickets.index', status='In Progress', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if status_filter == 'In Progress' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'In Progress' %}#0f172a{% else %}#cbd5e1{% endif %};">In Progress</a>
+        <a href="{{ url_for('tickets.index', status='Resolved', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if status_filter == 'Resolved' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'Resolved' %}#0f172a{% else %}#cbd5e1{% endif %};">Resolved</a>
+        <a href="{{ url_for('tickets.index', status='Closed', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if status_filter == 'Closed' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'Closed' %}#0f172a{% else %}#cbd5e1{% endif %};">Closed</a>
+
+        <form method="GET" action="{{ url_for('tickets.index') }}" style="display:inline-flex; align-items:center; gap:6px;">
+            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+            <select name="assignee" class="filter-input" onchange="this.form.submit()" style="padding: 10px 14px; font-size: 14px; min-height: 44px;">
+                <option value="all" {% if not assignee_filter or assignee_filter == 'all' %}selected{% endif %}>All tickets</option>
+                <option value="unassigned" {% if assignee_filter == 'unassigned' %}selected{% endif %}>Unassigned</option>
+                <option value="me" {% if assignee_filter == 'me' %}selected{% endif %}>Assigned to me</option>
+            </select>
+        </form>
     </div>
 
     <!-- Kelompok Tombol Aksi Admin & Tiket (Kanan) -->
@@ -39,6 +49,7 @@
             <th>PRIORITAS</th>
             <th>STATUS</th>
             <th>PELAPOR / DEPARTEMEN</th>
+            <th>ASSIGNEE</th>
             <th>AKSI</th>
         </tr>
     </thead>
@@ -70,6 +81,7 @@
                 <strong>{{ t.created_by }}</strong>
                 <small style="color:#94a3b8;">({{ t.department or 'IT' }})</small>
             </td>
+            <td>{{ t.assigned_to or '—' }}</td>
             <td>
                 {% if session['role'] == 'admin' %}
                 <a href="{{ url_for('tickets.delete_permanent', ticket_id=t.id) }}" class="btn-danger">Hapus</a>
@@ -80,7 +92,7 @@
         </tr>
         {% else %}
         <tr>
-            <td colspan="7" style="text-align:center; color:#64748b;">Belum ada tiket terdaftar.</td>
+            <td colspan="8" style="text-align:center; color:#64748b;">Belum ada tiket terdaftar.</td>
         </tr>
         {% endfor %}
     </tbody>

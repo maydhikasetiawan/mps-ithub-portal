@@ -22,6 +22,7 @@ def generate_ticket_code():
 @roles_required('admin', 'it', 'user', 'guest')
 def index():
     status_filter = request.args.get('status', '')
+    assignee_filter = request.args.get('assignee', 'all').strip()
     search_query = request.args.get('q', '')
     user_role = session.get('role', 'guest')
     username = session.get('username')
@@ -41,6 +42,12 @@ def index():
         query += " AND status = %s"
         params.append(status_filter)
 
+    if assignee_filter == 'unassigned':
+        query += " AND assigned_to IS NULL"
+    elif assignee_filter == 'me' and user_role in ['admin', 'it']:
+        query += " AND assigned_to = %s"
+        params.append(username)
+
     if search_query:
         query += " AND (ticket_code ILIKE %s OR title ILIKE %s OR created_by ILIKE %s)"
         params.extend([f'%{search_query}%', f'%{search_query}%', f'%{search_query}%'])
@@ -52,7 +59,7 @@ def index():
     cur.close()
     conn.close()
 
-    return render_template('tickets/index.html', tickets=tickets_list, status_filter=status_filter, search_query=search_query, active_page='tickets')
+    return render_template('tickets/index.html', tickets=tickets_list, status_filter=status_filter, assignee_filter=assignee_filter, search_query=search_query, active_page='tickets')
 
 # --- BUAT TIKET BARU ---
 @tickets_bp.route('/add', methods=['GET', 'POST'])
@@ -137,19 +144,22 @@ def detail(ticket_id):
         new_status = request.form.get('status')
         resolution_note = request.form.get('resolution_note', '').strip()
         user_now = session.get('username')
+        raw_assigned = request.form.get('assigned_to', '').strip()
+        assigned_to = raw_assigned if raw_assigned and raw_assigned.lower() != 'unassigned' else None
 
         if new_status in ['Resolved', 'Closed']:
             cur.execute("""
                 UPDATE tickets
-                SET status = %s, resolution_note = %s, resolved_by = %s, resolved_at = CURRENT_TIMESTAMP
+                SET status = %s, resolution_note = %s, resolved_by = %s, resolved_at = CURRENT_TIMESTAMP,
+                    assigned_to = %s
                 WHERE id = %s;
-            """, (new_status, resolution_note, user_now, ticket_id))
+            """, (new_status, resolution_note, user_now, assigned_to, ticket_id))
         else:
             cur.execute("""
                 UPDATE tickets
-                SET status = %s, resolution_note = %s
+                SET status = %s, resolution_note = %s, assigned_to = %s
                 WHERE id = %s;
-            """, (new_status, resolution_note, ticket_id))
+            """, (new_status, resolution_note, assigned_to, ticket_id))
 
         conn.commit()
         cur.close()
@@ -157,9 +167,14 @@ def detail(ticket_id):
         flash("Status dan laporan penyelesaian tiket berhasil diperbarui!", "success")
         return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
+    assignees = []
+    if user_role in ['admin', 'it']:
+        cur.execute("SELECT username FROM users WHERE role IN ('admin', 'it') ORDER BY username ASC;")
+        assignees = cur.fetchall()
+
     cur.close()
     conn.close()
-    return render_template('tickets/detail.html', ticket=ticket, active_page='tickets')
+    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, active_page='tickets')
 
 # --- KELOLA KATEGORI (KHUSUS ADMIN) ---
 @tickets_bp.route('/categories', methods=['GET', 'POST'])
