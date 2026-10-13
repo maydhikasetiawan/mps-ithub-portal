@@ -84,6 +84,15 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
     - Tiket `Resolved`/`Closed`: Evaluasi `resolved_at - created_at` terhadap target resolusi → `SLA Terpenuhi` (`met`) jika dalam target, atau `SLA Terlewati` (`breached`) jika melebihi target.
     - Tiket `Open`/`In Progress` belum direspon: Evaluasi `now - created_at` terhadap target respon → `Mendekati SLA` (`approaching`) jika berjalan >= 80% target, `SLA Terlewati` (`breached`) jika > 100% target, tanpa badge jika < 80%.
     - Tiket `Open`/`In Progress` sudah direspon: Evaluasi `now - created_at` terhadap target resolusi dengan ambang batas 80% (`approaching`) dan 100% (`breached`).
+- **Notifikasi Webhook**:
+  - **Konfigurasi**: Membaca variabel lingkungan `WEBHOOK_URL` (melalui `os.environ.get`). Jika tidak diset atau bernilai kosong, pengiriman dilewati secara senyap (*silent skip*).
+  - **Peristiwa (Events)**:
+    - `ticket.created` — Dipicu setelah tiket baru berhasil dibuat dan transaksi basis data di-commit.
+    - `ticket.status_changed` — Dipicu setelah status tiket diperbarui dan di-commit.
+    - `ticket.assigned` — Dipicu setelah penugasan tiket diperbarui atau dikosongkan (*Unassigned*) dan di-commit.
+    *(Catatan: Penambahan komentar tidak memicu webhook. Notifikasi email secara eksplisit ditunda / deferred).*
+  - **Struktur Payload (JSON)**: Berisi kunci `event`, `ticket_code`, `ticket_id`, `title`, `status`, `priority`, `assigned_to` (username atau `null`), `actor` (username yang memicu aksi), `timestamp` (format ISO 8601 UTC), dan `url` (tautan tiket relatif, misal `/tickets/14`).
+  - **Mekanisme Pengiriman**: HTTP POST sinkron berbasis pustaka standar Python `urllib` (tanpa dependensi eksternal). Bersifat *fail-open* dengan batas waktu (*timeout*) maksimal 5 detik di dalam penanganan `try/except: pass`; kegagalan pengiriman webhook tidak akan pernah menggagalkan operasi tiket.
 
 ### e. `uptime` (`routes/uptime.py`, URL prefix: `/uptime`)
 - **Tujuan**: Pemantauan ketersediaan target server/layanan melalui pengecekan TCP port atau HTTP request beserta pencatatan latensi (ms).

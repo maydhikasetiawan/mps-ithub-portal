@@ -37,6 +37,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Komentar Tiket**: Penambahan catatan komunikasi atau komentar oleh Admin, IT, maupun pelapor (User pada tiket miliknya).
 - **Riwayat Aktivitas (Timeline)**: Pencatatan kronologis terpadu untuk pembuatan tiket, perubahan status, penugasan, dan komentar.
 - **Target & Peringatan SLA**: Perhitungan target waktu respon dan resolusi otomatis berbasis prioritas (Critical, High, Medium, Low) dengan indikator status otomatis (*SLA Terpenuhi*, *Mendekati SLA*, *SLA Terlewati*).
+- **Notifikasi Webhook**: Pengiriman notifikasi HTTP POST berformat JSON ke URL eksternal (`WEBHOOK_URL`) saat tiket dibuat (`ticket.created`), status berubah (`ticket.status_changed`), atau penugasan diperbarui (`ticket.assigned`). Penambahan komentar tidak memicu webhook, dan notifikasi email ditunda (*deferred*).
 - **Kategori Tiket Dinamis**: Penambahan dan penghapusan kategori tiket oleh Administrator.
 - **Hapus Permanen Tiket**: Penghapusan data tiket dari database dengan konfirmasi kata sandi Admin.
 
@@ -88,6 +89,7 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Komentar Tiket | `/tickets/<id>` [POST action=comment] | Ya | Ya | Ya* | Tidak | Form komentar dibatasi untuk `admin`, `it`, dan `user` (*user: hanya tiket sendiri) |
 | | Riwayat Aktivitas | `/tickets/<id>` [GET] | Ya | Ya | Ya* | Ya | Linimasa tiket dapat dilihat oleh seluruh peran (*user: hanya tiket sendiri) |
 | | Target & Peringatan SLA | `/tickets/`, `/tickets/<id>` [GET] | Ya | Ya | Ya* | Ya | Indikator SLA otomatis dihitung dan tampil untuk seluruh peran (*user: hanya tiket sendiri) |
+| | Notifikasi Webhook | Otomatis via `WEBHOOK_URL` | Ya | Ya | Ya* | Tidak | Dipicu otomatis pada `ticket.created`, `ticket.status_changed`, `ticket.assigned` (*user: hanya saat buat tiket; email ditunda) |
 | | Kelola Kategori Tiket | `/tickets/categories` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Kategori Tiket | `/tickets/categories/delete/<id>` [GET] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Tiket Permanen | `/tickets/delete-permanent/<id>` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |

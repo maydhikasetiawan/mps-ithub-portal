@@ -2,7 +2,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from werkzeug.security import check_password_hash
 from routes.auth import login_required, roles_required
 from database.db import get_db_connection
-from datetime import datetime
+from datetime import datetime, timezone
+import os
+import json
+import urllib.request
 
 tickets_bp = Blueprint('tickets', __name__, url_prefix='/tickets')
 
@@ -121,6 +124,36 @@ def compute_sla(ticket, activities=None, has_response=None, now=None):
         'elapsed_label': elapsed_label,
     }
 
+def send_webhook(event, ticket, actor):
+    webhook_url = os.environ.get('WEBHOOK_URL', '').strip()
+    if not webhook_url:
+        return
+
+    try:
+        payload = {
+            'event': event,
+            'ticket_code': ticket.get('ticket_code'),
+            'ticket_id': ticket.get('id'),
+            'title': ticket.get('title'),
+            'status': ticket.get('status'),
+            'priority': ticket.get('priority'),
+            'assigned_to': ticket.get('assigned_to') or None,
+            'actor': actor,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'url': f"/tickets/{ticket.get('id')}",
+        }
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(
+            webhook_url,
+            data=data,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=5):
+            pass
+    except Exception:
+        pass
+
 def generate_ticket_code():
     today_str = datetime.now().strftime('%Y%m%d')
     conn = get_db_connection()
@@ -227,6 +260,17 @@ def add():
             conn.commit()
             cur.close()
             conn.close()
+
+            created_ticket = {
+                'id': new_ticket_id,
+                'ticket_code': ticket_code,
+                'title': title,
+                'status': 'Open',
+                'priority': priority,
+                'assigned_to': None,
+            }
+            send_webhook('ticket.created', created_ticket, created_by)
+
             flash(f"Tiket {ticket_code} berhasil dibuat!", "success")
             return redirect(url_for('tickets.index'))
         except Exception as e:
@@ -313,13 +357,16 @@ def detail(ticket_id):
             old_status = ticket['status']
             old_assigned_to = ticket['assigned_to']
 
-            if new_status and new_status != old_status:
+            status_changed = bool(new_status and new_status != old_status)
+            assigned_changed = bool(assigned_to != old_assigned_to)
+
+            if status_changed:
                 cur.execute("""
                     INSERT INTO ticket_activities (ticket_id, actor, type, content)
                     VALUES (%s, %s, 'status', %s);
                 """, (ticket_id, user_now, f"Status changed from {old_status} to {new_status}"))
 
-            if assigned_to != old_assigned_to:
+            if assigned_changed:
                 assign_content = f"Assigned to {assigned_to}" if assigned_to else "Assignment cleared (Unassigned)"
                 cur.execute("""
                     INSERT INTO ticket_activities (ticket_id, actor, type, content)
@@ -343,6 +390,18 @@ def detail(ticket_id):
             conn.commit()
             cur.close()
             conn.close()
+
+            updated_ticket = dict(ticket)
+            if new_status:
+                updated_ticket['status'] = new_status
+            updated_ticket['assigned_to'] = assigned_to
+
+            if status_changed:
+                send_webhook('ticket.status_changed', updated_ticket, user_now)
+
+            if assigned_changed:
+                send_webhook('ticket.assigned', updated_ticket, user_now)
+
             flash("Status dan laporan penyelesaian tiket berhasil diperbarui!", "success")
             return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
