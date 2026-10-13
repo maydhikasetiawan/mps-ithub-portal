@@ -58,4 +58,6 @@ jobs:
               -e DB_PASS=${{ secrets.DB_PASS }} \
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
               -e WEBHOOK_URL=${{ secrets.WEBHOOK_URL }} \
+              -v /home/ubuntu/my-web-app-uploads:/app/uploads \
+              -e UPLOAD_FOLDER=/app/uploads \
               ghcr.io/${{ github.repository }}:latest
