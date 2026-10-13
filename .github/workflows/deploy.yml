@@ -57,4 +57,5 @@ jobs:
               -e DB_USER=${{ secrets.DB_USER }} \
               -e DB_PASS=${{ secrets.DB_PASS }} \
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
+              -e WEBHOOK_URL=${{ secrets.WEBHOOK_URL }} \
               ghcr.io/${{ github.repository }}:latest
