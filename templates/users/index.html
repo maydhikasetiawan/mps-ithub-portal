@@ -81,7 +81,9 @@
 
                     {% if u.id != session['user_id'] %}
 
-                    <a href="{{ url_for('users.delete', user_id=u.id) }}" class="btn-danger" onclick="return confirm('Hapus user ini?')">Hapus</a>
+                    <form method="POST" action="{{ url_for('users.delete', user_id=u.id) }}" style="display: inline; margin: 0;" data-confirm="Hapus user ini?">
+                        <button type="submit" class="btn-danger" style="cursor: pointer; border: none;">Hapus</button>
+                    </form>
 
                     {% else %}
 

@@ -73,7 +73,9 @@
 
                     <td>
 
-                        <a href="{{ url_for('users.delete_department', dept_id=d.id) }}" class="btn-danger" onclick="return confirm('Hapus departemen ini?')">Hapus</a>
+                        <form method="POST" action="{{ url_for('users.delete_department', dept_id=d.id) }}" style="display: inline; margin: 0;" data-confirm="Hapus departemen ini?">
+                            <button type="submit" class="btn-danger" style="cursor: pointer; border: none;">Hapus</button>
+                        </form>
 
                     </td>
 

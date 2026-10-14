@@ -102,7 +102,7 @@ def check_now(monitor_id):
     return redirect(url_for('uptime.index'))
 
 # --- HAPUS TARGET MONITOR ---
-@uptime_bp.route('/delete/<int:monitor_id>')
+@uptime_bp.route('/delete/<int:monitor_id>', methods=['POST'])
 @login_required
 @roles_required('admin', 'it')
 def delete(monitor_id):

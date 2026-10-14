@@ -122,7 +122,9 @@
 
                     {% if session['role'] in ['admin', 'it'] %}
 
-                    <a href="{{ url_for('uptime.delete', monitor_id=m.id) }}" class="btn-danger" onclick="return confirm('Hapus target ini?')">Hapus</a>
+                    <form method="POST" action="{{ url_for('uptime.delete', monitor_id=m.id) }}" style="display: inline; margin: 0;" data-confirm="Hapus target ini?">
+                        <button type="submit" class="btn-danger" style="cursor: pointer; border: none;">Hapus</button>
+                    </form>
 
                     {% endif %}
 

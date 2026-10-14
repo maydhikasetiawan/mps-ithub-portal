@@ -938,7 +938,7 @@ def manage_categories():
 
     return render_template('tickets/categories.html', categories=categories, active_page='tickets')
 
-@tickets_bp.route('/categories/delete/<int:category_id>')
+@tickets_bp.route('/categories/delete/<int:category_id>', methods=['POST'])
 @login_required
 @roles_required('admin')
 def delete_category(category_id):

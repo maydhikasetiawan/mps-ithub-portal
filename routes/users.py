@@ -58,7 +58,7 @@ def add():
     return render_template('users/add.html', departments=departments, active_page='users')
 
 # --- HAPUS USER ---
-@users_bp.route('/delete/<int:user_id>')
+@users_bp.route('/delete/<int:user_id>', methods=['POST'])
 @login_required
 @roles_required('admin')
 def delete(user_id):
@@ -101,7 +101,7 @@ def departments():
 
     return render_template('users/departments.html', departments=dept_list, active_page='users')
 
-@users_bp.route('/departments/delete/<int:dept_id>')
+@users_bp.route('/departments/delete/<int:dept_id>', methods=['POST'])
 @login_required
 @roles_required('admin')
 def delete_department(dept_id):
