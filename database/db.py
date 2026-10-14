@@ -166,6 +166,18 @@ def init_db():
             );
         ''')
 
+        # 11. Tabel Ticket Relationships
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS ticket_relationships (
+                id SERIAL PRIMARY KEY,
+                ticket_a_id INTEGER NOT NULL,
+                ticket_b_id INTEGER NOT NULL,
+                relation_type VARCHAR(20) NOT NULL,
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+
         # Insert Default Categories Jika Belum Ada
         default_categories = ['Hardware', 'Network', 'Software', 'Server', 'Request']
         for cat in default_categories:
