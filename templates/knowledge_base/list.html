@@ -18,6 +18,17 @@
     {% endif %}
 </div>
 
+<form method="GET" class="filter-bar" style="margin-bottom: 20px;">
+    <input type="text" name="q" class="filter-input" placeholder="Cari judul, isi, atau tags..." value="{{ q }}" style="min-height: 44px;">
+    <select name="category" class="filter-input" style="min-height: 44px; max-width: 220px;">
+        <option value="">Semua Kategori</option>
+        {% for cat in categories %}
+        <option value="{{ cat.name }}" {% if category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn-primary" style="min-height: 44px;">Cari</button>
+</form>
+
 {% if articles %}
 <div style="display: flex; flex-direction: column; gap: 14px;">
     {% for a in articles %}
@@ -57,7 +68,11 @@
 </div>
 {% else %}
 <div style="background: #1e293b; border: 1px solid #334155; padding: 30px; border-radius: 8px; text-align: center; color: #64748b;">
+    {% if q or category %}
+    Tidak ada artikel yang cocok dengan pencarian.
+    {% else %}
     Belum ada artikel knowledge base.
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}
