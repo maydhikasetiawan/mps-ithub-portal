@@ -56,7 +56,7 @@
                     <span style="color: #94a3b8; font-size: 12px;">({{ r.other_status }})</span>
                 </div>
                 {% if session['role'] in ['admin', 'it'] %}
-                <form method="POST" style="margin: 0;" onsubmit="return confirm('Hapus relasi tiket ini?');">
+                <form method="POST" style="margin: 0;" data-confirm="Hapus relasi tiket ini?">
                     <input type="hidden" name="action" value="unlink">
                     <input type="hidden" name="relation_id" value="{{ r.id }}">
                     <button type="submit" class="btn-danger" style="font-size: 12px; padding: 6px 12px; min-height: 44px; border: none; cursor: pointer;">Hapus</button>

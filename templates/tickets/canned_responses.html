@@ -62,7 +62,7 @@
                         <td>
                             <div style="display: flex; gap: 6px; align-items: center;">
                                 <a href="{{ url_for('tickets.edit_canned_response', template_id=t.id) }}" class="btn-primary" style="font-size: 12px; padding: 6px 12px; min-height: 44px; display: inline-flex; align-items: center;">Edit</a>
-                                <form method="POST" action="{{ url_for('tickets.delete_canned_response', template_id=t.id) }}" style="display: inline-block; margin: 0;" onsubmit="return confirm('Hapus template respon ini?');">
+                                <form method="POST" action="{{ url_for('tickets.delete_canned_response', template_id=t.id) }}" style="display: inline-block; margin: 0;" data-confirm="Hapus template respon ini?">
                                     <button type="submit" class="btn-danger" style="font-size: 12px; padding: 6px 12px; min-height: 44px; cursor: pointer; border: none;">Hapus</button>
                                 </form>
                             </div>
