@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, abort
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from routes.auth import login_required, roles_required
@@ -705,9 +705,16 @@ def detail(ticket_id):
         """, (ticket['category'],))
         related_articles = cur.fetchall()
 
+    canned_templates = []
+    canned_templates_json = {}
+    if user_role in ['admin', 'it']:
+        cur.execute("SELECT id, title, content FROM canned_responses ORDER BY title ASC;")
+        canned_templates = cur.fetchall()
+        canned_templates_json = {str(t['id']): t['content'] for t in canned_templates}
+
     cur.close()
     conn.close()
-    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, related_articles=related_articles, rating=rating, active_page='tickets')
+    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, related_articles=related_articles, rating=rating, canned_templates=canned_templates, canned_templates_json=canned_templates_json, active_page='tickets')
 
 # --- UNDUH LAMPIRAN TIKET ---
 @tickets_bp.route('/<int:ticket_id>/attachments/<int:att_id>/download')
@@ -794,6 +801,132 @@ def delete_category(category_id):
     conn.close()
     flash("Kategori berhasil dihapus.", "success")
     return redirect(url_for('tickets.manage_categories'))
+
+# --- KELOLA TEMPLATE RESPON (KHUSUS ADMIN & IT) ---
+@tickets_bp.route('/canned-responses', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin', 'it')
+def manage_canned_responses():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT name FROM ticket_categories ORDER BY name ASC;")
+        categories = cur.fetchall()
+        valid_category_names = {c['name'] for c in categories}
+
+        form_data = None
+        if request.method == 'POST':
+            title = request.form.get('title', '').strip()
+            content = request.form.get('content', '').strip()
+            category_raw = request.form.get('category', '').strip()
+
+            if not title:
+                flash("Judul template tidak boleh kosong.", "danger")
+            elif len(title) > 255:
+                flash("Judul template tidak boleh lebih dari 255 karakter.", "danger")
+            elif not content:
+                flash("Konten template tidak boleh kosong.", "danger")
+            elif category_raw and category_raw not in valid_category_names:
+                flash("Kategori tidak valid.", "danger")
+            else:
+                category = category_raw if category_raw else 'Umum'
+                author = session.get('username')
+                cur.execute("""
+                    INSERT INTO canned_responses (title, content, category, author)
+                    VALUES (%s, %s, %s, %s);
+                """, (title, content, category, author))
+                conn.commit()
+                flash("Template respon berhasil ditambahkan!", "success")
+                return redirect(url_for('tickets.manage_canned_responses'))
+
+            form_data = {'title': title, 'content': content, 'category': category_raw}
+
+        cur.execute("SELECT * FROM canned_responses ORDER BY title ASC;")
+        templates = cur.fetchall()
+        return render_template(
+            'tickets/canned_responses.html',
+            templates=templates,
+            categories=categories,
+            form_data=form_data,
+            active_page='tickets'
+        )
+    finally:
+        cur.close()
+        conn.close()
+
+@tickets_bp.route('/canned-responses/<int:template_id>/edit', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin', 'it')
+def edit_canned_response(template_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM canned_responses WHERE id = %s;", (template_id,))
+        template_item = cur.fetchone()
+        if not template_item:
+            abort(404)
+
+        cur.execute("SELECT name FROM ticket_categories ORDER BY name ASC;")
+        categories = cur.fetchall()
+        valid_category_names = {c['name'] for c in categories}
+
+        if request.method == 'POST':
+            title = request.form.get('title', '').strip()
+            content = request.form.get('content', '').strip()
+            category_raw = request.form.get('category', '').strip()
+
+            if not title:
+                flash("Judul template tidak boleh kosong.", "danger")
+            elif len(title) > 255:
+                flash("Judul template tidak boleh lebih dari 255 karakter.", "danger")
+            elif not content:
+                flash("Konten template tidak boleh kosong.", "danger")
+            elif category_raw and category_raw not in valid_category_names:
+                flash("Kategori tidak valid.", "danger")
+            else:
+                category = category_raw if category_raw else 'Umum'
+                cur.execute("""
+                    UPDATE canned_responses
+                    SET title = %s, content = %s, category = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s;
+                """, (title, content, category, template_id))
+                conn.commit()
+                flash("Template respon berhasil diperbarui!", "success")
+                return redirect(url_for('tickets.manage_canned_responses'))
+
+            template_item['title'] = title
+            template_item['content'] = content
+            template_item['category'] = category_raw
+
+        return render_template(
+            'tickets/canned_response_edit.html',
+            template_item=template_item,
+            categories=categories,
+            active_page='tickets'
+        )
+    finally:
+        cur.close()
+        conn.close()
+
+@tickets_bp.route('/canned-responses/<int:template_id>/delete', methods=['POST'])
+@login_required
+@roles_required('admin', 'it')
+def delete_canned_response(template_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM canned_responses WHERE id = %s;", (template_id,))
+        template_item = cur.fetchone()
+        if not template_item:
+            abort(404)
+
+        cur.execute("DELETE FROM canned_responses WHERE id = %s;", (template_id,))
+        conn.commit()
+        flash("Template respon berhasil dihapus.", "success")
+        return redirect(url_for('tickets.manage_canned_responses'))
+    finally:
+        cur.close()
+        conn.close()
 
 # --- HAPUS PERMANEN (KHUSUS ADMIN BER-PASSWORD) ---
 @tickets_bp.route('/delete-permanent/<int:ticket_id>', methods=['GET', 'POST'])

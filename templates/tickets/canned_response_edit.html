@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Edit Template Respon - MPS-ITHub{% endblock %}
+{% block header_title %}Edit Template Respon (Admin & IT){% endblock %}
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('tickets.manage_canned_responses') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Kelola Template Respon</a>
+</div>
+
+<div class="form-card" style="max-width: 600px;">
+    <h4 style="color: #38bdf8; margin-bottom: 15px;">Edit Template Respon</h4>
+    <form method="POST">
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label style="color: #cbd5e1; font-size: 12px;">Judul Template *</label>
+            <input type="text" name="title" class="form-control" required maxlength="255" value="{{ template_item.title }}">
+        </div>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label style="color: #cbd5e1; font-size: 12px;">Kategori</label>
+            <select name="category" class="form-control">
+                <option value="" {% if template_item.category == 'Umum' %}selected{% endif %}>Umum (Default)</option>
+                {% for c in categories %}
+                <option value="{{ c.name }}" {% if template_item.category == c.name %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label style="color: #cbd5e1; font-size: 12px;">Konten Template *</label>
+            <textarea name="content" class="form-control" rows="6" required placeholder="Tuliskan isi template respon di sini...">{{ template_item.content }}</textarea>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button type="submit" class="btn-primary" style="min-height: 44px;">Simpan Perubahan</button>
+            <a href="{{ url_for('tickets.manage_canned_responses') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">Batal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

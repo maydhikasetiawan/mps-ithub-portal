@@ -153,6 +153,19 @@ def init_db():
             );
         ''')
 
+        # 10. Tabel Canned Responses (Templates)
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS canned_responses (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                category VARCHAR(100) NOT NULL DEFAULT 'Umum',
+                author VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+
         # Insert Default Categories Jika Belum Ada
         default_categories = ['Hardware', 'Network', 'Software', 'Server', 'Request']
         for cat in default_categories:
