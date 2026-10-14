@@ -590,6 +590,143 @@ def detail(ticket_id):
             send_webhook('ticket.status_changed', updated_ticket, username)
             return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
+        elif action == 'link':
+            if user_role not in ['admin', 'it']:
+                cur.close()
+                conn.close()
+                flash("Akses ditolak! Hanya Tim IT & Admin yang dapat menambah relasi tiket.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            relation_type = request.form.get('relation_type', '').strip()
+            if relation_type not in ['duplicate', 'related']:
+                cur.close()
+                conn.close()
+                flash("Jenis relasi tidak valid.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            target_code = request.form.get('target_code', '').strip().upper()
+            if not target_code:
+                cur.close()
+                conn.close()
+                flash("Kode tiket target tidak boleh kosong.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            cur.execute("SELECT id, ticket_code, status FROM tickets WHERE ticket_code = %s;", (target_code,))
+            target = cur.fetchone()
+            if not target:
+                cur.close()
+                conn.close()
+                flash("Tiket target tidak ditemukan.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            if target['id'] == ticket_id:
+                cur.close()
+                conn.close()
+                flash("Tiket tidak dapat dihubungkan ke dirinya sendiri.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            cur.execute("""
+                SELECT id FROM ticket_relationships
+                WHERE (ticket_a_id = %s AND ticket_b_id = %s)
+                   OR (ticket_a_id = %s AND ticket_b_id = %s);
+            """, (ticket_id, target['id'], target['id'], ticket_id))
+            if cur.fetchone():
+                cur.close()
+                conn.close()
+                flash("Relasi antar tiket ini sudah ada.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            cur.execute("""
+                INSERT INTO ticket_relationships (ticket_a_id, ticket_b_id, relation_type, created_by)
+                VALUES (%s, %s, %s, %s);
+            """, (ticket_id, target['id'], relation_type, username))
+
+            auto_close = (relation_type == 'duplicate' and ticket['status'] in ['Open', 'In Progress'])
+            resolution_note = None
+            if auto_close:
+                resolution_note = f"Duplikat dari {target_code}"
+                cur.execute("""
+                    UPDATE tickets
+                    SET status = 'Closed', resolved_by = %s, resolved_at = CURRENT_TIMESTAMP, resolution_note = %s
+                    WHERE id = %s;
+                """, (username, resolution_note, ticket_id))
+                cur.execute("""
+                    INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                    VALUES (%s, %s, 'status', %s);
+                """, (ticket_id, username, f"Ticket marked as duplicate of {target_code} by {username}"))
+            else:
+                cur.execute("""
+                    INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                    VALUES (%s, %s, 'relation', %s);
+                """, (ticket_id, username, f"Ticket linked to {target_code} as {relation_type} by {username}"))
+
+            if relation_type == 'duplicate':
+                target_activity = f"Ticket {ticket['ticket_code']} marked as duplicate of this ticket by {username}"
+            else:
+                target_activity = f"Ticket {ticket['ticket_code']} linked as related by {username}"
+            cur.execute("""
+                INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                VALUES (%s, %s, 'relation', %s);
+            """, (target['id'], username, target_activity))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            if auto_close:
+                updated_ticket = dict(ticket)
+                updated_ticket['status'] = 'Closed'
+                updated_ticket['resolved_by'] = username
+                updated_ticket['resolution_note'] = resolution_note
+                send_webhook('ticket.status_changed', updated_ticket, username)
+                flash("Tiket ditandai sebagai duplikat dan ditutup.", "success")
+            else:
+                flash("Relasi tiket berhasil ditambahkan!", "success")
+
+            return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+        elif action == 'unlink':
+            if user_role not in ['admin', 'it']:
+                cur.close()
+                conn.close()
+                flash("Akses ditolak! Hanya Tim IT & Admin yang dapat menghapus relasi tiket.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            relation_id = request.form.get('relation_id')
+            cur.execute("""
+                SELECT * FROM ticket_relationships
+                WHERE id = %s AND (ticket_a_id = %s OR ticket_b_id = %s);
+            """, (relation_id, ticket_id, ticket_id))
+            rel = cur.fetchone()
+            if not rel:
+                cur.close()
+                conn.close()
+                flash("Relasi tidak ditemukan.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            other_id = rel['ticket_b_id'] if rel['ticket_a_id'] == ticket_id else rel['ticket_a_id']
+            cur.execute("SELECT ticket_code FROM tickets WHERE id = %s;", (other_id,))
+            other_ticket = cur.fetchone()
+            other_code = other_ticket['ticket_code'] if other_ticket else f"#{other_id}"
+
+            cur.execute("DELETE FROM ticket_relationships WHERE id = %s;", (relation_id,))
+
+            cur.execute("""
+                INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                VALUES (%s, %s, 'relation', %s);
+            """, (ticket_id, username, f"Ticket unlinked from {other_code} by {username}"))
+
+            cur.execute("""
+                INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                VALUES (%s, %s, 'relation', %s);
+            """, (other_id, username, f"Ticket {ticket['ticket_code']} unlinked by {username}"))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Relasi tiket berhasil dihapus.", "success")
+            return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
         else:
             if user_role not in ['admin', 'it']:
                 flash("Akses ditolak! Hanya Tim IT & Admin yang dapat memperbarui status tiket.", "danger")
@@ -712,9 +849,21 @@ def detail(ticket_id):
         canned_templates = cur.fetchall()
         canned_templates_json = {str(t['id']): t['content'] for t in canned_templates}
 
+    cur.execute("""
+        SELECT r.id, r.relation_type, r.ticket_a_id, r.ticket_b_id,
+               t.id AS other_id, t.ticket_code AS other_code,
+               t.title AS other_title, t.status AS other_status
+        FROM ticket_relationships r
+        JOIN tickets t ON t.id = CASE WHEN r.ticket_a_id = %s
+            THEN r.ticket_b_id ELSE r.ticket_a_id END
+        WHERE r.ticket_a_id = %s OR r.ticket_b_id = %s
+        ORDER BY r.created_at DESC;
+    """, (ticket_id, ticket_id, ticket_id))
+    relations = cur.fetchall()
+
     cur.close()
     conn.close()
-    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, related_articles=related_articles, rating=rating, canned_templates=canned_templates, canned_templates_json=canned_templates_json, active_page='tickets')
+    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, related_articles=related_articles, rating=rating, canned_templates=canned_templates, canned_templates_json=canned_templates_json, relations=relations, active_page='tickets')
 
 # --- UNDUH LAMPIRAN TIKET ---
 @tickets_bp.route('/<int:ticket_id>/attachments/<int:att_id>/download')
