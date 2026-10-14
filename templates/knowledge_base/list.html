@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Knowledge Base - MPS-ITHub{% endblock %}
+{% block header_title %}Knowledge Base{% endblock %}
+
+{% block content %}
+<style>
+.btn-secondary { background: #334155; color: #cbd5e1; padding: 10px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; border: none; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.btn-secondary:hover { background: #475569; }
+</style>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+    <p style="color: #94a3b8; font-size: 14px; margin: 0;">Pusat panduan dan dokumentasi solusi teknis.</p>
+    {% if session['role'] in ['admin', 'it'] %}
+    <div>
+        <a href="{{ url_for('knowledge_base.add') }}" class="btn-primary">+ Tambah Artikel</a>
+    </div>
+    {% endif %}
+</div>
+
+{% if articles %}
+<div style="display: flex; flex-direction: column; gap: 14px;">
+    {% for a in articles %}
+    <div style="background: #1e293b; border: 1px solid #334155; padding: 20px; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+            <div>
+                <a href="{{ url_for('knowledge_base.detail', article_id=a.id) }}" style="color: #38bdf8; font-size: 16px; font-weight: bold; text-decoration: none;">
+                    {{ a.title }}
+                </a>
+                {% if a.status == 'draft' %}
+                <span class="badge badge-yellow" style="margin-left: 6px;">Draft</span>
+                {% endif %}
+            </div>
+
+            {% if session['role'] in ['admin', 'it'] %}
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <a href="{{ url_for('knowledge_base.edit', article_id=a.id) }}" class="btn-secondary" style="min-height: 44px; padding: 8px 14px; font-size: 13px;">Edit</a>
+                <form method="POST" action="{{ url_for('knowledge_base.delete', article_id=a.id) }}" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus artikel ini?');">
+                    <button type="submit" class="btn-danger" style="min-height: 44px; padding: 8px 14px; font-size: 13px; cursor: pointer; border: none;">Hapus</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 16px; margin-top: 12px; font-size: 13px; color: #94a3b8; flex-wrap: wrap; align-items: center;">
+            <span style="background: #334155; color: #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 12px;">
+                📁 {{ a.category }}
+            </span>
+            {% if a.tags %}
+            <span>🏷️ {{ a.tags }}</span>
+            {% endif %}
+            <span>👤 {{ a.author or '—' }}</span>
+            <span>📅 {{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '—' }}</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div style="background: #1e293b; border: 1px solid #334155; padding: 30px; border-radius: 8px; text-align: center; color: #64748b;">
+    Belum ada artikel knowledge base.
+</div>
+{% endif %}
+{% endblock %}

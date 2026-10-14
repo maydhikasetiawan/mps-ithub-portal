@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_edit %}Edit Artikel{% else %}Tambah Artikel{% endif %} - Knowledge Base - MPS-ITHub{% endblock %}
+{% block header_title %}{% if is_edit %}Edit Artikel Knowledge Base{% else %}Tambah Artikel Knowledge Base{% endif %}{% endblock %}
+
+{% block content %}
+<style>
+.btn-secondary { background: #334155; color: #cbd5e1; padding: 10px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; border: none; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
+.btn-secondary:hover { background: #475569; }
+</style>
+
+<div class="form-card" style="max-width: 800px;">
+    <form method="POST">
+        <div class="form-group">
+            <label for="title">Judul Artikel *</label>
+            <input type="text" id="title" name="title" class="form-control" required placeholder="Contoh: Solusi Printer Error / Panduan Koneksi VPN" value="{{ article.title if article and article.title else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="category">Kategori *</label>
+            <select id="category" name="category" class="form-control" required>
+                {% for cat in categories %}
+                <option value="{{ cat.name }}" {% if article and article.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="tags">Tags (Opsional)</label>
+            <input type="text" id="tags" name="tags" class="form-control" placeholder="pisahkan dengan koma" value="{{ article.tags if article and article.tags else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status *</label>
+            <select id="status" name="status" class="form-control" required>
+                <option value="draft" {% if not article or article.status == 'draft' %}selected{% endif %}>Draft</option>
+                <option value="published" {% if article and article.status == 'published' %}selected{% endif %}>Published</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="content">Konten Panduan / Solusi *</label>
+            <textarea id="content" name="content" class="form-control" rows="12" required placeholder="Tuliskan langkah-langkah solusi atau panduan masalah secara lengkap...">{{ article.content if article and article.content else '' }}</textarea>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: center; margin-top: 20px; flex-wrap: wrap;">
+            <button type="submit" class="btn-primary">{% if is_edit %}Simpan Perubahan{% else %}Terbitkan Artikel{% endif %}</button>
+            <a href="{% if is_edit and article and article.id %}{{ url_for('knowledge_base.detail', article_id=article.id) }}{% else %}{{ url_for('knowledge_base.index') }}{% endif %}" class="btn-secondary">Batal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
