@@ -20,6 +20,18 @@
         </div>
     </div>
 
+    <!-- Blok Artikel Knowledge Base Terkait -->
+    {% if related_articles %}
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h4 style="color: #38bdf8; font-size: 13px; margin-bottom: 12px;">📚 Artikel Knowledge Base Terkait</h4>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            {% for a in related_articles %}
+            <a href="{{ url_for('knowledge_base.detail', article_id=a.id) }}" style="color: #38bdf8; text-decoration: none;">{{ a.title }}</a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Blok Informasi SLA -->
     {% if ticket.sla %}
     <div style="background: #0f172a; padding: 14px 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">

@@ -589,9 +589,18 @@ def detail(ticket_id):
 
     ticket['sla'] = compute_sla(ticket, activities=activities)
 
+    related_articles = []
+    if ticket.get('category'):
+        cur.execute("""
+            SELECT id, title, category FROM kb_articles
+            WHERE status = 'published' AND category = %s
+            ORDER BY created_at DESC LIMIT 5;
+        """, (ticket['category'],))
+        related_articles = cur.fetchall()
+
     cur.close()
     conn.close()
-    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, active_page='tickets')
+    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, related_articles=related_articles, active_page='tickets')
 
 # --- UNDUH LAMPIRAN TIKET ---
 @tickets_bp.route('/<int:ticket_id>/attachments/<int:att_id>/download')
