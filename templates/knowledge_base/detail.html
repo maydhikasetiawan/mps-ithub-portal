@@ -27,7 +27,7 @@
         {% if session['role'] in ['admin', 'it'] %}
         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <a href="{{ url_for('knowledge_base.edit', article_id=article.id) }}" class="btn-secondary">Edit Artikel</a>
-            <form method="POST" action="{{ url_for('knowledge_base.delete', article_id=article.id) }}" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus artikel ini?');">
+            <form method="POST" action="{{ url_for('knowledge_base.delete', article_id=article.id) }}" style="display: inline;" data-confirm="Apakah Anda yakin ingin menghapus artikel ini?">
                 <button type="submit" class="btn-danger" style="cursor: pointer; border: none;">Hapus</button>
             </form>
         </div>
