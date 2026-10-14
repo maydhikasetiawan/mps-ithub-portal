@@ -1120,6 +1120,8 @@ def delete_permanent(ticket_id):
                             pass
 
             cur.execute("DELETE FROM ticket_attachments WHERE ticket_id = %s;", (ticket_id,))
+            cur.execute("DELETE FROM ticket_ratings WHERE ticket_id = %s;", (ticket_id,))
+            cur.execute("DELETE FROM ticket_relationships WHERE ticket_a_id = %s OR ticket_b_id = %s;", (ticket_id, ticket_id))
             cur.execute("DELETE FROM tickets WHERE id = %s;", (ticket_id,))
             conn.commit()
             cur.close()
