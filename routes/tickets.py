@@ -486,6 +486,57 @@ def detail(ticket_id):
             conn.close()
             return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
+        elif action == 'submit_rating':
+            if user_role == 'guest':
+                cur.close()
+                conn.close()
+                flash("Guest tidak diizinkan memberi penilaian.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            if ticket['status'] not in ['Resolved', 'Closed']:
+                cur.close()
+                conn.close()
+                flash("Penilaian hanya dapat diberikan untuk tiket yang sudah selesai.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            if ticket['created_by'] != username:
+                cur.close()
+                conn.close()
+                flash("Hanya pelapor tiket yang dapat memberikan penilaian.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            try:
+                rating_val = int(request.form.get('rating', ''))
+                if rating_val < 1 or rating_val > 5:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                cur.close()
+                conn.close()
+                flash("Penilaian harus berupa angka antara 1 dan 5.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            comment_val = request.form.get('comment', '').strip()
+            if len(comment_val) > 1000:
+                cur.close()
+                conn.close()
+                flash("Komentar penilaian tidak boleh lebih dari 1000 karakter.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            cur.execute("""
+                INSERT INTO ticket_ratings (ticket_id, rating, comment, rater)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (ticket_id) DO UPDATE SET
+                    rating = EXCLUDED.rating,
+                    comment = EXCLUDED.comment,
+                    rater = EXCLUDED.rater,
+                    updated_at = CURRENT_TIMESTAMP;
+            """, (ticket_id, rating_val, comment_val if comment_val else None, username))
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash("Penilaian berhasil disimpan!", "success")
+            return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
         else:
             if user_role not in ['admin', 'it']:
                 flash("Akses ditolak! Hanya Tim IT & Admin yang dapat memperbarui status tiket.", "danger")
@@ -589,6 +640,9 @@ def detail(ticket_id):
 
     ticket['sla'] = compute_sla(ticket, activities=activities)
 
+    cur.execute("SELECT * FROM ticket_ratings WHERE ticket_id = %s;", (ticket_id,))
+    rating = cur.fetchone()
+
     related_articles = []
     if ticket.get('category'):
         cur.execute("""
@@ -600,7 +654,7 @@ def detail(ticket_id):
 
     cur.close()
     conn.close()
-    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, related_articles=related_articles, active_page='tickets')
+    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, related_articles=related_articles, rating=rating, active_page='tickets')
 
 # --- UNDUH LAMPIRAN TIKET ---
 @tickets_bp.route('/<int:ticket_id>/attachments/<int:att_id>/download')

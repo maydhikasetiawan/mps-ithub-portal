@@ -52,6 +52,56 @@
     </div>
     {% endif %}
 
+    <!-- Blok Penilaian Kepuasan (CSAT) -->
+    {% if ticket.status in ['Resolved', 'Closed'] %}
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h4 style="color: #38bdf8; font-size: 13px; margin-bottom: 12px;">⭐ PENILAIAN KEPUASAN (CSAT)</h4>
+
+        {% if rating %}
+        <div style="margin-bottom: {% if ticket.created_by == session['username'] %}15px{% else %}0{% endif %};">
+            <div style="font-size: 18px; color: #facc15; margin-bottom: 6px;">
+                {% for i in range(1, 6) %}{% if i <= rating.rating %}★{% else %}☆{% endif %}{% endfor %}
+                <span style="font-size: 14px; font-weight: bold; color: #f8fafc; margin-left: 6px;">{{ rating.rating }}/5</span>
+            </div>
+            {% if rating.comment %}
+            <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 6px; white-space: pre-wrap;">{{ rating.comment }}</div>
+            {% endif %}
+            <small style="color: #94a3b8; font-size: 12px; display: block;">
+                Dinilai oleh <strong>{{ rating.rater }}</strong> pada {{ rating.updated_at.strftime('%Y-%m-%d %H:%M') if rating.updated_at else '-' }}
+            </small>
+        </div>
+        {% endif %}
+
+        {% if ticket.created_by == session['username'] %}
+        <form method="POST" style="{% if rating %}border-top: 1px solid #334155; padding-top: 15px; margin-top: 15px;{% endif %}">
+            <input type="hidden" name="action" value="submit_rating">
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label style="color: #cbd5e1; font-size: 13px; display: block; margin-bottom: 8px;">
+                    {% if rating %}Ubah Penilaian Anda:{% else %}Beri Penilaian Layanan:{% endif %}
+                </label>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    {% for i in range(1, 6) %}
+                    <label style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; cursor: pointer; color: #facc15; font-size: 14px;">
+                        <input type="radio" name="rating" value="{{ i }}" required {% if rating and rating.rating == i %}checked{% endif %} style="margin-right: 6px;">
+                        {{ i }} ★
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label style="color: #cbd5e1; font-size: 13px; display: block; margin-bottom: 6px;">Komentar (Opsional):</label>
+                <textarea name="comment" class="form-control" rows="3" maxlength="1000" placeholder="Tuliskan ulasan atau masukan Anda...">{{ rating.comment if rating and rating.comment else '' }}</textarea>
+            </div>
+            <button type="submit" class="btn-primary">
+                {% if rating %}Ubah Penilaian{% else %}Simpan Penilaian{% endif %}
+            </button>
+        </form>
+        {% elif not rating %}
+        <p style="color: #94a3b8; font-size: 13px; margin: 0;">Belum dinilai oleh pelapor.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <!-- Deskripsi Masalah & Pelapor (Disamakan Style-nya dengan Card Bawah) -->
     <div style="background: #0f172a; padding: 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
         <!-- Bagian Deskripsi Masalah -->
