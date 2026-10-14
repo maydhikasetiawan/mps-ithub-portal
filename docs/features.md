@@ -29,7 +29,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Hard Delete (Hapus Permanen)**: Penghapusan total dari database khusus Admin dengan konfirmasi nama aset dan kata sandi.
 
 ### D. Modul Service Desk (`routes/tickets.py`)
-- **Daftar Tiket**: Menampilkan antrean tiket bantuan. Pengguna reguler (`user`) hanya melihat tiket miliknya sendiri.
+- **Daftar Tiket**: Menampilkan antrean tiket bantuan. Pengguna reguler (`user`) hanya melihat tiket miliknya sendiri; badge status ditumpuk vertikal tepat di atas badge SLA secara terpusat, dan header beserta sel kolom STATUS rata tengah (*centered*).
 - **Buat Tiket**: Form pembuatan tiket masalah dengan penomoran otomatis (`TCK-YYYYMMDD-XXX`).
 - **Detail Tiket**: Rincian permasalahan, data pelapor, dan departemen pelapor.
 - **Penugasan Tiket (Assign Ticket)**: Penugasan tiket kepada staf IT atau Admin tertentu serta opsi mengosongkan penugasan (*Unassigned*).
@@ -38,23 +38,33 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Riwayat Aktivitas (Timeline)**: Pencatatan kronologis terpadu untuk pembuatan tiket, perubahan status, penugasan, dan komentar.
 - **Target & Peringatan SLA**: Perhitungan target waktu respon dan resolusi otomatis berbasis prioritas (Critical, High, Medium, Low) dengan indikator status otomatis (*SLA Terpenuhi*, *Mendekati SLA*, *SLA Terlewati*).
 - **Notifikasi Webhook**: Pengiriman notifikasi HTTP POST berformat JSON ke URL eksternal (`WEBHOOK_URL`) saat tiket dibuat (`ticket.created`), status berubah (`ticket.status_changed`), atau penugasan diperbarui (`ticket.assigned`). Penambahan komentar tidak memicu webhook, dan notifikasi email ditunda (*deferred*).
-- **Lampiran Berkas (Attachments)**: Fasilitas unggah berkas pendukung pada pembuatan dan detail tiket (maksimal 2 berkas per tiket, batas 5 MB per berkas; gambar, dokumen, log). Gambar dikompresi otomatis ke format JPEG (maksimal 1920px, kualitas 70 via Pillow), dan berkas dilindungi otorisasi saat diunduh.
+- **Lampiran Berkas (Attachments)**: Fasilitas unggah berkas pendukung pada pembuatan dan detail tiket (maksimal 2 berkas per tiket, batas 5 MB per berkas; gambar, dokumen, log). Gambar dikompresi otomatis ke format JPEG (maksimal 1920px, kualitas 70 via Pillow), dan berkas dilindungi otorisasi saat diunduh. Penyimpanan berkas persisten melalui Docker volume mount host (`/home/ubuntu/my-web-app-uploads` ↔ `/app/uploads`), didukung konfigurasi Nginx `client_max_body_size 15m`.
+- **Penilaian Kepuasan (CSAT)**: Satu penilaian per tiket (bintang 1–5, komentar opsional maks 1000 karakter) oleh pelapor tiket pada tiket berstatus `Resolved` atau `Closed`. Pengiriman ulang memperbarui penilaian yang ada (*upsert*); peran `guest` ditolak.
+- **Buka Ulang Tiket (Reopen)**: Pelapor atau Admin/IT dapat membuka kembali tiket `Resolved` atau `Closed` ke status `Open` dengan alasan opsional (maks 500 karakter). Mengosongkan data penyelesaian (`resolved_by`, `resolved_at`, `resolution_note`) namun tetap mempertahankan penugasan (*assignee*) dan rating CSAT sebelumnya; mencatat aktivitas bertipe `status` dan memicu webhook `ticket.status_changed`; perhitungan SLA tetap mengacu pada `created_at` awal.
+- **Template Respon Cepat (Canned Responses)**: Pustaka template balasan tiket yang dikelola oleh Admin/IT (judul, konten, kategori opsional, pembuat). Menu pemilih (*picker*) pada form komentar mengisi teks ke textarea (khusus Admin/IT); template tidak pernah mengirim otomatis (*never auto-send*), pengguna selalu meninjau, mengedit, dan mengirim komentar secara manual.
+- **Relasi Tiket & Auto-Close Duplikat (Ticket Relationships)**: Admin/IT dapat menghubungkan tiket sebagai "related" (tautan biasa) atau "duplicate". Penandaan duplikat secara otomatis menutup tiket saat ini (hanya jika berstatus `Open` atau `In Progress`) dengan catatan solusi `"Duplikat dari TCK-XXX"`, pencatatan aktivitas status, dan pengiriman webhook `ticket.status_changed`. Pemutusan relasi (*unlink*) tidak pernah membuka kembali tiket yang telah ditutup; daftar relasi tampil pada kedua tiket.
 - **Kategori Tiket Dinamis**: Penambahan dan penghapusan kategori tiket oleh Administrator.
-- **Hapus Permanen Tiket**: Penghapusan data tiket dari database dengan konfirmasi kata sandi Admin.
+- **Hapus Permanen Tiket**: Penghapusan total data tiket dari basis data khusus Admin dengan konfirmasi kata sandi; otomatis menghapus aktivitas, lampiran berkas (+ berkas fisik), penilaian CSAT, dan relasi tiket untuk mencegah data yatim (*no orphans*).
 
-### E. Modul Uptime Monitor (`routes/uptime.py`)
+### E. Modul Knowledge Base (`routes/knowledge_base.py`)
+- **Manajemen Artikel Pengetahuan**: CRUD artikel solusi teknis (judul, konten, kategori, tag, status draft/published) oleh Admin dan IT.
+- **Visibilitas Berbasis Peran**: Artikel `published` dapat diakses seluruh pengguna (termasuk `guest`); artikel `draft` hanya dapat diakses Admin dan IT (mengembalikan HTTP 404 bagi peran lain untuk mencegah kebocoran informasi).
+- **Pencarian & Filter Kategori**: Pencarian artikel pada halaman daftar menggunakan kata kunci (parameterized `ILIKE`) serta filter dropdown berdasarkan kategori tiket.
+- **Artikel Terkait pada Tiket**: Menampilkan hingga 5 artikel berstatus `published` dari kategori yang sama pada halaman detail tiket Service Desk ("Artikel Knowledge Base Terkait").
+
+### F. Modul Uptime Monitor (`routes/uptime.py`)
 - **Daftar Monitor Jaringan**: Monitoring status ketersediaan target (`UP` / `DOWN`) beserta waktu latensi (*latency* dalam milidetik).
 - **Tambah Target Monitor**: Penambahan endpoint baru dengan pilihan protokol TCP Socket atau HTTP Request, disertai uji kesehatan instan.
 - **Pindai Ulang Mandiri (Check Now)**: Trigger uji kesehatan langsung untuk target tertentu.
 - **Pindai Seluruh Layanan (Check All)**: Trigger uji kesehatan sekaligus ke seluruh daftar target monitor.
 - **Hapus Target Monitor**: Menghapus target dari daftar pemantauan.
 
-### F. Modul Reports Center (`routes/reports.py`)
+### G. Modul Reports Center (`routes/reports.py`)
 - **Ekspor CSV Aset TI**: Unduh berkas CSV dengan filter kategori, status, dan opsi menyertakan aset terhapus.
 - **Ekspor CSV Service Desk**: Unduh berkas CSV tiket dengan filter rentang tanggal, kategori, dan status tiket.
 - **Kompatibilitas Excel**: Berkas CSV disandikan dengan format UTF-8-SIG (`\ufeff`) agar kolom dan pemisah terbaca rapi pada Microsoft Excel.
 
-### G. Modul User Management & Profil (`routes/users.py`)
+### H. Modul User Management & Profil (`routes/users.py`)
 - **Daftar Pengguna**: Menampilkan seluruh data akun, peran, dan departemen terkait.
 - **Tambah Pengguna**: Pendaftaran akun baru dengan hashing kata sandi aman.
 - **Edit Pengguna & Reset Password**: Pembaruan data akun serta opsi reset kata sandi administratif (mengaktifkan flag wajib ganti password).
@@ -95,6 +105,16 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Kelola Kategori Tiket | `/tickets/categories` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Kategori Tiket | `/tickets/categories/delete/<id>` [GET] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Tiket Permanen | `/tickets/delete-permanent/<id>` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
+| | Penilaian Kepuasan (CSAT) | `/tickets/<id>` [POST action=submit_rating] | Ya* | Ya* | Ya* | Tidak | Form rating hanya untuk pelapor tiket pada tiket Resolved/Closed (*guest dilarang) |
+| | Buka Ulang Tiket (Reopen) | `/tickets/<id>` [POST action=reopen] | Ya | Ya | Ya* | Tidak | Pelapor tiket (*user tiket sendiri) atau `admin`/`it` pada tiket Resolved/Closed |
+| | Kelola Template Respon | `/tickets/canned-responses*` | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` (delete: POST-only) |
+| | Gunakan Template Respon | `/tickets/<id>` [UI Picker] | Ya | Ya | Tidak | Tidak | Picker template pada form komentar hanya tampil untuk `admin` & `it` |
+| | Tautkan / Hapus Relasi Tiket | `/tickets/<id>` [POST action=link/unlink] | Ya | Ya | Tidak | Tidak | Form relasi & aksi hapus relasi dibatasi untuk `admin` & `it` |
+| | Lihat Relasi Tiket | `/tickets/<id>` [GET] | Ya | Ya | Ya* | Ya | Daftar tiket terkait tampil untuk semua peran yang berhak melihat tiket |
+| **Knowledge Base** | Daftar Artikel (Published) | `/knowledge-base/` [GET] | Ya | Ya | Ya | Ya | `@roles_required('admin', 'it', 'user', 'guest')` |
+| | Detail Artikel (Published) | `/knowledge-base/<id>` [GET] | Ya | Ya | Ya | Ya | `@roles_required('admin', 'it', 'user', 'guest')` |
+| | Detail Artikel (Draft) | `/knowledge-base/<id>` [GET] | Ya | Ya | Tidak | Tidak | Draft artikel mengembalikan 404 bagi peran non-admin/IT |
+| | Kelola Artikel (CRUD) | `/knowledge-base/add`, `edit/<id>`, `delete/<id>` | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` (delete: POST-only) |
 | **Uptime** | Daftar Monitor | `/uptime/` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
 | | Tambah Monitor | `/uptime/add` [GET, POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | | Pindai Target (Single/All) | `/uptime/check/<id>`, `/check-all` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |

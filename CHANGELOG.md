@@ -5,6 +5,39 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 ---
 
 ## [Unreleased]
+- Penambahan relasi tiket dengan auto-close tiket duplikat (PR #21, Step 2.5):
+  - Tabel baru `ticket_relationships` melalui migrasi Alembic `008_add_ticket_relationships.py` dan `init_db()`.
+  - Penautan tiket lain sebagai "related" (tautan biasa) atau "duplicate" oleh peran Admin dan IT.
+  - Penandaan duplikat secara otomatis menutup tiket saat ini (*auto-close* dari status `Open` atau `In Progress`) dengan catatan solusi `"Duplikat dari TCK-XXX"`, pencatatan linimasa bertipe `status`, dan trigger webhook `ticket.status_changed`.
+  - Konvensi penyimpanan data relasi duplikat: `ticket_a_id` sebagai tiket duplikat dan `ticket_b_id` sebagai tiket kanonikal; penegakan keunikan pasangan dua arah pada level aplikasi.
+  - Tampilan daftar relasi tiket pada kedua tiket terkait; pemutusan relasi (*unlink*) tidak pernah membuka kembali tiket yang telah ditutup.
+- Penambahan pustaka template respon cepat (*canned responses*) untuk komentar tiket (PR #20, Step 2.4):
+  - Tabel baru `canned_responses` melalui migrasi Alembic `007_add_canned_responses.py` dan `init_db()`.
+  - Antarmuka manajemen pustaka template (`/tickets/canned-responses*`) khusus Admin dan IT.
+  - Menu pemilih (*picker*) template pada form komentar tiket untuk Admin/IT yang mengisi textarea via serialisasi aman `tojson | safe` tanpa pernah mengirim komentar secara otomatis (*never auto-send*).
+- Penambahan fitur buka ulang tiket yang telah selesai (*reopen tickets*) (PR #19, Step 2.3):
+  - Pengaktifan kembali tiket `Resolved` atau `Closed` ke status `Open` oleh pelapor tiket atau Admin/IT melalui tombol form pada halaman detail tiket.
+  - Mengosongkan kolom penyelesaian (`resolved_by`, `resolved_at`, `resolution_note`) namun mempertahankan penugasan (*assignee*) serta riwayat rating CSAT sebelumnya.
+  - Alasan buka ulang opsional (maksimal 500 karakter), pencatatan aktivitas bertipe `status`, dan pengiriman notifikasi webhook `ticket.status_changed`.
+  - Perhitungan SLA tetap berjalan mengacu pada waktu pembuatan awal (`created_at`).
+- Penambahan penilaian kepuasan pelanggan (*CSAT rating*) pada tiket selesai (PR #18, Step 2.2):
+  - Tabel baru `ticket_ratings` melalui migrasi Alembic `006_add_ticket_ratings.py` dan `init_db()`.
+  - Formulir penilaian bintang 1–5 dan komentar ulasan opsional (maksimal 1000 karakter) khusus bagi pelapor tiket pada tiket `Resolved` atau `Closed` (guest ditolak).
+  - Mekanisme *upsert* (`ON CONFLICT (ticket_id) DO UPDATE`) yang memungkinkan pelapor memperbarui penilaian yang telah dikirim.
+- Penambahan modul Knowledge Base: fondasi, pencarian/filter, dan artikel terkait (PR #15, #16, #17, Step 2.1a/b/c):
+  - Tabel baru `kb_articles` melalui migrasi Alembic `005_add_knowledge_base.py` dan `init_db()`.
+  - Modul Blueprint baru `knowledge_base` (`/knowledge-base/`) untuk pembuatan, pengubahan, dan penghapusan artikel oleh Admin dan IT.
+  - Visibilitas artikel berbasis peran: artikel `published` dapat diakses seluruh peran; artikel `draft` hanya dapat diakses Admin/IT (mengembalikan 404 bagi peran lain untuk mencegah kebocoran informasi).
+  - Pencarian artikel dengan kata kunci (parameterized `ILIKE`) dan filter dropdown kategori tiket.
+  - Tampilan hingga 5 artikel solusi berstatus `published` dari kategori yang sama pada halaman detail tiket Service Desk.
+- Perbaikan cascade delete pada penghapusan permanen tiket (Sweep PR #22, Commit `ef862ad`):
+  - Penghapusan otomatis data terkait pada `ticket_ratings` dan `ticket_relationships` di dalam transaksi yang sama saat tiket dihapus permanen oleh Admin.
+  - Migrasi data satu kali melalui Alembic `009_delete_orphan_ratings_and_relationships.py` untuk membersihkan data yatim (*orphan rows*) dari penghapusan tiket uji coba sebelumnya.
+- Rangkaian tindak lanjut dan pengerasan Fase 1 (*Fase 1 follow-ups & hardening*):
+  - Pengerasan Service Desk (PR #12): penguncian tiket selesai dari modifikasi status biasa atau komentar/lampiran baru, validasi integritas staf penugasan (*assignee*), serta penghapusan berkas fisik dan riwayat aktivitas saat tiket dihapus permanen.
+  - Persistensi berkas unggahan: konfigurasi volume mount host Docker (`/home/ubuntu/my-web-app-uploads` ↔ `/app/uploads`) untuk menjaga keutuhan berkas lampiran saat redeploy container.
+  - Penyesuaian batas unggahan Nginx: konfigurasi `client_max_body_size 15m` pada reverse proxy (aplikasi tetap membatasi 5 MB per berkas).
+  - Penataan antarmuka antrean tiket (PR #13 & PR #14): penataan lencana status bertumpuk vertikal tepat di atas lencana SLA secara terpusat tanpa tumpang-tindih visual, serta perataan tengah (*text-align: center*) pada header dan seluruh sel kolom STATUS tabel tiket.
 - Penambahan lampiran berkas (*file attachments*) untuk tiket Service Desk:
   - Tabel baru `ticket_attachments` melalui migrasi Alembic `004_add_ticket_attachments.py` dan `init_db()`.
   - Penyimpanan berkas di filesystem (`uploads/`, dikonfigurasi via `UPLOAD_FOLDER`) dengan nama acak UUID untuk mencegah kerentanan path traversal.
