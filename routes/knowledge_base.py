@@ -10,19 +10,50 @@ knowledge_base_bp = Blueprint('knowledge_base', __name__, url_prefix='/knowledge
 @roles_required('admin', 'it', 'user', 'guest')
 def index():
     user_role = session.get('role', 'guest')
+    q = request.args.get('q', '').strip()
+    category = request.args.get('category', '').strip()
+
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        if user_role in ['admin', 'it']:
-            cur.execute("SELECT * FROM kb_articles ORDER BY created_at DESC;")
-        else:
-            cur.execute("SELECT * FROM kb_articles WHERE status = 'published' ORDER BY created_at DESC;")
+        cur.execute("SELECT name FROM ticket_categories ORDER BY name ASC;")
+        categories = cur.fetchall()
+        valid_category_names = {c['name'] for c in categories}
+
+        conditions = []
+        params = []
+
+        if user_role not in ['admin', 'it']:
+            conditions.append("status = 'published'")
+
+        if q:
+            conditions.append("(title ILIKE %s OR content ILIKE %s OR tags ILIKE %s)")
+            keyword_param = f"%{q}%"
+            params.extend([keyword_param, keyword_param, keyword_param])
+
+        if category and category in valid_category_names:
+            conditions.append("category = %s")
+            params.append(category)
+
+        query = "SELECT * FROM kb_articles"
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY created_at DESC;"
+
+        cur.execute(query, tuple(params))
         articles = cur.fetchall()
     finally:
         cur.close()
         conn.close()
 
-    return render_template('knowledge_base/list.html', articles=articles, active_page='knowledge_base')
+    return render_template(
+        'knowledge_base/list.html',
+        articles=articles,
+        categories=categories,
+        q=q,
+        category=category,
+        active_page='knowledge_base'
+    )
 
 
 @knowledge_base_bp.route('/<int:article_id>')
