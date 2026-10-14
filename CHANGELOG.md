@@ -5,6 +5,8 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 ---
 
 ## [Unreleased]
+
+## [2026-10-14] - Fase 2: Service Desk lanjutan
 - Penambahan relasi tiket dengan auto-close tiket duplikat (PR #21, Step 2.5):
   - Tabel baru `ticket_relationships` melalui migrasi Alembic `008_add_ticket_relationships.py` dan `init_db()`.
   - Penautan tiket lain sebagai "related" (tautan biasa) atau "duplicate" oleh peran Admin dan IT.
@@ -38,6 +40,8 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
   - Persistensi berkas unggahan: konfigurasi volume mount host Docker (`/home/ubuntu/my-web-app-uploads` ↔ `/app/uploads`) untuk menjaga keutuhan berkas lampiran saat redeploy container.
   - Penyesuaian batas unggahan Nginx: konfigurasi `client_max_body_size 15m` pada reverse proxy (aplikasi tetap membatasi 5 MB per berkas).
   - Penataan antarmuka antrean tiket (PR #13 & PR #14): penataan lencana status bertumpuk vertikal tepat di atas lencana SLA secara terpusat tanpa tumpang-tindih visual, serta perataan tengah (*text-align: center*) pada header dan seluruh sel kolom STATUS tabel tiket.
+
+## [2026-10-13] - Fase 1: Service Desk inti
 - Penambahan lampiran berkas (*file attachments*) untuk tiket Service Desk:
   - Tabel baru `ticket_attachments` melalui migrasi Alembic `004_add_ticket_attachments.py` dan `init_db()`.
   - Penyimpanan berkas di filesystem (`uploads/`, dikonfigurasi via `UPLOAD_FOLDER`) dengan nama acak UUID untuk mencegah kerentanan path traversal.
