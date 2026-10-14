@@ -140,6 +140,19 @@ def init_db():
             );
         ''')
 
+        # 9. Tabel Ticket Ratings (CSAT)
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS ticket_ratings (
+                id SERIAL PRIMARY KEY,
+                ticket_id INT NOT NULL UNIQUE,
+                rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+                comment TEXT,
+                rater VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+
         # Insert Default Categories Jika Belum Ada
         default_categories = ['Hardware', 'Network', 'Software', 'Server', 'Request']
         for cat in default_categories:
