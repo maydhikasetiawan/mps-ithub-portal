@@ -245,12 +245,40 @@
         <h4 style="color: #38bdf8; font-size: 13px; margin-bottom: 15px;">💬 TAMBAHKAN KOMENTAR</h4>
         <form method="POST">
             <input type="hidden" name="action" value="comment">
+            {% if session['role'] in ['admin', 'it'] %}
+            <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <select id="canned-select" class="form-control" style="flex: 1; min-width: 200px; font-size: 13px;">
+                    <option value="">— Gunakan Template Respon —</option>
+                    {% for tmpl in canned_templates %}
+                    <option value="{{ tmpl.id }}">{{ tmpl.title }}</option>
+                    {% endfor %}
+                </select>
+                <a href="{{ url_for('tickets.manage_canned_responses') }}" style="color: #38bdf8; font-size: 12px; text-decoration: none; white-space: nowrap;">Kelola Template</a>
+            </div>
+            {% endif %}
             <div class="form-group" style="margin-bottom: 15px;">
                 <label style="color: #cbd5e1; font-size: 12px;">Komentar:</label>
-                <textarea name="comment" class="form-control" rows="3" placeholder="Tuliskan komentar atau catatan tambahan..." required></textarea>
+                <textarea id="comment-textarea" name="comment" class="form-control" rows="3" placeholder="Tuliskan komentar atau catatan tambahan..." required></textarea>
             </div>
             <button type="submit" class="btn-primary">Kirim Komentar</button>
         </form>
+        {% if session['role'] in ['admin', 'it'] %}
+        <script>
+        (function() {
+            const CANNED = {{ canned_templates_json | tojson | safe }};
+            const selectEl = document.getElementById('canned-select');
+            const commentArea = document.getElementById('comment-textarea');
+            if (selectEl && commentArea) {
+                selectEl.addEventListener('change', function() {
+                    const selectedId = this.value;
+                    if (selectedId && CANNED[selectedId] !== undefined) {
+                        commentArea.value = CANNED[selectedId];
+                    }
+                });
+            }
+        })();
+        </script>
+        {% endif %}
     </div>
     {% endif %}
 
