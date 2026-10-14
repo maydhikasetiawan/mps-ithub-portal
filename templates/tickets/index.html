@@ -73,14 +73,16 @@
                 </span>
             </td>
             <td>
-                <span class="badge {% if t.status == 'Open' %}badge-orange{% elif t.status == 'In Progress' %}badge-yellow{% elif t.status == 'Resolved' %}badge-green{% else %}badge-red{% endif %}">
-                    {{ t.status }}
+                <span style="display: inline-flex; flex-direction: column; align-items: center; gap: 4px;">
+                    <span class="badge {% if t.status == 'Open' %}badge-orange{% elif t.status == 'In Progress' %}badge-yellow{% elif t.status == 'Resolved' %}badge-green{% else %}badge-red{% endif %}">
+                        {{ t.status }}
+                    </span>
+                    {% if t.sla and t.sla.badge_text %}
+                    <span class="badge {% if t.sla.state == 'approaching' %}badge-yellow{% elif t.sla.state == 'breached' %}badge-red{% elif t.sla.state == 'met' %}badge-green{% endif %}">
+                        {{ t.sla.badge_text }}
+                    </span>
+                    {% endif %}
                 </span>
-                {% if t.sla and t.sla.badge_text %}
-                <span class="badge {% if t.sla.state == 'approaching' %}badge-yellow{% elif t.sla.state == 'breached' %}badge-red{% elif t.sla.state == 'met' %}badge-green{% endif %}" style="margin-left: 4px;">
-                    {{ t.sla.badge_text }}
-                </span>
-                {% endif %}
             </td>
             <td>
                 <strong>{{ t.created_by }}</strong>
