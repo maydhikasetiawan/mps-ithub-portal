@@ -537,6 +537,59 @@ def detail(ticket_id):
             flash("Penilaian berhasil disimpan!", "success")
             return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
+        elif action == 'reopen':
+            if user_role == 'guest':
+                cur.close()
+                conn.close()
+                flash("Guest tidak diizinkan membuka ulang tiket.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            if ticket['status'] not in ['Resolved', 'Closed']:
+                cur.close()
+                conn.close()
+                flash("Hanya tiket yang sudah selesai yang dapat dibuka ulang.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            if username != ticket['created_by'] and user_role not in ['admin', 'it']:
+                cur.close()
+                conn.close()
+                flash("Akses ditolak! Anda tidak memiliki izin untuk membuka ulang tiket ini.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            reason = request.form.get('reopen_reason', '').strip()
+            if len(reason) > 500:
+                cur.close()
+                conn.close()
+                flash("Alasan buka ulang tiket tidak boleh lebih dari 500 karakter.", "danger")
+                return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+            cur.execute("""
+                UPDATE tickets
+                SET status = 'Open', resolved_by = NULL, resolved_at = NULL, resolution_note = NULL
+                WHERE id = %s;
+            """, (ticket_id,))
+
+            content = f"Ticket reopened by {username}" + (f" (Reason: {reason})" if reason else "")
+            cur.execute("""
+                INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                VALUES (%s, %s, 'status', %s);
+            """, (ticket_id, username, content))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            flash("Tiket berhasil dibuka ulang!", "success")
+            updated_ticket = dict(ticket)
+            updated_ticket.update({
+                'status': 'Open',
+                'resolved_by': None,
+                'resolved_at': None,
+                'resolution_note': None
+            })
+            send_webhook('ticket.status_changed', updated_ticket, username)
+            return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
         else:
             if user_role not in ['admin', 'it']:
                 flash("Akses ditolak! Hanya Tim IT & Admin yang dapat memperbarui status tiket.", "danger")

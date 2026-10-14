@@ -186,6 +186,16 @@
         </div>
         <p style="font-size: 13px; color: #cbd5e1; white-space: pre-line;">{{ ticket.resolution_note or 'Tidak ada catatan penyelesaian.' }}</p>
 
+        {% if ticket.created_by == session['username'] or session['role'] in ['admin', 'it'] %}
+        <form method="POST" style="margin-top: 15px; border-top: 1px solid #1e293b; padding-top: 15px;">
+            <input type="hidden" name="action" value="reopen">
+            <div class="form-group" style="margin-bottom: 12px;">
+                <textarea name="reopen_reason" class="form-control" rows="2" maxlength="500" placeholder="Alasan dibuka ulang (opsional)..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary" style="min-height: 44px;">Buka Ulang Tiket</button>
+        </form>
+        {% endif %}
+
         {% elif session['role'] in ['admin', 'it'] %}
         <!-- Form Pengisian Hanya Buka Jika Status Masih Open / In Progress -->
         <form method="POST">
