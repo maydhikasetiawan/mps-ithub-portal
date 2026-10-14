@@ -68,13 +68,16 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET, POST /assets/hard-delete/<int:asset_id>` — Hapus permanen dari basis data (konfirmasi nama dan kata sandi admin).
 
 ### d. `tickets` (`routes/tickets.py`, URL prefix: `/tickets`)
-- **Tujuan**: Layanan helpdesk/service desk internal. Pembuatan kode tiket otomatis (`TCK-YYYYMMDD-XXX`), filter status, penyelesaian masalah (*resolution note*), penugasan staf, penambahan komentar, kalkulasi Service Level Agreement (SLA) otomatis, serta pencatatan linimasa aktivitas terpadu dan manajemen kategori dinamis.
+- **Tujuan**: Layanan helpdesk/service desk internal. Pembuatan kode tiket otomatis (`TCK-YYYYMMDD-XXX`), filter status, penyelesaian masalah (*resolution note*), penugasan staf, penambahan komentar, kalkulasi Service Level Agreement (SLA) otomatis, serta pencatatan linimasa aktivitas terpadu dan manajemen kategori dinamis. Seluruh fitur tiket Fase 2 (penilaian kepuasan CSAT, buka ulang tiket/reopen, template respon/canned responses, dan relasi tiket/relationships) beroperasi di dalam blueprint ini melalui aksi dispatch pada `detail()` serta rute `/tickets/canned-responses*`.
 - **Rute Utama**:
   - `GET /tickets/` — Daftar tiket (pengguna biasa hanya melihat tiket miliknya; mendukung filter status dan parameter `assignee`: `all`, `unassigned`, `me`; dilengkapi badge SLA).
   - `GET, POST /tickets/add` — Pembuatan laporan masalah baru beserta pencatatan otomatis aktivitas `created`.
-  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket beserta blok target/status SLA dan linimasa aktivitas; penanganan POST terbagi: penambahan komentar (`action=comment`, admin/it/user pada tiketnya) dan pembaruan status/assignee (`action=update_status`, admin/it) dengan auto-logging riwayat status dan penugasan.
+  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket beserta blok target/status SLA dan linimasa aktivitas; penanganan POST terbagi: penambahan komentar (`action=comment`, admin/it/user pada tiketnya), pembaruan status/assignee (`action=update_status`, admin/it), penilaian CSAT (`action=submit_rating`, reporter tiket), buka ulang tiket (`action=reopen`, reporter/admin/it), penautan relasi tiket (`action=link`, admin/it), dan pemutusan relasi (`action=unlink`, admin/it).
   - `GET, POST /tickets/categories` — Manajemen kategori tiket (Admin).
   - `GET /tickets/categories/delete/<int:category_id>` — Hapus kategori tiket (Admin).
+  - `GET, POST /tickets/canned-responses` — Kelola pustaka template balasan tiket (Admin/IT).
+  - `GET, POST /tickets/canned-responses/<int:template_id>/edit` — Edit template respon cepat (Admin/IT).
+  - `POST /tickets/canned-responses/<int:template_id>/delete` — Hapus template respon cepat (Admin/IT).
   - `GET, POST /tickets/delete-permanent/<int:ticket_id>` — Hapus permanen tiket (Admin).
   - `GET /tickets/<int:ticket_id>/attachments/<int:att_id>/download` — Unduh berkas lampiran tiket dengan proteksi izin akses via `send_file`.
 - **Aturan & State Machine SLA**:
@@ -132,11 +135,20 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 - **Rute**:
   - `GET /health` — Mengembalikan JSON `{"status": "healthy"}` dengan status HTTP 200.
 
+### i. `knowledge_base` (`routes/knowledge_base.py`, URL prefix: `/knowledge-base`)
+- **Tujuan**: Modul basis pengetahuan solusi masalah teknis mandiri. Mendukung pencarian kata kunci, filter kategori, manajemen artikel draft dan published, serta referensi solusi artikel terkait pada tiket.
+- **Rute Utama**:
+  - `GET /knowledge-base/` — Daftar artikel solusi (pencarian kata kunci dan filter kategori).
+  - `GET /knowledge-base/<int:article_id>` — Detail artikel pengetahuan (draft mengembalikan 404 bagi non-admin/IT).
+  - `GET, POST /knowledge-base/add` — Penambahan artikel baru (Admin/IT).
+  - `GET, POST /knowledge-base/edit/<int:article_id>` — Edit artikel pengetahuan (Admin/IT).
+  - `POST /knowledge-base/delete/<int:article_id>` — Hapus artikel pengetahuan (Admin/IT).
+
 ---
 
 ## 4. Skema Basis Data (Database Schema)
 
-Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`migrations/versions/001_add_missing_schema_objects.py`):
+Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–009`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
 
 1. **`users`**
    - Kolom: `id` (PK, Serial), `username` (VARCHAR 50, Unique), `email` (VARCHAR 100, Unique), `password_hash` (TEXT), `role` (VARCHAR 20, default 'staff'), `department` (VARCHAR 50, default 'IT'), `must_change_password` (BOOLEAN, default FALSE), `created_at` (TIMESTAMP).
@@ -160,14 +172,28 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
 9. **`ticket_attachments`**
    - Kolom: `id` (PK, Serial), `ticket_id` (INT, Not Null), `stored_filename` (VARCHAR 255, Not Null), `original_filename` (VARCHAR 255, Not Null), `size_bytes` (INT, Not Null), `mime_type` (VARCHAR 100), `uploader` (VARCHAR 50), `created_at` (TIMESTAMP).
    - Menyimpan seluruh metadata berkas lampiran tiket.
+10. **`kb_articles`** *(Migrasi 005)*
+    - Kolom: `id` (PK, Serial), `title` (VARCHAR 255, Not Null), `category` (VARCHAR 100, Not Null), `content` (TEXT, Not Null), `tags` (VARCHAR 255), `status` (VARCHAR 20, default 'draft', check draft/published), `author` (VARCHAR 50), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP).
+    - Tujuan: Menyimpan artikel panduan teknis dan solusi masalah Knowledge Base.
+11. **`ticket_ratings`** *(Migrasi 006)*
+    - Kolom: `id` (PK, Serial), `ticket_id` (INT, Not Null, Unique), `rating` (INT, Not Null, check 1-5), `comment` (TEXT), `rater` (VARCHAR 50), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP).
+    - Tujuan: Menyimpan penilaian kepuasan layanan (CSAT) dari pelapor tiket.
+12. **`canned_responses`** *(Migrasi 007)*
+    - Kolom: `id` (PK, Serial), `title` (VARCHAR 255, Not Null), `content` (TEXT, Not Null), `category` (VARCHAR 100, default 'Umum'), `author` (VARCHAR 50), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP).
+    - Tujuan: Menyimpan pustaka template balasan komentar Service Desk bagi Admin dan IT.
+13. **`ticket_relationships`** *(Migrasi 008)*
+    - Kolom: `id` (PK, Serial), `ticket_a_id` (INT, Not Null), `ticket_b_id` (INT, Not Null), `relation_type` (VARCHAR 20, Not Null: 'duplicate' / 'related'), `created_by` (VARCHAR 50), `created_at` (TIMESTAMP).
+    - Tujuan: Menyimpan hubungan keterkaitan antar-tiket. Konvensi penyimpanan: `ticket_a_id` = tiket duplikat (sumber), `ticket_b_id` = tiket kanonikal (target). Keunikan pasangan kedua arah ditegakkan di level aplikasi tanpa constraint UNIQUE DB.
 
 *Relasi Relasional*:
 Hubungan antar-tabel dijaga secara logis di tingkat aplikasi:
 - `tickets.created_by`, `tickets.assigned_to`, `tickets.resolved_by`, `assets.updated_by`, `assets.deleted_by` berelasi logis ke `users.username`.
-- `ticket_activities.ticket_id` berelasi logis ke `tickets.id`; `ticket_activities.actor` berelasi logis ke `users.username`.
-- `ticket_attachments.ticket_id` berelasi logis ke `tickets.id`; `ticket_attachments.uploader` berelasi logis ke `users.username`.
+- `ticket_activities.ticket_id`, `ticket_attachments.ticket_id`, dan `ticket_ratings.ticket_id` berelasi logis ke `tickets.id`.
+- `ticket_relationships.ticket_a_id` dan `ticket_relationships.ticket_b_id` berelasi logis ke `tickets.id`.
+- `ticket_activities.actor`, `ticket_attachments.uploader`, `ticket_ratings.rater`, `canned_responses.author`, `kb_articles.author`, dan `ticket_relationships.created_by` berelasi logis ke `users.username`.
 - `users.department` dan `tickets.department` berelasi logis ke `departments.name`.
-- `tickets.category` berelasi logis ke `ticket_categories.name`.
+- `tickets.category`, `kb_articles.category`, dan `canned_responses.category` berelasi logis ke `ticket_categories.name`.
+- Penghapusan permanen tiket (`delete_permanent`) membersihkan seluruh baris terkait pada `ticket_activities`, `ticket_attachments`, `ticket_ratings`, dan `ticket_relationships` di level aplikasi sebelum baris tiket dihapus (tanpa ON DELETE CASCADE / foreign keys).
 
 ---
 
