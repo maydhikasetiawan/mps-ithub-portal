@@ -7,6 +7,7 @@ from routes.assets import assets_bp
 from routes.tickets import tickets_bp
 from routes.reports import reports_bp
 from routes.users import users_bp # 1. Import Blueprint Users
+from routes.knowledge_base import knowledge_base_bp
 from flask import session, redirect, url_for, request, flash
 from routes.uptime import uptime_bp
 
@@ -21,6 +22,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(assets_bp)
 app.register_blueprint(tickets_bp)
+app.register_blueprint(knowledge_base_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(users_bp) # 2. Register Blueprint Users
 

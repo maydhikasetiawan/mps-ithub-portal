@@ -125,6 +125,21 @@ def init_db():
             );
         ''')
 
+        # 8. Tabel Knowledge Base Articles
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS kb_articles (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                content TEXT NOT NULL,
+                tags VARCHAR(255),
+                status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+                author VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+
         # Insert Default Categories Jika Belum Ada
         default_categories = ['Hardware', 'Network', 'Software', 'Server', 'Request']
         for cat in default_categories:

@@ -88,6 +88,7 @@
 
             <!-- Modul Service Desk: Untuk Semua Role -->
             <li class="nav-item"><a href="{{ url_for('tickets.index') }}" class="nav-link {% if active_page == 'tickets' %}active{% endif %}">🎫 Service Desk</a></li>
+            <li class="nav-item"><a href="{{ url_for('knowledge_base.index') }}" class="nav-link {% if active_page == 'knowledge_base' %}active{% endif %}">📚 Knowledge Base</a></li>
 
             <!-- Modul Uptime Monitor: Untuk Admin, IT, dan Guest -->
             {% if session['role'] in ['admin', 'it', 'guest'] %}
