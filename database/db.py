@@ -57,6 +57,7 @@ def init_db():
                 status VARCHAR(20) DEFAULT 'Active',
                 location VARCHAR(100),
                 notes TEXT,
+                assigned_to VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_by VARCHAR(50)

@@ -42,6 +42,15 @@
             </select>
         </div>
         <div class="form-group">
+            <label>Ditugaskan Kepada</label>
+            <select name="assigned_to" class="form-control">
+                <option value="">Unassigned</option>
+                {% for u in users %}
+                <option value="{{ u }}">{{ u }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
             <label>Lokasi Perangkat / Region</label>
             <input type="text" name="location" class="form-control" placeholder="Contoh: AWS ap-southeast-3 / Rak Server 1">
         </div>

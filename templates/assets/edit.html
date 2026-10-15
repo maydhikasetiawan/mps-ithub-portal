@@ -41,6 +41,15 @@
             </select>
         </div>
         <div class="form-group">
+            <label>Ditugaskan Kepada</label>
+            <select name="assigned_to" class="form-control">
+                <option value="" {% if not asset.assigned_to %}selected{% endif %}>Unassigned</option>
+                {% for u in users %}
+                <option value="{{ u }}" {% if asset.assigned_to == u %}selected{% endif %}>{{ u }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
             <label>Lokasi Perangkat / Region</label>
             <input type="text" name="location" class="form-control" value="{{ asset.location or '' }}">
         </div>

@@ -33,6 +33,7 @@
 
         <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155;">
             <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">LOKASI & UMUR</h4>
+            <p style="font-size: 13px; margin-bottom: 6px;">Assigned To: <strong>{{ asset.assigned_to or 'Unassigned' }}</strong></p>
             <p style="font-size: 13px; margin-bottom: 6px;">Lokasi: <strong>{{ asset.location or '-' }}</strong></p>
             <p style="font-size: 13px;">Umur di Inventori: <strong style="color: #38bdf8;">{{ asset.age }}</strong></p>
         </div>
