@@ -31,6 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             pendingForm = form;
             messageEl.textContent = form.getAttribute('data-confirm') || '';
+            if (confirmBtn) {
+                confirmBtn.textContent = form.getAttribute('data-confirm-label') || 'Ya, Hapus';
+            }
             modal.style.display = 'flex';
         });
     });
