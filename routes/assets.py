@@ -99,6 +99,7 @@ def add():
         mac_address = request.form.get('mac_address', '').strip()
         status = request.form.get('status')
         assigned_to_raw = request.form.get('assigned_to', '').strip()
+        no_warranty = (request.form.get('no_warranty') == '1')
         purchase_date_raw = request.form.get('purchase_date', '').strip()
         warranty_expiry_raw = request.form.get('warranty_expiry', '').strip()
         location = request.form.get('location', '').strip()
@@ -125,16 +126,19 @@ def add():
                 return render_template('assets/add.html', users=assignable_users, active_page='assets')
 
         warranty_expiry = None
-        if warranty_expiry_raw:
-            try:
-                warranty_expiry = datetime.strptime(warranty_expiry_raw, '%Y-%m-%d').date()
-            except ValueError:
-                flash("Tanggal garansi habis tidak valid. Gunakan format YYYY-MM-DD.", "danger")
-                return render_template('assets/add.html', users=assignable_users, active_page='assets')
+        if no_warranty:
+            warranty_expiry = None
+        else:
+            if warranty_expiry_raw:
+                try:
+                    warranty_expiry = datetime.strptime(warranty_expiry_raw, '%Y-%m-%d').date()
+                except ValueError:
+                    flash("Tanggal garansi habis tidak valid. Gunakan format YYYY-MM-DD.", "danger")
+                    return render_template('assets/add.html', users=assignable_users, active_page='assets')
 
-        if purchase_date and warranty_expiry and warranty_expiry < purchase_date:
-            flash("Tanggal garansi habis tidak boleh sebelum tanggal beli.", "danger")
-            return render_template('assets/add.html', users=assignable_users, active_page='assets')
+            if purchase_date and warranty_expiry and warranty_expiry < purchase_date:
+                flash("Tanggal garansi habis tidak boleh sebelum tanggal beli.", "danger")
+                return render_template('assets/add.html', users=assignable_users, active_page='assets')
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -150,9 +154,9 @@ def add():
 
         try:
             cur.execute("""
-                INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, location, notes, updated_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-            """, (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, location, notes, user_now))
+                INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, updated_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, user_now))
             conn.commit()
             cur.close()
             conn.close()
@@ -186,7 +190,9 @@ def detail(asset_id):
 
     warranty_status = "Tidak ada info garansi"
     days_remaining = None
-    if asset['warranty_expiry']:
+    if asset['no_warranty']:
+        warranty_status = "Tanpa Garansi"
+    elif asset['warranty_expiry']:
         today = date.today()
         diff = (asset['warranty_expiry'] - today).days
         days_remaining = diff
@@ -213,6 +219,7 @@ def edit(asset_id):
         mac_address = request.form.get('mac_address')
         status = request.form.get('status')
         assigned_to_raw = request.form.get('assigned_to', '').strip()
+        no_warranty = (request.form.get('no_warranty') == '1')
         purchase_date_raw = request.form.get('purchase_date', '').strip()
         warranty_expiry_raw = request.form.get('warranty_expiry', '').strip()
         location = request.form.get('location')
@@ -257,36 +264,39 @@ def edit(asset_id):
                 return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
 
         warranty_expiry = None
-        if warranty_expiry_raw:
-            try:
-                warranty_expiry = datetime.strptime(warranty_expiry_raw, '%Y-%m-%d').date()
-            except ValueError:
+        if no_warranty:
+            warranty_expiry = None
+        else:
+            if warranty_expiry_raw:
+                try:
+                    warranty_expiry = datetime.strptime(warranty_expiry_raw, '%Y-%m-%d').date()
+                except ValueError:
+                    cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
+                    asset = cur.fetchone()
+                    cur.close()
+                    conn.close()
+                    if not asset:
+                        return "Asset tidak ditemukan atau sudah dihapus", 404
+                    flash("Tanggal garansi habis tidak valid. Gunakan format YYYY-MM-DD.", "danger")
+                    return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
+
+            if purchase_date and warranty_expiry and warranty_expiry < purchase_date:
                 cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
                 asset = cur.fetchone()
                 cur.close()
                 conn.close()
                 if not asset:
                     return "Asset tidak ditemukan atau sudah dihapus", 404
-                flash("Tanggal garansi habis tidak valid. Gunakan format YYYY-MM-DD.", "danger")
+                flash("Tanggal garansi habis tidak boleh sebelum tanggal beli.", "danger")
                 return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
-
-        if purchase_date and warranty_expiry and warranty_expiry < purchase_date:
-            cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
-            asset = cur.fetchone()
-            cur.close()
-            conn.close()
-            if not asset:
-                return "Asset tidak ditemukan atau sudah dihapus", 404
-            flash("Tanggal garansi habis tidak boleh sebelum tanggal beli.", "danger")
-            return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
 
         try:
             cur.execute("""
                 UPDATE assets
-                SET ip_address = %s, mac_address = %s, status = %s, assigned_to = %s, purchase_date = %s, warranty_expiry = %s, location = %s, notes = %s,
+                SET ip_address = %s, mac_address = %s, status = %s, assigned_to = %s, purchase_date = %s, warranty_expiry = %s, no_warranty = %s, location = %s, notes = %s,
                     updated_at = CURRENT_TIMESTAMP, updated_by = %s
                 WHERE id = %s;
-            """, (ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, location, notes, user_now, asset_id))
+            """, (ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, user_now, asset_id))
             conn.commit()
             cur.close()
             conn.close()

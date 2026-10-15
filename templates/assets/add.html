@@ -55,8 +55,11 @@
             <input type="date" name="purchase_date" class="form-control">
         </div>
         <div class="form-group">
+            <label><input type="checkbox" name="no_warranty" value="1" id="no_warranty"> Tanpa Garansi</label>
+        </div>
+        <div class="form-group">
             <label>Garansi Habis</label>
-            <input type="date" name="warranty_expiry" class="form-control">
+            <input type="date" name="warranty_expiry" id="warranty_expiry" class="form-control">
         </div>
         <div class="form-group">
             <label>Lokasi Perangkat / Region</label>
@@ -70,4 +73,19 @@
         <a href="{{ url_for('assets.index') }}" style="color: #94a3b8; margin-left: 15px; font-size: 13px; text-decoration: none;">Batal</a>
     </form>
 </div>
+<script>
+(function() {
+    var chk = document.getElementById('no_warranty');
+    var exp = document.getElementById('warranty_expiry');
+    if (!chk || !exp) return;
+    chk.addEventListener('change', function() {
+        if (chk.checked) {
+            exp.value = '';
+            exp.disabled = true;
+        } else {
+            exp.disabled = false;
+        }
+    });
+})();
+</script>
 {% endblock %}
