@@ -6,6 +6,44 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [2026-10-15] - Fase 3: Asset Management
+- Pengelolaan siklus hidup aset dengan status pengadaan (*asset lifecycle*) (PR #31, main `37572c4`):
+  - Penambahan status baru `Procurement` pada aset sehingga daftar status lengkap menjadi `Procurement`, `Active`, `Under Repair`, dan `Retired` (`ALLOWED_STATUSES`).
+  - Penyesuaian filter status antarmuka, formulir tambah/edit aset, dan lencana status pada tabel serta halaman detail aset.
+- Penugasan aset ke pengguna (*asset assignment*) (PR #32, main `2f182f2`):
+  - Penambahan kolom `assigned_to VARCHAR(50)` pada tabel `assets` melalui migrasi Alembic `010_add_asset_assigned_to.py` dan `init_db()`.
+  - Dukungan penugasan perangkat kepada pengguna dengan peran `admin`, `it`, atau `user` (mengecualikan `guest`), dilengkapi filter penugasan pada daftar aset (`unassigned` atau spesifik pengguna).
+- Informasi dan pengingat masa garansi aset (*warranty reminders*) (PR #33, main `4e151b5`):
+  - Penambahan kolom `purchase_date DATE` dan `warranty_expiry DATE` pada tabel `assets` melalui migrasi Alembic `011_add_asset_warranty_dates.py` dan `init_db()`.
+  - Validasi tanggal berformat YYYY-MM-DD dengan aturan `warranty_expiry` tidak boleh sebelum `purchase_date`.
+  - Tampilan sisa hari garansi pada detail aset serta kalkulasi status garansi dinamis (*Aktif — habis dalam N hari*, *Habis hari ini*, atau *Sudah habis — N hari lalu*).
+- Penegasan status tanpa garansi (*explicit Tanpa Garansi*) dan reposisi antarmuka (PR #34, main `b7169f7`; PR #36):
+  - Penambahan kolom `no_warranty BOOLEAN DEFAULT FALSE` pada tabel `assets` melalui migrasi Alembic `012_add_asset_no_warranty.py` dan `init_db()`.
+  - Checkbox "Tanpa Garansi" yang mengosongkan serta menonaktifkan input tanggal garansi habis saat dipilih (*checkbox-wins*).
+  - Pemindahan letak checkbox "Tanpa Garansi" agar berada tepat di bawah input tanggal "Garansi Habis" pada formulir tambah dan edit aset (Step 3.3b, PR #36).
+- Jejak audit aktivitas aset (*asset audit trail*) (PR #35, main `cd72438`):
+  - Pembentukan tabel baru `asset_activities` melalui migrasi Alembic `013_add_asset_activities.py` dan `init_db()` (`id`, `asset_id`, `actor`, `action`, `field_name`, `old_value`, `new_value`, `created_at`).
+  - Pencatatan linimasa aktivitas otomatis untuk aksi: `created` saat pembuatan aset, `updated` per field yang mengalami perubahan saat diedit, `soft-deleted` saat penghapusan sementara, dan `restored` saat pemulihan aset (tanpa *historical backfill* untuk data aset lama).
+  - Panel "Riwayat Perubahan" pada halaman detail aset yang merender label field audit dan nilai perubahan yang mudah dibaca.
+- Impor massal aset dari CSV (*bulk asset import*) (PR #36, main `80f6324`):
+  - Rute baru `GET, POST /assets/import` khusus peran `admin` dan `it`.
+  - Validasi ketat baris header tepat 12 kolom: `asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes`.
+  - Transaksi atomik penuh (*all-or-nothing*): jika terdapat 1 baris tidak valid, seluruh proses impor dibatalkan tanpa ada data yang tersimpan, mengumpulkan seluruh galat per baris, dan membatasi maksimal 200 baris per berkas.
+  - Pencatatan entri linimasa `asset_activities` beraksi `created` untuk setiap aset yang berhasil diimpor dalam transaksi database yang sama.
+- Template CSV unduhan dan perapian kotak panduan impor (PR #37, main `576f82d`):
+  - Rute baru `GET /assets/import/template` khusus peran `admin` dan `it` yang menghasilkan berkas CSV siap pakai secara *in-memory* dengan nama berkas `template_import_aset.csv`.
+  - Berkas template memuat header 12 kolom dan tepat 1 baris contoh data valid (`CONTOH-001`).
+  - Redesain kotak dokumentasi format pada `/assets/import` dalam bahasa Indonesia terstruktur (Cara Import, Ketentuan, dan Header CSV) dengan proteksi `overflow-wrap: break-word` dan `word-break: break-all` agar baris header tidak meluap (*overflow*).
+- Halaman cetak label QR fisik aset (PR #38, main `202272d`):
+  - Rute baru `GET /assets/<int:asset_id>/label` untuk peran `admin`, `it`, dan `guest` (visibilitas baca sama dengan detail aset).
+  - Pembangkitan kode QR secara *server-side* menggunakan pustaka `qrcode==8.2` dan `Pillow`, dikonversi *in-memory* melalui `io.BytesIO` menjadi data URI base64 tanpa menulis berkas fisik ke disk.
+  - Muatan (*payload*) QR berupa URL lengkap halaman detail aset via `url_for('assets.detail', asset_id=asset_id, _external=True)`.
+  - Template cetak mandiri (`templates/assets/label.html`) dengan tombol aksi "Cetak" (`window.print()`) yang disembunyikan otomatis pada media cetak (`@media print`).
+- Dukungan *reverse proxy* via Werkzeug ProxyFix (PR #39, main `d25a23f`):
+  - Pemasangan middleware `ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)` pada `app.py` agar aplikasi mempercayai header `X-Forwarded-*` dari Nginx (tepat 1 *hop*).
+  - Memastikan `url_for(..., _external=True)` pada payload QR menghasilkan URL berskema `https://` yang sesuai dengan akses peramban pengguna.
+  - *Catatan prasyarat*: ProxyFix hanya berdampak jika *reverse proxy* (Nginx) meneruskan skema protokol asli melalui header `X-Forwarded-Proto` (konfigurasi sisi server di luar repositori).
+
 ## [2026-10-15] - Blok "Besok" + susulan
 - Penambahan notifikasi polling tiket baru pada daftar Service Desk (PR #27):
   - Endpoint baru `GET /tickets/api/new-count` khusus peran `admin` dan `it` yang mengembalikan jumlah tiket baru sejak baseline `since_id` pengguna dalam format JSON `{"new_count": N, "latest_id": M}` dengan filter status, assignee, dan pencarian yang identik dengan rute daftar tiket.

@@ -6,9 +6,10 @@ Dokumen ini menjelaskan rancangan arsitektur, tumpukan teknologi (*technology st
 
 ## 1. Tumpukan Teknologi (Tech Stack)
 
-- **Backend Framework**: Python 3.11, Flask 3.0.2, Werkzeug 3.0.1
+- **Backend Framework**: Python 3.11, Flask 3.0.2, Werkzeug 3.0.1 (dengan middleware `ProxyFix` untuk reverse proxy)
 - **Template Engine & UI**: Jinja2 dengan Vanilla Custom CSS (tanpa framework CSS eksternal seperti Bootstrap/Tailwind)
 - **Database & Migration**: PostgreSQL, driver `psycopg2-binary` 2.9.9 (`RealDictCursor`), skema migrasi menggunakan Alembic 1.13.1
+- **Image Processing & QR**: Pillow 10.2.0, qrcode 8.2 (pembangkitan QR server-side in-memory)
 - **Containerization**: Docker (base image `python:3.11-slim`)
 - **CI/CD & Infrastruktur**: GitHub Actions, GitHub Container Registry (`ghcr.io`), AWS EC2 via SSH (`appleboy/ssh-action`)
 
@@ -55,12 +56,15 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET /` & `GET /dashboard` — Agregasi total aset aktif, jumlah tiket terbuka/dalam pengerjaan, dan persentase ketersediaan layanan (*uptime percentage*).
 
 ### c. `assets` (`routes/assets.py`, URL prefix: `/assets`)
-- **Tujuan**: Manajemen inventaris aset TI dan IP Address Management (IPAM). Mendukung pencatatan aset, penghitungan usia perangkat, validasi keunikan tag aset, soft delete beralasan, pemulihan (*restore*), serta penghapusan permanen khusus admin dengan verifikasi ganda.
+- **Tujuan**: Manajemen inventaris aset TI dan IP Address Management (IPAM). Mendukung pencatatan aset, penghitungan usia perangkat, validasi keunikan tag aset, penugasan perangkat, pemantauan masa garansi dan opsi tanpa garansi, jejak audit riwayat perubahan (*asset activities*), impor massal dari CSV, pencetakan label fisik QR, soft delete beralasan, pemulihan (*restore*), serta penghapusan permanen khusus admin dengan verifikasi ganda.
 - **Rute Utama**:
-  - `GET /assets/` — Daftar aset aktif dengan filter pencarian.
-  - `GET, POST /assets/add` — Formulir penambahan aset baru.
-  - `GET /assets/<int:asset_id>` — Detail spesifikasi dan histori aset.
-  - `GET, POST /assets/edit/<int:asset_id>` — Pembaruan informasi perangkat.
+  - `GET /assets/` — Daftar aset aktif dengan filter pencarian, status, dan penugasan pengguna.
+  - `GET, POST /assets/add` — Formulir penambahan aset baru dengan penugasan dan masa garansi.
+  - `GET /assets/<int:asset_id>` — Detail spesifikasi, linimasa riwayat perubahan, status garansi dinamis, dan kalkulasi usia aset.
+  - `GET, POST /assets/edit/<int:asset_id>` — Pembaruan informasi perangkat dengan pencatatan jejak audit otomatis.
+  - `GET, POST /assets/import` — Impor massal data aset dari berkas CSV dengan validasi 12 kolom dan transaksi atomik (*all-or-nothing*).
+  - `GET /assets/import/template` — Unduh template CSV aset siap pakai (`template_import_aset.csv`) yang dibangkitkan secara *in-memory*.
+  - `GET /assets/<int:asset_id>/label` — Tampilan label QR fisik siap cetak untuk perangkat tertentu (pembangkitan QR *server-side* via qrcode/Pillow).
   - `GET, POST /assets/delete/<int:asset_id>` — Soft delete aset ke riwayat terhapus.
   - `POST /assets/restore/<int:asset_id>` — Mengembalikan aset terhapus ke status aktif.
   - `GET /assets/deleted-history` — Riwayat seluruh aset yang berstatus terhapus.
@@ -149,13 +153,13 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 
 ## 4. Skema Basis Data (Database Schema)
 
-Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–009`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
+Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–013`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
 
 1. **`users`**
    - Kolom: `id` (PK, Serial), `username` (VARCHAR 50, Unique), `email` (VARCHAR 100, Unique), `password_hash` (TEXT), `role` (VARCHAR 20, default 'staff'), `department` (VARCHAR 50, default 'IT'), `must_change_password` (BOOLEAN, default FALSE), `created_at` (TIMESTAMP).
    - Data bawaan: akun `admin` (role admin) dan `guest` (role guest).
 2. **`assets`**
-   - Kolom: `id` (PK, Serial), `asset_tag` (VARCHAR 50, Unique), `name` (VARCHAR 100), `category` (VARCHAR 50), `ip_address` (VARCHAR 45), `mac_address` (VARCHAR 45), `status` (VARCHAR 20, default 'Active'), `location` (VARCHAR 100), `notes` (TEXT), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP), `updated_by` (VARCHAR 50).
+   - Kolom: `id` (PK, Serial), `asset_tag` (VARCHAR 50, Unique), `name` (VARCHAR 100), `category` (VARCHAR 50), `ip_address` (VARCHAR 45), `mac_address` (VARCHAR 45), `status` (VARCHAR 20, default 'Active'), `location` (VARCHAR 100), `notes` (TEXT), `assigned_to` (VARCHAR 50, Migrasi 010), `purchase_date` (DATE, Migrasi 011), `warranty_expiry` (DATE, Migrasi 011), `no_warranty` (BOOLEAN, default FALSE, Migrasi 012), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP), `updated_by` (VARCHAR 50).
 3. **`tickets`**
    - Kolom: `id` (PK, Serial), `ticket_code` (VARCHAR 20, Unique), `title` (VARCHAR 150), `category` (VARCHAR 50), `priority` (VARCHAR 20, default 'Medium'), `status` (VARCHAR 20, default 'Open'), `description` (TEXT), `created_by` (VARCHAR 50), `assigned_to` (VARCHAR 50), `department` (VARCHAR 50), `resolution_note` (TEXT), `resolved_by` (VARCHAR 50), `resolved_at` (TIMESTAMP), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP).
 4. **`ticket_categories`**
@@ -185,16 +189,21 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
 13. **`ticket_relationships`** *(Migrasi 008)*
     - Kolom: `id` (PK, Serial), `ticket_a_id` (INT, Not Null), `ticket_b_id` (INT, Not Null), `relation_type` (VARCHAR 20, Not Null: 'duplicate' / 'related'), `created_by` (VARCHAR 50), `created_at` (TIMESTAMP).
     - Tujuan: Menyimpan hubungan keterkaitan antar-tiket. Konvensi penyimpanan: `ticket_a_id` = tiket duplikat (sumber), `ticket_b_id` = tiket kanonikal (target). Keunikan pasangan kedua arah ditegakkan di level aplikasi tanpa constraint UNIQUE DB.
+14. **`asset_activities`** *(Migrasi 013)*
+    - Kolom: `id` (PK, Serial), `asset_id` (INT, Not Null), `actor` (VARCHAR 50), `action` (VARCHAR 20, Not Null), `field_name` (VARCHAR 50), `old_value` (TEXT), `new_value` (TEXT), `created_at` (TIMESTAMP).
+    - Tujuan: Menyimpan linimasa jejak audit (*audit trail*) riwayat perubahan data aset untuk aksi `created`, `updated`, `soft-deleted`, dan `restored`.
 
 *Relasi Relasional*:
 Hubungan antar-tabel dijaga secara logis di tingkat aplikasi:
-- `tickets.created_by`, `tickets.assigned_to`, `tickets.resolved_by`, `assets.updated_by`, `assets.deleted_by` berelasi logis ke `users.username`.
+- `tickets.created_by`, `tickets.assigned_to`, `tickets.resolved_by`, `assets.assigned_to`, `assets.updated_by`, `assets.deleted_by` berelasi logis ke `users.username`.
 - `ticket_activities.ticket_id`, `ticket_attachments.ticket_id`, dan `ticket_ratings.ticket_id` berelasi logis ke `tickets.id`.
 - `ticket_relationships.ticket_a_id` dan `ticket_relationships.ticket_b_id` berelasi logis ke `tickets.id`.
-- `ticket_activities.actor`, `ticket_attachments.uploader`, `ticket_ratings.rater`, `canned_responses.author`, `kb_articles.author`, dan `ticket_relationships.created_by` berelasi logis ke `users.username`.
+- `asset_activities.asset_id` berelasi logis ke `assets.id`.
+- `ticket_activities.actor`, `ticket_attachments.uploader`, `ticket_ratings.rater`, `canned_responses.author`, `kb_articles.author`, `ticket_relationships.created_by`, dan `asset_activities.actor` berelasi logis ke `users.username`.
 - `users.department` dan `tickets.department` berelasi logis ke `departments.name`.
 - `tickets.category`, `kb_articles.category`, dan `canned_responses.category` berelasi logis ke `ticket_categories.name`.
 - Penghapusan permanen tiket (`delete_permanent`) membersihkan seluruh baris terkait pada `ticket_activities`, `ticket_attachments`, `ticket_ratings`, dan `ticket_relationships` di level aplikasi sebelum baris tiket dihapus (tanpa ON DELETE CASCADE / foreign keys).
+- Penghapusan permanen aset (`hard_delete`) membersihkan seluruh baris linimasa terkait pada `asset_activities` sebelum baris aset dihapus.
 
 ---
 
@@ -209,6 +218,14 @@ Sistem menggunakan session cookies terenkripsi (`SECRET_KEY`) dengan proteksi du
 - Pengaturan `SESSION_REFRESH_EACH_REQUEST = True` memastikan cookie kedaluwarsa diperbarui setiap ada permintaan baru (*rolling idle timeout*).
 - Status permanen sesi diaktifkan khusus saat login berhasil (`session.permanent = True` di `routes/auth.py`). Sesi anonim tidak pernah dijadikan permanen.
 - Jika pengguna idle melampaui 30 menit, permintaan atau klik berikutnya mendapati sesi telah kedaluwarsa dan `@login_required` otomatis mengarahkan ke `/login`.
+
+### Middleware ProxyFix (Reverse Proxy Trust):
+- Aplikasi dibungkus oleh middleware Werkzeug `ProxyFix` pada `app.py`:
+  ```python
+  app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+  ```
+- Mengonfigurasi aplikasi agar mempercayai header `X-Forwarded-For`, `X-Forwarded-Proto`, dan `X-Forwarded-Host` dari tepat 1 *hop* reverse proxy Nginx. Hal ini memastikan pembentukan URL absolut seperti `url_for(..., _external=True)` (digunakan untuk muatan kode QR label aset) menghasilkan skema protokol `https://` yang sesuai dengan akses peramban pengguna.
+- **Catatan Prasyarat**: `ProxyFix` hanya berdampak jika reverse proxy Nginx meneruskan skema protokol asli klien melalui header `X-Forwarded-Proto` (konfigurasi tingkat server di luar repositori).
 
 ### Peran Pengguna:
 - **`admin`**: Memiliki hak akses penuh mencakup manajemen pengguna, departemen, penghapusan permanen tiket dan aset, manajemen kategori, dan seluruh modul operasional.
