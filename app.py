@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 from database.db import init_db
 from routes.auth import auth_bp
 from routes.dashboard import dashboard_bp
@@ -13,6 +14,11 @@ from flask import session, redirect, url_for, request, flash
 from routes.uptime import uptime_bp
 
 app = Flask(__name__)
+# Trust X-Forwarded-* headers from the single Nginx reverse
+# proxy in front of the app (exactly 1 hop — do NOT increase
+# these values). This makes url_for(_external=True) generate
+# https:// URLs matching what browsers actually use.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 secret_key = os.getenv('SECRET_KEY')
 if not secret_key:
     raise RuntimeError("Missing required environment variable: SECRET_KEY")
