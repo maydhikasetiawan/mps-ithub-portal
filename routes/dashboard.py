@@ -39,6 +39,7 @@ def index():
         SELECT id, asset_tag, name, warranty_expiry
         FROM assets
         WHERE is_deleted = FALSE
+          AND (no_warranty IS NULL OR no_warranty = FALSE)
           AND warranty_expiry IS NOT NULL
           AND warranty_expiry <= %s
         ORDER BY warranty_expiry ASC;

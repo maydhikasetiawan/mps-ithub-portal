@@ -60,6 +60,7 @@ def init_db():
                 assigned_to VARCHAR(50),
                 purchase_date DATE,
                 warranty_expiry DATE,
+                no_warranty BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_by VARCHAR(50)
