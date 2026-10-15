@@ -58,6 +58,8 @@ def init_db():
                 location VARCHAR(100),
                 notes TEXT,
                 assigned_to VARCHAR(50),
+                purchase_date DATE,
+                warranty_expiry DATE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_by VARCHAR(50)
