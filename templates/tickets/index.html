@@ -7,6 +7,10 @@
 <style>
 .btn-secondary { background: #334155; color: #cbd5e1; padding: 10px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; border: none; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; }
 .btn-secondary:hover { background: #475569; }
+.new-ticket-banner { display: none; }
+.new-ticket-banner.is-visible { display: flex; justify-content: space-between; align-items: center; background: #0284c7; color: #f0f9ff; padding: 12px 16px; border-radius: 6px; margin-bottom: 15px; font-weight: 500; gap: 10px; flex-wrap: wrap; }
+.new-ticket-banner .banner-btn { background: #f8fafc; color: #0369a1; border: none; padding: 6px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; min-height: 44px; }
+.new-ticket-banner .banner-btn:hover { background: #e2e8f0; }
 </style>
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
     <!-- Kelompok Tombol Filter Status (Kiri) -->
@@ -38,6 +42,10 @@
         {% endif %}
     </div>
 </div>
+
+{% if session['role'] in ['admin', 'it'] %}
+<div id="new-ticket-banner" class="new-ticket-banner"></div>
+{% endif %}
 
 <div class="table-responsive">
 <table class="data-table">
@@ -105,4 +113,61 @@
     </tbody>
 </table>
 </div>
+
+{% if session['role'] in ['admin', 'it'] %}
+<script>
+(function() {
+    const lastSeenId = {{ latest_ticket_id|default(0) }};
+    let isFetching = false;
+    const banner = document.getElementById('new-ticket-banner');
+
+    function poll() {
+        if (document.visibilityState !== 'visible' || isFetching) {
+            return;
+        }
+
+        const currentParams = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams();
+        params.set('since_id', lastSeenId);
+        if (currentParams.has('status')) params.set('status', currentParams.get('status'));
+        if (currentParams.has('assignee')) params.set('assignee', currentParams.get('assignee'));
+        if (currentParams.has('q')) params.set('q', currentParams.get('q'));
+
+        isFetching = true;
+        fetch('/tickets/api/new-count?' + params.toString())
+            .then(function(res) {
+                if (!res.ok) throw new Error();
+                return res.json();
+            })
+            .then(function(data) {
+                if (data && data.new_count > 0 && banner) {
+                    banner.textContent = '';
+                    const textSpan = document.createElement('span');
+                    textSpan.textContent = '\uD83D\uDD14 ' + data.new_count + ' tiket baru';
+
+                    const reloadBtn = document.createElement('button');
+                    reloadBtn.type = 'button';
+                    reloadBtn.className = 'banner-btn';
+                    reloadBtn.textContent = 'Muat tiket baru';
+                    reloadBtn.addEventListener('click', function() {
+                        window.location.reload();
+                    });
+
+                    banner.appendChild(textSpan);
+                    banner.appendChild(reloadBtn);
+                    banner.classList.add('is-visible');
+                }
+            })
+            .catch(function() {
+                // Silently ignore network or non-200 errors
+            })
+            .finally(function() {
+                isFetching = false;
+            });
+    }
+
+    setInterval(poll, 30000);
+})();
+</script>
+{% endif %}
 {% endblock %}
