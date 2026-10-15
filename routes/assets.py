@@ -1,6 +1,6 @@
 import csv
 import io
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response
 from werkzeug.security import check_password_hash
 from routes.auth import login_required, roles_required
 from database.db import get_db_connection
@@ -202,6 +202,21 @@ def add():
             return render_template('assets/add.html', users=assignable_users, active_page='assets')
 
     return render_template('assets/add.html', users=assignable_users, active_page='assets')
+
+# --- DOWNLOAD TEMPLATE CSV ---
+@assets_bp.route('/import/template', methods=['GET'])
+@login_required
+@roles_required('admin', 'it')
+def import_template():
+    body = (
+        "asset_tag,name,category,ip_address,mac_address,status,assigned_to,purchase_date,warranty_expiry,no_warranty,location,notes\n"
+        "CONTOH-001,Contoh Aset,PC/Laptop,192.168.1.100,,Active,,2026-01-10,2027-01-10,0,Ruang Contoh,Hapus baris ini sebelum import\n"
+    )
+    return Response(
+        body,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="template_import_aset.csv"'}
+    )
 
 # --- IMPORT ASET DARI CSV ---
 @assets_bp.route('/import', methods=['GET', 'POST'])

@@ -15,9 +15,31 @@
     </div>
     {% endif %}
 
-    <div style="background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: #cbd5e1; line-height: 1.6; white-space: pre-wrap;">header row must be
-asset_tag,name,category,ip_address,mac_address,status,assigned_to,purchase_date,warranty_expiry,no_warranty,location,notes
-— plus the rules: asset_tag + name wajib diisi; category salah satu dari Server, PC/Laptop, Network, Docker Container, Printer/Peripherals; status kosong → Active; tanggal format YYYY-MM-DD; no_warranty diisi 1/0 (atau ya/tidak); maksimal 200 baris; kalau ada 1 baris error, SELURUH file dibatalkan (tidak ada yang diimpor).</div>
+    <div style="background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: #cbd5e1; line-height: 1.7;">
+        <div style="font-weight: bold; margin-bottom: 5px;">Cara Import:</div>
+        <ol style="margin: 0 0 15px 0; padding-left: 20px;">
+            <li>Download Template CSV di bawah.</li>
+            <li>Isi data aset pada template, lalu hapus baris contoh (CONTOH-001) sebelum upload.</li>
+            <li>Pilih file CSV, lalu klik Import.</li>
+        </ol>
+
+        <div style="font-weight: bold; margin-bottom: 5px;">Ketentuan:</div>
+        <ul style="margin: 0 0 15px 0; padding-left: 20px;">
+            <li><code>asset_tag</code> dan <code>name</code> wajib diisi.</li>
+            <li><code>category</code>: Server, PC/Laptop, Network, Docker Container, Printer/Peripherals.</li>
+            <li><code>status</code> kosong → Active.</li>
+            <li>Tanggal format YYYY-MM-DD.</li>
+            <li><code>no_warranty</code>: 1/0 (atau ya/tidak).</li>
+            <li>Maksimal 200 baris. Kalau ada 1 baris error, SELURUH file dibatalkan.</li>
+        </ul>
+
+        <div style="font-weight: bold; margin-bottom: 5px;">Header CSV:</div>
+        <div style="overflow-wrap: break-word; word-break: break-all;"><code style="overflow-wrap: break-word; word-break: break-all;">asset_tag,name,category,ip_address,mac_address,status,assigned_to,purchase_date,warranty_expiry,no_warranty,location,notes</code></div>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('assets.import_template') }}" class="btn-primary">Download Template CSV</a>
+    </div>
 
     <form method="POST" enctype="multipart/form-data">
         <div class="form-group">
