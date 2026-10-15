@@ -6,6 +6,8 @@ from datetime import datetime
 
 assets_bp = Blueprint('assets', __name__, url_prefix='/assets')
 
+ALLOWED_STATUSES = ['Procurement', 'Active', 'Under Repair', 'Retired']
+
 def calculate_age(created_at):
     if not created_at:
         return "-"
@@ -32,18 +34,26 @@ def calculate_age(created_at):
 @roles_required('admin', 'it', 'guest')
 def index():
     search_query = request.args.get('q', '')
+    status_filter = request.args.get('status', '').strip()
+    if status_filter not in ALLOWED_STATUSES:
+        status_filter = ''
+
     conn = get_db_connection()
     cur = conn.cursor()
 
+    query = "SELECT * FROM assets WHERE is_deleted = FALSE"
+    params = []
+
+    if status_filter:
+        query += " AND status = %s"
+        params.append(status_filter)
+
     if search_query:
-        cur.execute("""
-            SELECT * FROM assets
-            WHERE is_deleted = FALSE
-              AND (name ILIKE %s OR asset_tag ILIKE %s OR ip_address ILIKE %s OR location ILIKE %s)
-            ORDER BY id DESC;
-        """, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', f'%{search_query}%'))
-    else:
-        cur.execute("SELECT * FROM assets WHERE is_deleted = FALSE ORDER BY id DESC;")
+        query += " AND (name ILIKE %s OR asset_tag ILIKE %s OR ip_address ILIKE %s OR location ILIKE %s)"
+        params.extend([f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', f'%{search_query}%'])
+
+    query += " ORDER BY id DESC;"
+    cur.execute(query, tuple(params))
 
     assets_list = cur.fetchall()
     cur.close()
@@ -52,7 +62,7 @@ def index():
     for asset in assets_list:
         asset['age'] = calculate_age(asset['created_at'])
 
-    return render_template('assets/index.html', assets=assets_list, search_query=search_query, active_page='assets')
+    return render_template('assets/index.html', assets=assets_list, search_query=search_query, status_filter=status_filter, active_page='assets')
 
 # --- TAMBAH ASET BARU ---
 @assets_bp.route('/add', methods=['GET', 'POST'])
@@ -69,6 +79,10 @@ def add():
         location = request.form.get('location', '').strip()
         notes = request.form.get('notes', '').strip()
         user_now = session.get('username')
+
+        if status not in ALLOWED_STATUSES:
+            flash("Status tidak valid.", "danger")
+            return render_template('assets/add.html', active_page='assets')
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -134,6 +148,16 @@ def edit(asset_id):
         location = request.form.get('location')
         notes = request.form.get('notes')
         user_now = session.get('username')
+
+        if status not in ALLOWED_STATUSES:
+            cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
+            asset = cur.fetchone()
+            cur.close()
+            conn.close()
+            if not asset:
+                return "Asset tidak ditemukan atau sudah dihapus", 404
+            flash("Status tidak valid.", "danger")
+            return render_template('assets/edit.html', asset=asset, active_page='assets')
 
         try:
             cur.execute("""

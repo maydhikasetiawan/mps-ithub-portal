@@ -34,6 +34,7 @@
         <div class="form-group">
             <label>Status Perangkat</label>
             <select name="status" class="form-control">
+                <option value="Procurement" {% if asset.status == 'Procurement' %}selected{% endif %}>Procurement</option>
                 <option value="Active" {% if asset.status == 'Active' %}selected{% endif %}>Active</option>
                 <option value="Under Repair" {% if asset.status == 'Under Repair' %}selected{% endif %}>Under Repair</option>
                 <option value="Retired" {% if asset.status == 'Retired' %}selected{% endif %}>Retired</option>
