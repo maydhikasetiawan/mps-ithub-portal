@@ -1,3 +1,5 @@
+import csv
+import io
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import check_password_hash
 from routes.auth import login_required, roles_required
@@ -7,6 +9,7 @@ from datetime import datetime, date
 assets_bp = Blueprint('assets', __name__, url_prefix='/assets')
 
 ALLOWED_STATUSES = ['Procurement', 'Active', 'Under Repair', 'Retired']
+ALLOWED_CATEGORIES = ['Server', 'PC/Laptop', 'Network', 'Docker Container', 'Printer/Peripherals']
 
 FIELD_LABELS = {
     'ip_address': 'IP Address',
@@ -199,6 +202,197 @@ def add():
             return render_template('assets/add.html', users=assignable_users, active_page='assets')
 
     return render_template('assets/add.html', users=assignable_users, active_page='assets')
+
+# --- IMPORT ASET DARI CSV ---
+@assets_bp.route('/import', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin', 'it')
+def import_assets():
+    if request.method == 'GET':
+        return render_template('assets/import.html', active_page='assets')
+
+    csv_file = request.files.get('csv_file')
+    if not csv_file or not csv_file.filename:
+        flash("Pilih file CSV dulu.", "danger")
+        return render_template('assets/import.html', active_page='assets')
+
+    if not csv_file.filename.lower().endswith('.csv'):
+        flash("File harus berformat .csv.", "danger")
+        return render_template('assets/import.html', active_page='assets')
+
+    try:
+        content = csv_file.read().decode('utf-8-sig')
+    except UnicodeDecodeError:
+        flash("File bukan teks UTF-8 yang valid.", "danger")
+        return render_template('assets/import.html', active_page='assets')
+
+    stream = io.StringIO(content)
+    reader = csv.DictReader(stream)
+
+    if reader.fieldnames is None:
+        flash("File CSV tidak berisi data.", "danger")
+        return render_template('assets/import.html', active_page='assets')
+
+    headers = [h.strip() for h in reader.fieldnames if h is not None]
+    header_set = set(headers)
+    expected_columns = {
+        'asset_tag', 'name', 'category', 'ip_address', 'mac_address',
+        'status', 'assigned_to', 'purchase_date', 'warranty_expiry',
+        'no_warranty', 'location', 'notes'
+    }
+
+    missing = sorted(list(expected_columns - header_set))
+    extra = sorted(list(header_set - expected_columns))
+    if missing or extra or len(headers) != len(expected_columns):
+        reasons = []
+        if missing:
+            reasons.append(f"Kolom hilang: {', '.join(missing)}")
+        if extra:
+            reasons.append(f"Kolom tidak dikenal: {', '.join(extra)}")
+        if not reasons and len(headers) != len(expected_columns):
+            reasons.append("Terdapat duplikasi kolom pada header")
+        flash(f"Header CSV tidak sesuai. {'; '.join(reasons)}", "danger")
+        return render_template('assets/import.html', active_page='assets')
+
+    rows = []
+    for r in reader:
+        clean_row = {}
+        for k, v in r.items():
+            if k is not None:
+                clean_row[k.strip()] = v.strip() if isinstance(v, str) else ('' if v is None else str(v).strip())
+        rows.append(clean_row)
+
+    if len(rows) == 0:
+        flash("File CSV tidak berisi data.", "danger")
+        return render_template('assets/import.html', active_page='assets')
+
+    if len(rows) > 200:
+        flash("Maksimal 200 baris per import.", "danger")
+        return render_template('assets/import.html', active_page='assets')
+
+    assignable_users = get_assignable_users()
+    errors = []
+    seen_tags = set()
+    validated_rows = []
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        for idx, row in enumerate(rows, start=2):
+            tag = row.get('asset_tag', '')
+            name = row.get('name', '')
+            cat = row.get('category', '')
+            status_raw = row.get('status', '')
+            assigned_to_raw = row.get('assigned_to', '')
+            p_date_raw = row.get('purchase_date', '')
+            w_exp_raw = row.get('warranty_expiry', '')
+            no_w_raw = row.get('no_warranty', '').lower()
+
+            if not tag:
+                errors.append({'row': idx, 'asset_tag': tag, 'reason': 'Asset tag wajib diisi.'})
+            else:
+                if tag in seen_tags:
+                    errors.append({'row': idx, 'asset_tag': tag, 'reason': f"Asset tag '{tag}' duplikat di dalam file CSV."})
+                seen_tags.add(tag)
+                cur.execute("SELECT id FROM assets WHERE asset_tag = %s;", (tag,))
+                if cur.fetchone():
+                    errors.append({'row': idx, 'asset_tag': tag, 'reason': f"Asset tag '{tag}' sudah terdaftar di sistem."})
+
+            if not name:
+                errors.append({'row': idx, 'asset_tag': tag, 'reason': 'Nama aset wajib diisi.'})
+
+            if cat not in ALLOWED_CATEGORIES:
+                errors.append({'row': idx, 'asset_tag': tag, 'reason': f"Kategori '{cat}' tidak valid."})
+
+            status = 'Active'
+            if status_raw:
+                if status_raw not in ALLOWED_STATUSES:
+                    errors.append({'row': idx, 'asset_tag': tag, 'reason': f"Status '{status_raw}' tidak valid."})
+                else:
+                    status = status_raw
+
+            assigned_to = None
+            if assigned_to_raw:
+                if assigned_to_raw not in assignable_users:
+                    errors.append({'row': idx, 'asset_tag': tag, 'reason': f"Pengguna '{assigned_to_raw}' tidak valid."})
+                else:
+                    assigned_to = assigned_to_raw
+
+            no_warranty = False
+            if no_w_raw == '':
+                no_warranty = False
+            elif no_w_raw in ('1', 'true', 'ya'):
+                no_warranty = True
+            elif no_w_raw in ('0', 'false', 'tidak'):
+                no_warranty = False
+            else:
+                errors.append({'row': idx, 'asset_tag': tag, 'reason': f"Nilai no_warranty '{row.get('no_warranty', '')}' tidak valid."})
+
+            purchase_date = None
+            p_ok = True
+            if p_date_raw:
+                try:
+                    purchase_date = datetime.strptime(p_date_raw, '%Y-%m-%d').date()
+                except ValueError:
+                    p_ok = False
+                    errors.append({'row': idx, 'asset_tag': tag, 'reason': f"Tanggal beli '{p_date_raw}' tidak valid (format: YYYY-MM-DD)."})
+
+            warranty_expiry = None
+            w_ok = True
+            if no_warranty:
+                warranty_expiry = None
+            else:
+                if w_exp_raw:
+                    try:
+                        warranty_expiry = datetime.strptime(w_exp_raw, '%Y-%m-%d').date()
+                    except ValueError:
+                        w_ok = False
+                        errors.append({'row': idx, 'asset_tag': tag, 'reason': f"Tanggal garansi habis '{w_exp_raw}' tidak valid (format: YYYY-MM-DD)."})
+
+            if p_ok and w_ok and purchase_date and warranty_expiry and warranty_expiry < purchase_date:
+                errors.append({'row': idx, 'asset_tag': tag, 'reason': "Tanggal garansi habis tidak boleh sebelum tanggal beli."})
+
+            validated_rows.append((
+                tag, name, cat,
+                row.get('ip_address') or None,
+                row.get('mac_address') or None,
+                status, assigned_to,
+                purchase_date, warranty_expiry, no_warranty,
+                row.get('location') or None,
+                row.get('notes') or None
+            ))
+
+        if errors:
+            cur.close()
+            conn.close()
+            flash(f"Import gagal: {len(errors)} kesalahan ditemukan pada file CSV.", "danger")
+            return render_template('assets/import.html', errors=errors, active_page='assets')
+
+        user_now = session.get('username')
+        for item in validated_rows:
+            cur.execute("""
+                INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, updated_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id;
+            """, (*item, user_now))
+            new_asset_id = cur.fetchone()['id']
+            cur.execute("""
+                INSERT INTO asset_activities (asset_id, actor, action, field_name, old_value, new_value)
+                VALUES (%s, %s, 'created', NULL, NULL, NULL);
+            """, (new_asset_id, user_now))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash(f"{len(validated_rows)} aset berhasil diimpor.", "success")
+        return redirect(url_for('assets.index'))
+
+    except Exception as e:
+        conn.rollback()
+        cur.close()
+        conn.close()
+        flash(f"Terjadi kesalahan saat mengimpor data: {e}", "danger")
+        return render_template('assets/import.html', active_page='assets')
 
 # --- DETAIL ASET ---
 @assets_bp.route('/<int:asset_id>')

@@ -29,6 +29,7 @@
     <div style="display:flex; gap:10px;">
         <a href="{{ url_for('assets.deleted_history') }}" style="background:#334155; color:#cbd5e1; padding:8px 14px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold;">📜 Riwayat Terhapus</a>
         {% if session['role'] != 'guest' %}
+        <a href="{{ url_for('assets.import_assets') }}" class="btn-primary">Import CSV</a>
         <a href="{{ url_for('assets.add') }}" class="btn-primary">+ Tambah Aset Baru</a>
         {% endif %}
     </div>
