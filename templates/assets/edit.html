@@ -54,11 +54,11 @@
             <input type="date" name="purchase_date" class="form-control" value="{{ asset.purchase_date.strftime('%Y-%m-%d') if asset.purchase_date else '' }}">
         </div>
         <div class="form-group">
-            <label><input type="checkbox" name="no_warranty" value="1" id="no_warranty" {% if asset.no_warranty %}checked{% endif %}> Tanpa Garansi</label>
-        </div>
-        <div class="form-group">
             <label>Garansi Habis</label>
             <input type="date" name="warranty_expiry" id="warranty_expiry" class="form-control" value="{{ asset.warranty_expiry.strftime('%Y-%m-%d') if asset.warranty_expiry else '' }}" {% if asset.no_warranty %}disabled{% endif %}>
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" name="no_warranty" value="1" id="no_warranty" {% if asset.no_warranty %}checked{% endif %}> Tanpa Garansi</label>
         </div>
         <div class="form-group">
             <label>Lokasi Perangkat / Region</label>

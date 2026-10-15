@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Aset - MPS-ITHub{% endblock %}
+{% block header_title %}Import Aset dari CSV{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    {% if errors %}
+    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #fca5a5; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+        <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+            {% for err in errors %}
+            <li>Baris {{ err.row }} ({{ err.asset_tag }}): {{ err.reason }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div style="background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: #cbd5e1; line-height: 1.6; white-space: pre-wrap;">header row must be
+asset_tag,name,category,ip_address,mac_address,status,assigned_to,purchase_date,warranty_expiry,no_warranty,location,notes
+— plus the rules: asset_tag + name wajib diisi; category salah satu dari Server, PC/Laptop, Network, Docker Container, Printer/Peripherals; status kosong → Active; tanggal format YYYY-MM-DD; no_warranty diisi 1/0 (atau ya/tidak); maksimal 200 baris; kalau ada 1 baris error, SELURUH file dibatalkan (tidak ada yang diimpor).</div>
+
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>Pilih File CSV *</label>
+            <input type="file" name="csv_file" class="form-control" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn-primary">Import</button>
+        <a href="{{ url_for('assets.index') }}" style="color: #94a3b8; margin-left: 15px; font-size: 13px; text-decoration: none;">Batal</a>
+    </form>
+</div>
+{% endblock %}
