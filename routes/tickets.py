@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, abort
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, abort, jsonify
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from routes.auth import login_required, roles_required
@@ -347,7 +347,9 @@ def index():
     cur.close()
     conn.close()
 
-    return render_template('tickets/index.html', tickets=tickets_list, status_filter=status_filter, assignee_filter=assignee_filter, search_query=search_query, active_page='tickets')
+    latest_ticket_id = tickets_list[0]['id'] if tickets_list else 0
+
+    return render_template('tickets/index.html', tickets=tickets_list, status_filter=status_filter, assignee_filter=assignee_filter, search_query=search_query, active_page='tickets', latest_ticket_id=latest_ticket_id)
 
 # --- BUAT TIKET BARU ---
 @tickets_bp.route('/add', methods=['GET', 'POST'])
@@ -410,6 +412,51 @@ def add():
     conn.close()
 
     return render_template('tickets/add.html', categories=categories, active_page='tickets')
+
+@tickets_bp.route('/api/new-count')
+@login_required
+@roles_required('admin', 'it')
+def new_count():
+    try:
+        since_id = int(request.args.get('since_id', 0))
+    except (ValueError, TypeError):
+        since_id = 0
+
+    status_filter = request.args.get('status', '')
+    assignee_filter = request.args.get('assignee', 'all').strip()
+    search_query = request.args.get('q', '')
+    user_role = session.get('role', 'guest')
+    username = session.get('username')
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    query = "SELECT COUNT(*) AS new_count, COALESCE(MAX(id), 0) AS latest_id FROM tickets WHERE is_deleted = FALSE AND id > %s"
+    params = [since_id]
+
+    if status_filter:
+        query += " AND status = %s"
+        params.append(status_filter)
+
+    if assignee_filter == 'unassigned':
+        query += " AND assigned_to IS NULL"
+    elif assignee_filter == 'me' and user_role in ['admin', 'it']:
+        query += " AND assigned_to = %s"
+        params.append(username)
+
+    if search_query:
+        query += " AND (ticket_code ILIKE %s OR title ILIKE %s OR created_by ILIKE %s)"
+        params.extend([f'%{search_query}%', f'%{search_query}%', f'%{search_query}%'])
+
+    cur.execute(query, tuple(params))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    new_count_val = row['new_count'] if row else 0
+    latest_id_val = row['latest_id'] if row else 0
+
+    return jsonify({"new_count": new_count_val, "latest_id": latest_id_val})
 
 # --- DETAIL TIKET ---
 @tickets_bp.route('/<int:ticket_id>', methods=['GET', 'POST'])
