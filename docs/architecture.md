@@ -47,7 +47,7 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 - **Tujuan**: Menangani autentikasi sesi, pembatasan brute force (*rate limiting* 5 kali gagal per jendela 15 menit per IP/username), dan dekorator izin akses.
 - **Rute Utama**:
   - `GET, POST /login` — Halaman dan pemrosesan autentikasi login pengguna.
-  - `GET /logout` — Menghapus sesi dan mengarahkan kembali ke halaman login.
+  - `POST /logout` — Menghapus sesi dan mengarahkan kembali ke halaman login (POST-only; dipicu melalui dropdown profil dengan konfirmasi modal "Keluar dari aplikasi?").
 
 ### b. `dashboard` (`routes/dashboard.py`, URL prefix: root)
 - **Tujuan**: Menampilkan statistik ringkasan operasional secara waktu nyata.
@@ -71,6 +71,7 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 - **Tujuan**: Layanan helpdesk/service desk internal. Pembuatan kode tiket otomatis (`TCK-YYYYMMDD-XXX`), filter status, penyelesaian masalah (*resolution note*), penugasan staf, penambahan komentar, kalkulasi Service Level Agreement (SLA) otomatis, serta pencatatan linimasa aktivitas terpadu dan manajemen kategori dinamis. Seluruh fitur tiket Fase 2 (penilaian kepuasan CSAT, buka ulang tiket/reopen, template respon/canned responses, dan relasi tiket/relationships) beroperasi di dalam blueprint ini melalui aksi dispatch pada `detail()` serta rute `/tickets/canned-responses*`.
 - **Rute Utama**:
   - `GET /tickets/` — Daftar tiket (pengguna biasa hanya melihat tiket miliknya; mendukung filter status dan parameter `assignee`: `all`, `unassigned`, `me`; dilengkapi badge SLA).
+  - `GET /tickets/api/new-count` — Endpoint polling berkala untuk menghitung jumlah tiket baru sejak baseline `since_id` pengguna (Admin/IT, mengembalikan JSON `{"new_count": N, "latest_id": M}`).
   - `GET, POST /tickets/add` — Pembuatan laporan masalah baru beserta pencatatan otomatis aktivitas `created`.
   - `GET, POST /tickets/<int:ticket_id>` — Detail tiket beserta blok target/status SLA dan linimasa aktivitas; penanganan POST terbagi: penambahan komentar (`action=comment`, admin/it/user pada tiketnya), pembaruan status/assignee (`action=update_status`, admin/it), penilaian CSAT (`action=submit_rating`, reporter tiket), buka ulang tiket (`action=reopen`, reporter/admin/it), penautan relasi tiket (`action=link`, admin/it), dan pemutusan relasi (`action=unlink`, admin/it).
   - `GET, POST /tickets/categories` — Manajemen kategori tiket (Admin).
@@ -203,6 +204,12 @@ Sistem menggunakan session cookies terenkripsi (`SECRET_KEY`) dengan proteksi du
 1. `@login_required`: Memastikan pengunjung telah memiliki sesi aktif (`session['user_id']`).
 2. `@roles_required(*allowed_roles)`: Memverifikasi nilai `session['role']` sesuai daftar peran yang diizinkan.
 
+### Kedaluwarsa Sesi (Idle Session Timeout):
+- Dikonfigurasi dengan batas waktu tidak aktif 30 menit melalui `PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)`.
+- Pengaturan `SESSION_REFRESH_EACH_REQUEST = True` memastikan cookie kedaluwarsa diperbarui setiap ada permintaan baru (*rolling idle timeout*).
+- Status permanen sesi diaktifkan khusus saat login berhasil (`session.permanent = True` di `routes/auth.py`). Sesi anonim tidak pernah dijadikan permanen.
+- Jika pengguna idle melampaui 30 menit, permintaan atau klik berikutnya mendapati sesi telah kedaluwarsa dan `@login_required` otomatis mengarahkan ke `/login`.
+
 ### Peran Pengguna:
 - **`admin`**: Memiliki hak akses penuh mencakup manajemen pengguna, departemen, penghapusan permanen tiket dan aset, manajemen kategori, dan seluruh modul operasional.
 - **`it`**: Tim teknis IT yang dapat mengelola aset (tambah/edit/soft delete/restore), memperbarui status tiket dan catatan solusi, serta mengelola target uptime monitor.
@@ -217,6 +224,7 @@ Sistem juga menerapkan middleware `check_mandatory_password_change` pada `app.py
 
 Otomatisasi pengiriman kode ke server produksi diatur melalui GitHub Actions pada file `.github/workflows/deploy.yml`:
 
+- **Concurrency Guard**: Dikonfigurasi dengan `concurrency: group: deploy-production, cancel-in-progress: false`. Jika terjadi merge/push beruntun ke `main`, proses deploy kedua akan mengantre dan deploy yang sedang berjalan tidak pernah dibatalkan di tengah jalan (*never killed mid-way*) guna menghindari kondisi inkonsistensi kontainer produksi.
 1. **Trigger**: Event `push` ke branch utama (`main`).
 2. **Job: build-and-push**:
    - Menjalankan runner `ubuntu-latest`.

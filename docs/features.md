@@ -9,7 +9,9 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 ### A. Modul Autentikasi (`routes/auth.py`)
 - **Login Sesi**: Akses masuk berbasis username dan hash kata sandi (`Werkzeug`).
 - **Proteksi Brute-Force**: Membatasi kegagalan login maksimal 5 kali dalam 15 menit per kombinasi IP dan username; mengembalikan kode HTTP 429 saat terkunci.
-- **Logout Sesi**: Menghapus seluruh data sesi dan mengembalikan pengguna ke halaman login.
+- **Logout Sesi**: Form POST khusus dengan modal konfirmasi interaktif ("Keluar dari aplikasi?") melalui dropdown profil di header; menghapus seluruh data sesi dan mengembalikan pengguna ke halaman login (rute `POST /logout` menolak metode GET dengan 405 Method Not Allowed).
+- **Idle Session Timeout (30 Menit)**: Sesi kedaluwarsa otomatis setelah 30 menit tanpa aktivitas (*server-side rolling idle timeout* melalui `PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)` dan `SESSION_REFRESH_EACH_REQUEST = True`). Permintaan berikutnya setelah kedaluwarsa dialihkan kembali ke halaman login.
+- **Profile Dropdown**: Menu dropdown pengguna pada header (#profile-button) yang menampilkan nama pengguna, chevron rotasi, header status peran ("Masuk sebagai"), tautan Ganti Password, dan aksi Logout.
 - **Enforcement Ganti Kata Sandi**: Pengalihan otomatis bagi akun dengan status `must_change_password = TRUE`.
 
 ### B. Modul Dasbor Operasional (`routes/dashboard.py`)
@@ -43,6 +45,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Buka Ulang Tiket (Reopen)**: Pelapor atau Admin/IT dapat membuka kembali tiket `Resolved` atau `Closed` ke status `Open` dengan alasan opsional (maks 500 karakter). Mengosongkan data penyelesaian (`resolved_by`, `resolved_at`, `resolution_note`) namun tetap mempertahankan penugasan (*assignee*) dan rating CSAT sebelumnya; mencatat aktivitas bertipe `status` dan memicu webhook `ticket.status_changed`; perhitungan SLA tetap mengacu pada `created_at` awal.
 - **Template Respon Cepat (Canned Responses)**: Pustaka template balasan tiket yang dikelola oleh Admin/IT (judul, konten, kategori opsional, pembuat). Menu pemilih (*picker*) pada form komentar mengisi teks ke textarea (khusus Admin/IT); template tidak pernah mengirim otomatis (*never auto-send*), pengguna selalu meninjau, mengedit, dan mengirim komentar secara manual.
 - **Relasi Tiket & Auto-Close Duplikat (Ticket Relationships)**: Admin/IT dapat menghubungkan tiket sebagai "related" (tautan biasa) atau "duplicate". Penandaan duplikat secara otomatis menutup tiket saat ini (hanya jika berstatus `Open` atau `In Progress`) dengan catatan solusi `"Duplikat dari TCK-XXX"`, pencatatan aktivitas status, dan pengiriman webhook `ticket.status_changed`. Pemutusan relasi (*unlink*) tidak pernah membuka kembali tiket yang telah ditutup; daftar relasi tampil pada kedua tiket.
+- **Notifikasi Polling Tiket Baru**: Pengecekan tiket baru berkala (setiap 30 detik pada tab aktif) bagi Admin dan IT melalui endpoint `GET /tickets/api/new-count` dengan parameter filter aktif; menampilkan banner notifikasi `🔔 N tiket baru` dan tombol `Muat tiket baru` untuk memuat ulang daftar tiket dengan filter yang sama.
 - **Kategori Tiket Dinamis**: Penambahan dan penghapusan kategori tiket oleh Administrator.
 - **Hapus Permanen Tiket**: Penghapusan total data tiket dari basis data khusus Admin dengan konfirmasi kata sandi; otomatis menghapus aktivitas, lampiran berkas (+ berkas fisik), penilaian CSAT, dan relasi tiket untuk mencegah data yatim (*no orphans*).
 
@@ -80,7 +83,8 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 
 | Modul | Fitur / Tindakan | Endpoint & Method | `admin` | `it` | `user` | `guest` | Dasar Grounding Kode |
 | --- | --- | --- | :---: | :---: | :---: | :---: | --- |
-| **Auth** | Login & Logout | `/login`, `/logout` [GET, POST] | Ya | Ya | Ya | Ya | Rute publik / sesi |
+| **Auth** | Login | `/login` [GET, POST] | Ya | Ya | Ya | Ya | Rute publik / login form |
+| | Logout Sesi | `/logout` [POST] | Ya | Ya | Ya | Ya | `@auth_bp.route('/logout', methods=['POST'])` via profile dropdown |
 | **Profil** | Ganti Password Mandiri | `/users/change-password` [GET, POST] | Ya | Ya | Ya | Ya | `@login_required` |
 | **Dashboard**| Ringkasan Operasional | `/`, `/dashboard` [GET] | Ya | Ya | Ya | Ya | `@login_required` |
 | **Assets** | Daftar Aset Aktif | `/assets/` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
@@ -93,6 +97,7 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Detail Aset Terhapus | `/assets/deleted-detail/<id>` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
 | | Hard Delete Aset | `/assets/hard-delete/<id>` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | **Tickets** | Daftar Tiket | `/tickets/` [GET] | Ya | Ya | Ya* | Ya | `@roles_required('admin', 'it', 'user', 'guest')` (*user: hanya tiket sendiri) |
+| | Cek Tiket Baru (Polling) | `/tickets/api/new-count` [GET] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | | Buat Tiket Baru | `/tickets/add` [GET, POST] | Ya | Ya | Ya | Tidak | `@roles_required('admin', 'it', 'user')` |
 | | Detail Tiket | `/tickets/<id>` [GET] | Ya | Ya | Ya* | Ya | `@roles_required('admin', 'it', 'user', 'guest')` (*user: hanya tiket sendiri) |
 | | Penugasan Tiket (Assignee) | `/tickets/<id>` [POST] | Ya | Ya | Tidak | Tidak | Logika controller: hanya `admin` dan `it` yang dapat menetapkan `assigned_to` |
