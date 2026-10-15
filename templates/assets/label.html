@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Label QR - {{ asset.asset_tag }}</title>
+    <style>
+        body {
+            background: #ffffff;
+            color: #000000;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .label-card {
+            border: 2px solid #000000;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+            background: #ffffff;
+        }
+        .asset-tag {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+        .asset-name {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333333;
+        }
+        .qr-img {
+            max-width: 220px;
+            width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto 15px auto;
+        }
+        .meta-line {
+            font-size: 13px;
+            margin: 4px 0;
+            color: #444444;
+        }
+        .hint {
+            font-size: 11px;
+            color: #666666;
+            margin-top: 12px;
+        }
+        .btn-print {
+            margin-top: 20px;
+            background: #0284c7;
+            color: #ffffff;
+            border: none;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        @media print {
+            body {
+                min-height: auto;
+                padding: 0;
+            }
+            .label-card {
+                border: 2px solid #000000;
+                margin: 0 auto;
+                page-break-inside: avoid;
+            }
+            .btn-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="label-card">
+        <div class="asset-tag">{{ asset.asset_tag }}</div>
+        <div class="asset-name">{{ asset.name }}</div>
+        <img class="qr-img" src="data:image/png;base64,{{ qr_base64 }}" alt="QR Label {{ asset.asset_tag }}">
+        {% if asset.category %}
+        <div class="meta-line">Kategori: {{ asset.category }}</div>
+        {% endif %}
+        {% if asset.ip_address %}
+        <div class="meta-line">IP: {{ asset.ip_address }}</div>
+        {% endif %}
+        {% if asset.location %}
+        <div class="meta-line">Lokasi: {{ asset.location }}</div>
+        {% endif %}
+        <div class="hint">Scan QR untuk membuka detail aset.</div>
+    </div>
+    <button class="btn-print" onclick="window.print()">Cetak</button>
+</body>
+</html>

@@ -1,5 +1,7 @@
 import csv
 import io
+import base64
+import qrcode
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response
 from werkzeug.security import check_password_hash
 from routes.auth import login_required, roles_required
@@ -447,6 +449,29 @@ def detail(asset_id):
             warranty_status = f"Sudah habis — {abs(diff)} hari lalu"
 
     return render_template('assets/detail.html', asset=asset, activities=activities, FIELD_LABELS=FIELD_LABELS, warranty_status=warranty_status, days_remaining=days_remaining, active_page='assets')
+
+# --- CETAK LABEL QR ASET ---
+@assets_bp.route('/<int:asset_id>/label', methods=['GET'])
+@login_required
+@roles_required('admin', 'it', 'guest')
+def asset_label(asset_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM assets WHERE id = %s;", (asset_id,))
+    asset = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not asset:
+        return "Asset tidak ditemukan", 404
+
+    payload = url_for('assets.detail', asset_id=asset_id, _external=True)
+    img = qrcode.make(payload)
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    qr_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    return render_template('assets/label.html', asset=asset, qr_base64=qr_base64, active_page='assets')
 
 # --- EDIT ASET ---
 @assets_bp.route('/edit/<int:asset_id>', methods=['GET', 'POST'])
