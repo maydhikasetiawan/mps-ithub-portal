@@ -67,6 +67,20 @@ def init_db():
             );
         ''')
 
+        # 2b. Tabel Asset Activities (Audit Trail)
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS asset_activities (
+                id SERIAL PRIMARY KEY,
+                asset_id INT NOT NULL,
+                actor VARCHAR(50),
+                action VARCHAR(20) NOT NULL,
+                field_name VARCHAR(50),
+                old_value TEXT,
+                new_value TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+
         # 3. Tabel Tickets
         cur.execute('''
             CREATE TABLE IF NOT EXISTS tickets (
