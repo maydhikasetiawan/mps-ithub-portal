@@ -8,6 +8,29 @@ assets_bp = Blueprint('assets', __name__, url_prefix='/assets')
 
 ALLOWED_STATUSES = ['Procurement', 'Active', 'Under Repair', 'Retired']
 
+FIELD_LABELS = {
+    'ip_address': 'IP Address',
+    'mac_address': 'MAC Address',
+    'status': 'Status',
+    'assigned_to': 'Ditugaskan Kepada',
+    'purchase_date': 'Tanggal Beli',
+    'warranty_expiry': 'Garansi Habis',
+    'no_warranty': 'Tanpa Garansi',
+    'location': 'Lokasi',
+    'notes': 'Catatan'
+}
+
+def render_audit_value(field, val):
+    if val is None or val == '':
+        return None
+    if isinstance(val, (date, datetime)):
+        return val.strftime('%Y-%m-%d')
+    if isinstance(val, bool):
+        return 'Ya' if val else 'Tidak'
+    if field == 'no_warranty':
+        return 'Ya' if val in (True, 'True', 'true', 1, '1') else 'Tidak'
+    return str(val).strip() or None
+
 def get_assignable_users():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -155,8 +178,14 @@ def add():
         try:
             cur.execute("""
                 INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, updated_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id;
             """, (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, user_now))
+            new_asset_id = cur.fetchone()['id']
+            cur.execute("""
+                INSERT INTO asset_activities (asset_id, actor, action, field_name, old_value, new_value)
+                VALUES (%s, %s, 'created', NULL, NULL, NULL);
+            """, (new_asset_id, user_now))
             conn.commit()
             cur.close()
             conn.close()
@@ -180,11 +209,16 @@ def detail(asset_id):
     cur = conn.cursor()
     cur.execute("SELECT * FROM assets WHERE id = %s;", (asset_id,))
     asset = cur.fetchone()
-    cur.close()
-    conn.close()
 
     if not asset:
+        cur.close()
+        conn.close()
         return "Asset tidak ditemukan", 404
+
+    cur.execute("SELECT * FROM asset_activities WHERE asset_id = %s ORDER BY created_at DESC, id DESC;", (asset_id,))
+    activities = cur.fetchall()
+    cur.close()
+    conn.close()
 
     asset['age'] = calculate_age(asset['created_at'])
 
@@ -203,7 +237,7 @@ def detail(asset_id):
         else:
             warranty_status = f"Sudah habis — {abs(diff)} hari lalu"
 
-    return render_template('assets/detail.html', asset=asset, warranty_status=warranty_status, days_remaining=days_remaining, active_page='assets')
+    return render_template('assets/detail.html', asset=asset, activities=activities, FIELD_LABELS=FIELD_LABELS, warranty_status=warranty_status, days_remaining=days_remaining, active_page='assets')
 
 # --- EDIT ASET ---
 @assets_bp.route('/edit/<int:asset_id>', methods=['GET', 'POST'])
@@ -213,6 +247,13 @@ def edit(asset_id):
     conn = get_db_connection()
     cur = conn.cursor()
     assignable_users = get_assignable_users()
+
+    cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
+    old_asset = cur.fetchone()
+    if not old_asset:
+        cur.close()
+        conn.close()
+        return "Asset tidak ditemukan atau sudah dihapus", 404
 
     if request.method == 'POST':
         ip_address = request.form.get('ip_address')
@@ -227,26 +268,18 @@ def edit(asset_id):
         user_now = session.get('username')
 
         if status not in ALLOWED_STATUSES:
-            cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
-            asset = cur.fetchone()
             cur.close()
             conn.close()
-            if not asset:
-                return "Asset tidak ditemukan atau sudah dihapus", 404
             flash("Status tidak valid.", "danger")
-            return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
+            return render_template('assets/edit.html', asset=old_asset, users=assignable_users, active_page='assets')
 
         assigned_to = None
         if assigned_to_raw:
             if assigned_to_raw not in assignable_users:
-                cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
-                asset = cur.fetchone()
                 cur.close()
                 conn.close()
-                if not asset:
-                    return "Asset tidak ditemukan atau sudah dihapus", 404
                 flash("Pengguna yang ditugaskan tidak valid.", "danger")
-                return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
+                return render_template('assets/edit.html', asset=old_asset, users=assignable_users, active_page='assets')
             assigned_to = assigned_to_raw
 
         purchase_date = None
@@ -254,14 +287,10 @@ def edit(asset_id):
             try:
                 purchase_date = datetime.strptime(purchase_date_raw, '%Y-%m-%d').date()
             except ValueError:
-                cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
-                asset = cur.fetchone()
                 cur.close()
                 conn.close()
-                if not asset:
-                    return "Asset tidak ditemukan atau sudah dihapus", 404
                 flash("Tanggal beli tidak valid. Gunakan format YYYY-MM-DD.", "danger")
-                return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
+                return render_template('assets/edit.html', asset=old_asset, users=assignable_users, active_page='assets')
 
         warranty_expiry = None
         if no_warranty:
@@ -271,24 +300,16 @@ def edit(asset_id):
                 try:
                     warranty_expiry = datetime.strptime(warranty_expiry_raw, '%Y-%m-%d').date()
                 except ValueError:
-                    cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
-                    asset = cur.fetchone()
                     cur.close()
                     conn.close()
-                    if not asset:
-                        return "Asset tidak ditemukan atau sudah dihapus", 404
                     flash("Tanggal garansi habis tidak valid. Gunakan format YYYY-MM-DD.", "danger")
-                    return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
+                    return render_template('assets/edit.html', asset=old_asset, users=assignable_users, active_page='assets')
 
             if purchase_date and warranty_expiry and warranty_expiry < purchase_date:
-                cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
-                asset = cur.fetchone()
                 cur.close()
                 conn.close()
-                if not asset:
-                    return "Asset tidak ditemukan atau sudah dihapus", 404
                 flash("Tanggal garansi habis tidak boleh sebelum tanggal beli.", "danger")
-                return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
+                return render_template('assets/edit.html', asset=old_asset, users=assignable_users, active_page='assets')
 
         try:
             cur.execute("""
@@ -297,6 +318,28 @@ def edit(asset_id):
                     updated_at = CURRENT_TIMESTAMP, updated_by = %s
                 WHERE id = %s;
             """, (ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, user_now, asset_id))
+
+            new_values_map = {
+                'ip_address': ip_address,
+                'mac_address': mac_address,
+                'status': status,
+                'assigned_to': assigned_to,
+                'purchase_date': purchase_date,
+                'warranty_expiry': warranty_expiry,
+                'no_warranty': no_warranty,
+                'location': location,
+                'notes': notes
+            }
+
+            for field_name in ['ip_address', 'mac_address', 'status', 'assigned_to', 'purchase_date', 'warranty_expiry', 'no_warranty', 'location', 'notes']:
+                old_val_rendered = render_audit_value(field_name, old_asset.get(field_name))
+                new_val_rendered = render_audit_value(field_name, new_values_map.get(field_name))
+                if old_val_rendered != new_val_rendered:
+                    cur.execute("""
+                        INSERT INTO asset_activities (asset_id, actor, action, field_name, old_value, new_value)
+                        VALUES (%s, %s, 'updated', %s, %s, %s);
+                    """, (asset_id, user_now, field_name, old_val_rendered, new_val_rendered))
+
             conn.commit()
             cur.close()
             conn.close()
@@ -308,15 +351,9 @@ def edit(asset_id):
             conn.close()
             return f"Error updating asset: {e}"
 
-    cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
-    asset = cur.fetchone()
     cur.close()
     conn.close()
-
-    if not asset:
-        return "Asset tidak ditemukan atau sudah dihapus", 404
-
-    return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
+    return render_template('assets/edit.html', asset=old_asset, users=assignable_users, active_page='assets')
 
 # --- SOFT DELETE (HAPUS KE RIWAYAT) ---
 @assets_bp.route('/delete/<int:asset_id>', methods=['GET', 'POST'])
@@ -328,6 +365,7 @@ def delete(asset_id):
 
     if request.method == 'POST':
         reason = request.form.get('delete_reason')
+        reason_val = reason.strip() if reason and reason.strip() else None
         user_now = session.get('username')
 
         cur.execute("""
@@ -338,6 +376,10 @@ def delete(asset_id):
                 delete_reason = %s
             WHERE id = %s;
         """, (user_now, reason, asset_id))
+        cur.execute("""
+            INSERT INTO asset_activities (asset_id, actor, action, field_name, old_value, new_value)
+            VALUES (%s, %s, 'soft-deleted', NULL, NULL, %s);
+        """, (asset_id, user_now, reason_val))
         conn.commit()
         cur.close()
         conn.close()
@@ -380,6 +422,10 @@ def restore(asset_id):
             updated_by = %s
         WHERE id = %s;
     """, (user_now, asset_id))
+    cur.execute("""
+        INSERT INTO asset_activities (asset_id, actor, action, field_name, old_value, new_value)
+        VALUES (%s, %s, 'restored', NULL, NULL, NULL);
+    """, (asset_id, user_now))
     conn.commit()
     cur.close()
     conn.close()
@@ -460,6 +506,7 @@ def hard_delete(asset_id):
         elif not user_data or not check_password_hash(user_data['password_hash'], input_password):
             error = "Password Anda salah! Hapus permanen dibatalkan."
         else:
+            cur.execute("DELETE FROM asset_activities WHERE asset_id = %s;", (asset_id,))
             cur.execute("DELETE FROM assets WHERE id = %s;", (asset_id,))
             conn.commit()
             cur.close()

@@ -51,6 +51,33 @@
         <p style="font-size: 13px; color: #cbd5e1; white-space: pre-line;">{{ asset.notes or 'Tidak ada catatan tambahan.' }}</p>
     </div>
 
+    <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
+        <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 15px;">RIWAYAT PERUBAHAN</h4>
+        {% if activities %}
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            {% for a in activities %}
+            <div style="font-size: 13px; color: #cbd5e1; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
+                <span style="color: #64748b; font-size: 12px;">{{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '-' }}</span>
+                — <strong>{{ a.actor or 'system' }}</strong>:
+                {% if a.action == 'created' %}
+                <span>Aset dibuat.</span>
+                {% elif a.action == 'soft-deleted' %}
+                <span>Aset dipindahkan ke Riwayat Terhapus{% if a.new_value %} — Alasan: {{ a.new_value }}{% endif %}.</span>
+                {% elif a.action == 'restored' %}
+                <span>Aset dikembalikan dari Riwayat Terhapus.</span>
+                {% elif a.action == 'updated' %}
+                <span><strong>{{ FIELD_LABELS.get(a.field_name, a.field_name) }}</strong> diubah: <code>{{ a.old_value or '-' }}</code> → <code>{{ a.new_value or '-' }}</code></span>
+                {% else %}
+                <span>{{ a.action }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="font-size: 13px; color: #64748b; margin: 0;">Belum ada riwayat perubahan.</p>
+        {% endif %}
+    </div>
+
     <div style="border-top: 1px solid #334155; padding-top: 15px; font-size: 12px; color: #64748b; display: flex; justify-content: space-between;">
         <span>Didaftarkan pada: <strong>{{ asset.created_at.strftime('%Y-%m-%d %H:%M') if asset.created_at else '-' }}</strong></span>
         <span>Terakhir diperbarui: <strong>{{ asset.updated_at.strftime('%Y-%m-%d %H:%M') if asset.updated_at else '-' }}</strong> (by {{ asset.updated_by or 'system' }})</span>
