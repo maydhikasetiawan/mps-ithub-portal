@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from flask import Flask
 from database.db import init_db
 from routes.auth import auth_bp
@@ -16,6 +17,12 @@ secret_key = os.getenv('SECRET_KEY')
 if not secret_key:
     raise RuntimeError("Missing required environment variable: SECRET_KEY")
 app.secret_key = secret_key
+
+# Idle session timeout: cookie expires after 30 minutes with no requests.
+# SESSION_REFRESH_EACH_REQUEST=True (Flask default, made explicit) means
+# every request refreshes the expiry, so the 30 minutes count idle time.
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 # Register Blueprints
 app.register_blueprint(auth_bp)
