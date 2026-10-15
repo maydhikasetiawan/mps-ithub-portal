@@ -97,6 +97,7 @@ def login():
             conn.close()
 
             if user and check_password_hash(user['password_hash'], password):
+                session.permanent = True
                 _reset_attempts(ip, username)
                 session['user_id'] = user['id']
                 session['username'] = user['username']

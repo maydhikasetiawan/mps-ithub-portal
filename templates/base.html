@@ -16,6 +16,7 @@
         .main-content { flex: 1; padding: 30px; overflow-y: auto; margin-left: 250px; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 15px; flex-wrap: wrap; gap: 12px; }
         .hamburger-btn { display: none; background: #1e293b; border: 1px solid #334155; color: #38bdf8; padding: 10px 14px; border-radius: 6px; font-size: 20px; cursor: pointer; min-height: 44px; min-width: 44px; }
+        .hamburger-btn:hover { background: #334155; }
         .sidebar-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; opacity: 0; transition: opacity 0.3s ease; }
         .sidebar-backdrop.open { display: block; opacity: 1; }
         .user-badge { background: #334155; padding: 4px 10px; border-radius: 12px; font-size: 12px; color: #10b981; }
@@ -59,9 +60,9 @@
             .sidebar.open { transform: translateX(0); }
             .sidebar-backdrop.open { display: block; }
             .main-content { margin-left: 0; padding: 20px 16px; }
-            .header { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .header h2 { font-size: 20px; margin: 0; }
-            .header > div { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+            .header { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+            .header h2 { font-size: 20px; margin: 0; order: 3; width: 100%; }
+            .header > div { width: auto; margin-left: auto; justify-content: flex-end; flex-wrap: wrap; }
             .filter-bar { flex-direction: column; }
             .filter-input { width: 100%; min-width: 0; }
             .form-control { width: 100%; }
@@ -75,8 +76,13 @@
         .profile-dropdown-wrapper { position: relative; }
         .profile-btn { background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; min-height: 44px; padding: 10px 14px; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
         .profile-btn:hover { background: #334155; }
+        .profile-chevron { font-size: 11px; color: #94a3b8; transition: transform 0.2s; }
+        #profile-button[aria-expanded="true"] .profile-chevron { transform: rotate(180deg); }
         .profile-dropdown-panel { display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #1e293b; border: 1px solid #334155; border-radius: 8px; min-width: 200px; max-width: calc(100vw - 16px); z-index: 1000; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); padding: 6px; box-sizing: border-box; }
         .profile-dropdown-panel.is-open { display: block; }
+        .profile-dropdown-header { padding: 10px 14px 12px; border-bottom: 1px solid #334155; margin-bottom: 6px; }
+        .profile-dropdown-header-label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
+        .profile-dropdown-header-user { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; }
         .profile-dropdown-item { display: flex; align-items: center; width: 100%; box-sizing: border-box; padding: 10px 14px; min-height: 44px; border-radius: 6px; font-size: 14px; font-weight: bold; text-decoration: none; cursor: pointer; text-align: left; }
         .profile-dropdown-item.item-link { color: #38bdf8; background: transparent; }
         .profile-dropdown-item.item-link:hover { background: #334155; }
@@ -124,11 +130,17 @@
                 <div class="profile-dropdown-wrapper">
                     <button type="button" id="profile-button" class="profile-btn" aria-haspopup="true" aria-expanded="false">
                         <span>👤 <strong>{{ session['username'] }}</strong></span>
-                        <span class="badge {% if session['role'] == 'admin' %}badge-red{% elif session['role'] == 'it' %}badge-yellow{% elif session['role'] == 'user' %}badge-green{% else %}badge-repair{% endif %}">
-                            [{{ session['role'] | upper }}]
-                        </span>
+                        <span class="profile-chevron" aria-hidden="true">▾</span>
                     </button>
                     <div id="profile-dropdown-menu" class="profile-dropdown-panel" role="menu">
+                        <div class="profile-dropdown-header">
+                            <span class="profile-dropdown-header-label">Masuk sebagai</span>
+                            <span class="profile-dropdown-header-user">👤 <strong>{{ session['username'] }}</strong>
+                                <span class="badge {% if session['role'] == 'admin' %}badge-red{% elif session['role'] == 'it' %}badge-yellow{% elif session['role'] == 'user' %}badge-green{% else %}badge-repair{% endif %}">
+                                    [{{ session['role'] | upper }}]
+                                </span>
+                            </span>
+                        </div>
                         <a href="{{ url_for('users.change_password') }}" class="profile-dropdown-item item-link" role="menuitem">🔑 Ganti Password</a>
                         <form method="POST" action="{{ url_for('auth.logout') }}" data-confirm="Keluar dari aplikasi?" data-confirm-label="Ya, Keluar" style="margin: 0;">
                             <button type="submit" class="profile-dropdown-item item-danger" role="menuitem">🚪 Logout</button>
