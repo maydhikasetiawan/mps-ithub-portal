@@ -50,6 +50,14 @@
             </select>
         </div>
         <div class="form-group">
+            <label>Tanggal Beli</label>
+            <input type="date" name="purchase_date" class="form-control" value="{{ asset.purchase_date.strftime('%Y-%m-%d') if asset.purchase_date else '' }}">
+        </div>
+        <div class="form-group">
+            <label>Garansi Habis</label>
+            <input type="date" name="warranty_expiry" class="form-control" value="{{ asset.warranty_expiry.strftime('%Y-%m-%d') if asset.warranty_expiry else '' }}">
+        </div>
+        <div class="form-group">
             <label>Lokasi Perangkat / Region</label>
             <input type="text" name="location" class="form-control" value="{{ asset.location or '' }}">
         </div>

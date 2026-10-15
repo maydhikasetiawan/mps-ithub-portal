@@ -40,6 +40,13 @@
     </div>
 
     <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
+        <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">GARANSI & PEMBELIAN</h4>
+        <p style="font-size: 13px; margin-bottom: 6px;">Tanggal Beli: <strong>{{ asset.purchase_date.strftime('%Y-%m-%d') if asset.purchase_date else '-' }}</strong></p>
+        <p style="font-size: 13px; margin-bottom: 6px;">Garansi Habis: <strong>{{ asset.warranty_expiry.strftime('%Y-%m-%d') if asset.warranty_expiry else '-' }}</strong></p>
+        <p style="font-size: 13px;">Status Garansi: <strong>{{ warranty_status }}</strong></p>
+    </div>
+
+    <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
         <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">CATATAN / NOTES</h4>
         <p style="font-size: 13px; color: #cbd5e1; white-space: pre-line;">{{ asset.notes or 'Tidak ada catatan tambahan.' }}</p>
     </div>

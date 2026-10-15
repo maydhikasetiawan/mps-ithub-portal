@@ -18,4 +18,40 @@
         <h2 style="color: #34d399;">{{ uptime_percentage }}%</h2>
     </div>
 </div>
+
+{% if expiring_warranties %}
+<div class="card" style="margin-top: 25px;">
+    <h3 style="color: #f59e0b; margin-bottom: 15px; font-size: 16px;">⚠️ Garansi Akan Habis</h3>
+    <div class="table-responsive">
+        <table class="data-table" style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>ASSET TAG</th>
+                    <th>NAMA PERANGKAT</th>
+                    <th>GARANSI HABIS</th>
+                    <th>STATUS GARANSI</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for w in expiring_warranties %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('assets.detail', asset_id=w.id) }}" style="color: #38bdf8; font-weight: bold; text-decoration: none;">
+                            {{ w.asset_tag }}
+                        </a>
+                    </td>
+                    <td>{{ w.name }}</td>
+                    <td><code>{{ w.warranty_expiry }}</code></td>
+                    <td>
+                        <strong style="color: {% if w.days_remaining < 0 %}#f87171{% elif w.days_remaining == 0 %}#facc15{% else %}#fbbf24{% endif %};">
+                            {{ w.status_text }}
+                        </strong>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

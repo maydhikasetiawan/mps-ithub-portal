@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session
 from routes.auth import login_required
 from database.db import get_db_connection
+from datetime import date, timedelta
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -31,6 +32,37 @@ def index():
     else:
         uptime_percentage = 100.0  # Default 100% jika belum ada monitor
 
+    # Pengingat Garansi Habis (aktif, warranty_expiry <= today + 30 days)
+    today = date.today()
+    threshold = today + timedelta(days=30)
+    cur.execute("""
+        SELECT id, asset_tag, name, warranty_expiry
+        FROM assets
+        WHERE is_deleted = FALSE
+          AND warranty_expiry IS NOT NULL
+          AND warranty_expiry <= %s
+        ORDER BY warranty_expiry ASC;
+    """, (threshold,))
+    warranty_rows = cur.fetchall()
+
+    expiring_warranties = []
+    for row in warranty_rows:
+        diff = (row['warranty_expiry'] - today).days
+        if diff > 0:
+            status_text = f"Aktif — habis dalam {diff} hari"
+        elif diff == 0:
+            status_text = "Habis hari ini"
+        else:
+            status_text = f"Sudah habis — {abs(diff)} hari lalu"
+        expiring_warranties.append({
+            'id': row['id'],
+            'asset_tag': row['asset_tag'],
+            'name': row['name'],
+            'warranty_expiry': row['warranty_expiry'].strftime('%Y-%m-%d'),
+            'status_text': status_text,
+            'days_remaining': diff
+        })
+
     cur.close()
     conn.close()
 
@@ -38,4 +70,5 @@ def index():
                            total_assets=total_assets,
                            open_tickets=open_tickets,
                            uptime_percentage=uptime_percentage,
+                           expiring_warranties=expiring_warranties,
                            active_page='dashboard')
