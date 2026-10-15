@@ -6,6 +6,21 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [2026-10-15] - Blok "Besok" + susulan
+- Penambahan notifikasi polling tiket baru pada daftar Service Desk (PR #27):
+  - Endpoint baru `GET /tickets/api/new-count` khusus peran `admin` dan `it` yang mengembalikan jumlah tiket baru sejak baseline `since_id` pengguna dalam format JSON `{"new_count": N, "latest_id": M}` dengan filter status, assignee, dan pencarian yang identik dengan rute daftar tiket.
+  - Skrip polling inline pada halaman daftar tiket (`/tickets/`) yang melakukan pengecekan setiap 30 detik hanya saat tab peramban aktif (`document.visibilityState === 'visible'`) tanpa tumpang tindih permintaan (*request overlap guard*).
+  - Banner tunggal berpenanda `🔔 N tiket baru` dengan tombol `Muat tiket baru` (memuat ulang halaman dengan filter yang sama) berstandar touch-height 44px; disembunyikan secara bawaan dan ditampilkan via kelas CSS tanpa inline style. Peran `guest` dan `user` tidak memuat skrip maupun banner polling.
+- Penambahan profile dropdown dan konfirmasi logout (PR #28):
+  - Penggantian tautan teks pengguna dan logout di header menjadi satu tombol dropdown profil (#profile-button) berisi menu Ganti Password dan tombol form POST Logout.
+  - Perubahan rute logout menjadi POST-only (`POST /logout`); akses langsung melalui metode GET mengembalikan status HTTP 405 Method Not Allowed.
+  - Generalisasi modal konfirmasi bersama (`_confirm_modal.html`) menggunakan atribut `data-confirm-label` dengan nilai bawaan `"Ya, Hapus"` untuk form hapus yang telah ada dan label khusus `"Ya, Keluar"` pada form logout.
+  - Penutupan otomatis dropdown profil saat form logout dikirimkan sebelum modal konfirmasi terbuka.
+- Batch deploy guard, session timeout, dan perapian header (PR #29):
+  - Penambahan concurrency guard pada workflow GitHub Actions `.github/workflows/deploy.yml` (`concurrency: group: deploy-production, cancel-in-progress: false`) untuk mencegah race condition deploy ganda ke server produksi; deploy kedua akan mengantre tanpa membatalkan deploy yang sedang berjalan.
+  - Penegakan batas kedaluwarsa sesi tidak aktif 30 menit (*30-minute idle session timeout*) melalui konfigurasi `PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)` dan `SESSION_REFRESH_EACH_REQUEST = True` pada `app.py`, serta penetapan `session.permanent = True` pada alur login berhasil di `routes/auth.py`.
+  - Perapian tampilan header di `templates/base.html`: tombol profil disederhanakan dengan indikator chevron `▾` yang berotasi via atribut `aria-expanded`, pemindahan badge peran ke baris header dropdown non-klik bertuliskan "Masuk sebagai", penyelarasan hover tombol hamburger, serta penyesuaian tata letak mobile (baris 1: hamburger & tombol profil, baris 2: judul halaman penuh).
+
 ## [2026-10-14] - Fase 2: Service Desk lanjutan
 - Penambahan relasi tiket dengan auto-close tiket duplikat (PR #21, Step 2.5):
   - Tabel baru `ticket_relationships` melalui migrasi Alembic `008_add_ticket_relationships.py` dan `init_db()`.
