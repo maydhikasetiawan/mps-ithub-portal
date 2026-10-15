@@ -20,11 +20,15 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Persentase Ketersediaan Layanan**: Perhitungan rasio layanan berstatus `UP` dari tabel monitor.
 
 ### C. Modul IT Assets / IPAM (`routes/assets.py`)
-- **Daftar Inventaris Aset**: Menampilkan seluruh perangkat aktif dengan kalkulasi umur perangkat otomatis.
+- **Daftar Inventaris Aset**: Menampilkan seluruh perangkat aktif dengan kalkulasi umur perangkat otomatis, filter status (`Procurement`, `Active`, `Under Repair`, `Retired`), dan filter penugasan (`unassigned` atau spesifik pengguna).
 - **Pencarian Aset**: Pencarian fleksibel berdasarkan nama, tag aset, IP, atau lokasi.
-- **Tambah Aset**: Pendaftaran perangkat baru dengan validasi keunikan tag aset (*asset tag*).
-- **Detail & Spesifikasi**: Informasi rinci perangkat keras, alamat IP, alamat MAC, dan riwayat pembaruan.
-- **Ubah Aset**: Pembaruan data jaringan, status, lokasi, dan catatan teknis.
+- **Tambah Aset**: Pendaftaran perangkat baru dengan validasi keunikan tag aset (*asset tag*), kategori (Server, PC/Laptop, Network, Docker Container, Printer/Peripherals), status, penugasan pengguna, tanggal beli, dan tanggal garansi habis.
+- **Detail & Spesifikasi**: Informasi rinci perangkat keras, alamat IP, alamat MAC, status penugasan, status masa garansi dinamis, dan kalkulasi usia perangkat.
+- **Pengingat & Manajemen Garansi**: Validasi tanggal beli (`purchase_date`) dan habis garansi (`warranty_expiry`), opsi eksplisit **Tanpa Garansi** (`no_warranty`) yang menonaktifkan input tanggal habis garansi saat dicentang, serta indikator status garansi dinamis pada halaman detail aset.
+- **Jejak Audit Aktivitas Aset (Riwayat Perubahan)**: Linimasa pencatatan perubahan pada detail aset yang melacak aksi pembuatan (`created`), pembaruan per kolom data (`updated`), penghapusan sementara (`soft-deleted`), dan pemulihan (`restored`) melalui tabel `asset_activities`.
+- **Ubah Aset**: Pembaruan data perangkat keras, penugasan, garansi, status, lokasi, dan catatan teknis dengan audit pencatatan perubahan otomatis.
+- **Impor Massal Aset via CSV**: Fitur impor massal hingga 200 baris per berkas melalui `/assets/import` dengan validasi ketat 12 kolom header dan sifat transaksi atomik (*all-or-nothing*). Dilengkapi fasilitas pengunduhan berkas template CSV siap pakai (`/assets/import/template`).
+- **Cetak Label QR Fisik**: Halaman cetak stiker label QR perangkat (`/assets/<id>/label`) dengan pembangkitan kode QR *server-side* (menghasilkan URL detail aset ber-HTTPS via ProxyFix) dan format siap cetak yang otomatis menyembunyikan tombol cetak pada media cetak.
 - **Soft Delete Aset**: Pemindahan aset ke riwayat terhapus dengan pencatatan alasan dan pengguna yang menghapus.
 - **Restore Aset**: Mengembalikan aset terhapus ke daftar aktif via form POST instan.
 - **Riwayat Terhapus**: Halaman arsip untuk meninjau aset-aset yang telah dihapus sementara.
@@ -96,6 +100,9 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Riwayat Aset Terhapus | `/assets/deleted-history` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
 | | Detail Aset Terhapus | `/assets/deleted-detail/<id>` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
 | | Hard Delete Aset | `/assets/hard-delete/<id>` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
+| | Impor Massal CSV | `/assets/import` [GET, POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
+| | Unduh Template CSV | `/assets/import/template` [GET] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
+| | Cetak Label QR | `/assets/<id>/label` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
 | **Tickets** | Daftar Tiket | `/tickets/` [GET] | Ya | Ya | Ya* | Ya | `@roles_required('admin', 'it', 'user', 'guest')` (*user: hanya tiket sendiri) |
 | | Cek Tiket Baru (Polling) | `/tickets/api/new-count` [GET] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | | Buat Tiket Baru | `/tickets/add` [GET, POST] | Ya | Ya | Ya | Tidak | `@roles_required('admin', 'it', 'user')` |
