@@ -8,6 +8,15 @@ assets_bp = Blueprint('assets', __name__, url_prefix='/assets')
 
 ALLOWED_STATUSES = ['Procurement', 'Active', 'Under Repair', 'Retired']
 
+def get_assignable_users():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT username FROM users WHERE role IN ('admin', 'it', 'user') ORDER BY username;")
+    users = [row['username'] for row in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return users
+
 def calculate_age(created_at):
     if not created_at:
         return "-"
@@ -38,6 +47,11 @@ def index():
     if status_filter not in ALLOWED_STATUSES:
         status_filter = ''
 
+    assignable_users = get_assignable_users()
+    assigned_filter = request.args.get('assigned', '').strip()
+    if assigned_filter != 'unassigned' and assigned_filter not in assignable_users:
+        assigned_filter = ''
+
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -47,6 +61,12 @@ def index():
     if status_filter:
         query += " AND status = %s"
         params.append(status_filter)
+
+    if assigned_filter == 'unassigned':
+        query += " AND assigned_to IS NULL"
+    elif assigned_filter:
+        query += " AND assigned_to = %s"
+        params.append(assigned_filter)
 
     if search_query:
         query += " AND (name ILIKE %s OR asset_tag ILIKE %s OR ip_address ILIKE %s OR location ILIKE %s)"
@@ -62,13 +82,15 @@ def index():
     for asset in assets_list:
         asset['age'] = calculate_age(asset['created_at'])
 
-    return render_template('assets/index.html', assets=assets_list, search_query=search_query, status_filter=status_filter, active_page='assets')
+    return render_template('assets/index.html', assets=assets_list, search_query=search_query, status_filter=status_filter, assigned_filter=assigned_filter, users=assignable_users, active_page='assets')
 
 # --- TAMBAH ASET BARU ---
 @assets_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 @roles_required('admin', 'it')
 def add():
+    assignable_users = get_assignable_users()
+
     if request.method == 'POST':
         asset_tag = request.form.get('asset_tag', '').strip()
         name = request.form.get('name', '').strip()
@@ -76,13 +98,21 @@ def add():
         ip_address = request.form.get('ip_address', '').strip()
         mac_address = request.form.get('mac_address', '').strip()
         status = request.form.get('status')
+        assigned_to_raw = request.form.get('assigned_to', '').strip()
         location = request.form.get('location', '').strip()
         notes = request.form.get('notes', '').strip()
         user_now = session.get('username')
 
         if status not in ALLOWED_STATUSES:
             flash("Status tidak valid.", "danger")
-            return render_template('assets/add.html', active_page='assets')
+            return render_template('assets/add.html', users=assignable_users, active_page='assets')
+
+        assigned_to = None
+        if assigned_to_raw:
+            if assigned_to_raw not in assignable_users:
+                flash("Pengguna yang ditugaskan tidak valid.", "danger")
+                return render_template('assets/add.html', users=assignable_users, active_page='assets')
+            assigned_to = assigned_to_raw
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -94,13 +124,13 @@ def add():
             cur.close()
             conn.close()
             flash(f"Gagal! Asset Tag '{asset_tag}' sudah terdaftar di sistem. Gunakan Tag lain.", "danger")
-            return render_template('assets/add.html', active_page='assets')
+            return render_template('assets/add.html', users=assignable_users, active_page='assets')
 
         try:
             cur.execute("""
-                INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, status, location, notes, updated_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-            """, (asset_tag, name, category, ip_address, mac_address, status, location, notes, user_now))
+                INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, status, assigned_to, location, notes, updated_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            """, (asset_tag, name, category, ip_address, mac_address, status, assigned_to, location, notes, user_now))
             conn.commit()
             cur.close()
             conn.close()
@@ -111,9 +141,9 @@ def add():
             cur.close()
             conn.close()
             flash(f"Terjadi kesalahan saat menyimpan data: {e}", "danger")
-            return render_template('assets/add.html', active_page='assets')
+            return render_template('assets/add.html', users=assignable_users, active_page='assets')
 
-    return render_template('assets/add.html', active_page='assets')
+    return render_template('assets/add.html', users=assignable_users, active_page='assets')
 
 # --- DETAIL ASET ---
 @assets_bp.route('/<int:asset_id>')
@@ -140,11 +170,13 @@ def detail(asset_id):
 def edit(asset_id):
     conn = get_db_connection()
     cur = conn.cursor()
+    assignable_users = get_assignable_users()
 
     if request.method == 'POST':
         ip_address = request.form.get('ip_address')
         mac_address = request.form.get('mac_address')
         status = request.form.get('status')
+        assigned_to_raw = request.form.get('assigned_to', '').strip()
         location = request.form.get('location')
         notes = request.form.get('notes')
         user_now = session.get('username')
@@ -157,15 +189,28 @@ def edit(asset_id):
             if not asset:
                 return "Asset tidak ditemukan atau sudah dihapus", 404
             flash("Status tidak valid.", "danger")
-            return render_template('assets/edit.html', asset=asset, active_page='assets')
+            return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
+
+        assigned_to = None
+        if assigned_to_raw:
+            if assigned_to_raw not in assignable_users:
+                cur.execute("SELECT * FROM assets WHERE id = %s AND is_deleted = FALSE;", (asset_id,))
+                asset = cur.fetchone()
+                cur.close()
+                conn.close()
+                if not asset:
+                    return "Asset tidak ditemukan atau sudah dihapus", 404
+                flash("Pengguna yang ditugaskan tidak valid.", "danger")
+                return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
+            assigned_to = assigned_to_raw
 
         try:
             cur.execute("""
                 UPDATE assets
-                SET ip_address = %s, mac_address = %s, status = %s, location = %s, notes = %s,
+                SET ip_address = %s, mac_address = %s, status = %s, assigned_to = %s, location = %s, notes = %s,
                     updated_at = CURRENT_TIMESTAMP, updated_by = %s
                 WHERE id = %s;
-            """, (ip_address, mac_address, status, location, notes, user_now, asset_id))
+            """, (ip_address, mac_address, status, assigned_to, location, notes, user_now, asset_id))
             conn.commit()
             cur.close()
             conn.close()
@@ -185,7 +230,7 @@ def edit(asset_id):
     if not asset:
         return "Asset tidak ditemukan atau sudah dihapus", 404
 
-    return render_template('assets/edit.html', asset=asset, active_page='assets')
+    return render_template('assets/edit.html', asset=asset, users=assignable_users, active_page='assets')
 
 # --- SOFT DELETE (HAPUS KE RIWAYAT) ---
 @assets_bp.route('/delete/<int:asset_id>', methods=['GET', 'POST'])
