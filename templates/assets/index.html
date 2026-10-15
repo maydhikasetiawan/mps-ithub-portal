@@ -7,8 +7,15 @@
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
     <form method="GET" class="filter-bar" style="margin-bottom:0; display:flex; gap:8px;">
         <input type="text" name="q" class="filter-input" placeholder="Cari nama, tag, IP, atau lokasi..." value="{{ search_query }}">
+        <select name="status" class="filter-input" style="min-width: 160px;">
+            <option value="">Semua Status</option>
+            <option value="Procurement" {% if status_filter == 'Procurement' %}selected{% endif %}>Procurement</option>
+            <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+            <option value="Under Repair" {% if status_filter == 'Under Repair' %}selected{% endif %}>Under Repair</option>
+            <option value="Retired" {% if status_filter == 'Retired' %}selected{% endif %}>Retired</option>
+        </select>
         <button type="submit" class="btn-primary">Cari</button>
-        {% if search_query %}
+        {% if search_query or status_filter %}
         <a href="{{ url_for('assets.index') }}" class="btn-danger" style="display:flex; align-items:center; text-decoration:none; padding: 0 12px; font-weight:bold;">✕ Reset</a>
         {% endif %}
     </form>
@@ -51,7 +58,7 @@
             <td>{{ a.category }}</td>
             <td><code>{{ a.ip_address or '-' }}</code></td>
             <td>
-                <span class="badge {% if a.status == 'Active' %}badge-active{% elif a.status == 'Under Repair' %}badge-repair{% else %}badge-retired{% endif %}">
+                <span class="badge {% if a.status == 'Procurement' %}badge-procurement{% elif a.status == 'Active' %}badge-active{% elif a.status == 'Under Repair' %}badge-repair{% else %}badge-retired{% endif %}">
                     {{ a.status }}
                 </span>
             </td>
