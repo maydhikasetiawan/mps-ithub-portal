@@ -3,6 +3,7 @@ import time
 import urllib.request
 import logging
 import threading
+import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from routes.auth import login_required, roles_required
 from database.db import get_db_connection
@@ -32,6 +33,54 @@ def check_target_health(target, monitor_type='PING', port=None):
     except Exception:
         return 'DOWN', 0
 
+def get_telegram_config():
+    """Return (bot_token, chat_id) from the saved telegram_settings row.
+    Returns ('', '') when not configured or on any read error."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT bot_token, chat_id FROM telegram_settings WHERE id = 1;")
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row:
+            return row['bot_token'] or '', row['chat_id'] or ''
+    except Exception:
+        logging.exception("Failed to read Telegram settings")
+    return '', ''
+
+
+def send_telegram_message(token, chat_id, text):
+    """Send one Telegram message. Returns (True, '') on success,
+    (False, error) on failure. Never raises."""
+    if not token or not chat_id:
+        return False, "Telegram belum dikonfigurasi."
+    try:
+        payload = json.dumps({'chat_id': chat_id, 'text': text}).encode('utf-8')
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            response.read()
+        return True, ''
+    except Exception as exc:
+        return False, str(exc)
+
+
+def send_telegram_alert(text):
+    """Best-effort alert sender for the scheduler: read saved config,
+    send, log on failure. Never raises (must never break the loop)."""
+    try:
+        token, chat_id = get_telegram_config()
+        ok, error = send_telegram_message(token, chat_id, text)
+        if not ok:
+            logging.warning("Telegram alert not sent: %s", error)
+    except Exception:
+        logging.exception("Failed to send Telegram alert")
+
+
 # --- DASHBOARD UPTIME MONITOR ---
 @uptime_bp.route('/')
 @login_required
@@ -41,6 +90,16 @@ def index():
     cur = conn.cursor()
     cur.execute("SELECT * FROM monitors ORDER BY id DESC;")
     monitors_list = cur.fetchall()
+
+    cur.execute("""
+        SELECT a.*, mon.name AS monitor_name
+        FROM uptime_alerts a
+        JOIN monitors mon ON mon.id = a.monitor_id
+        ORDER BY a.created_at DESC
+        LIMIT 20;
+    """)
+    alerts = cur.fetchall()
+
     cur.close()
     conn.close()
 
@@ -49,8 +108,11 @@ def index():
     up_count = sum(1 for m in monitors_list if m['enabled'] and m['status'] == 'UP')
     down_count = sum(1 for m in monitors_list if m['enabled'] and m['status'] == 'DOWN')
     paused_count = sum(1 for m in monitors_list if not m['enabled'])
+    down_names = ", ".join(
+        m['name'] for m in monitors_list if m['enabled'] and m['status'] == 'DOWN'
+    )
 
-    return render_template('uptime/index.html', monitors=monitors_list, total=total, up_count=up_count, down_count=down_count, paused_count=paused_count, active_page='uptime')
+    return render_template('uptime/index.html', monitors=monitors_list, total=total, up_count=up_count, down_count=down_count, paused_count=paused_count, alerts=alerts, down_names=down_names, active_page='uptime')
 
 # --- TAMBAH TARGET MONITOR BARU ---
 @uptime_bp.route('/add', methods=['GET', 'POST'])
@@ -92,11 +154,22 @@ def check_now(monitor_id):
 
     if monitor:
         status, latency = check_target_health(monitor['target'], monitor['type'], monitor['port'])
-        cur.execute("""
-            UPDATE monitors
-            SET status = %s, latency = %s, last_check = CURRENT_TIMESTAMP
-            WHERE id = %s;
-        """, (status, latency, monitor_id))
+        if status == 'UP':
+            # UP resets the failure counter so the next down-episode
+            # starts clean (otherwise a later DOWN would jump
+            # failures 2 -> 3 and skip the == 2 alert condition).
+            cur.execute("""
+                UPDATE monitors
+                SET status = %s, latency = %s, last_check = CURRENT_TIMESTAMP,
+                    consecutive_failures = 0
+                WHERE id = %s;
+            """, (status, latency, monitor_id))
+        else:
+            cur.execute("""
+                UPDATE monitors
+                SET status = %s, latency = %s, last_check = CURRENT_TIMESTAMP
+                WHERE id = %s;
+            """, (status, latency, monitor_id))
         conn.commit()
         flash(f"Status '{monitor['name']}' berhasil diperbarui ({status} - {latency}ms).", "info")
 
@@ -111,6 +184,7 @@ def check_now(monitor_id):
 def delete(monitor_id):
     conn = get_db_connection()
     cur = conn.cursor()
+    cur.execute("DELETE FROM uptime_alerts WHERE monitor_id = %s;", (monitor_id,))
     cur.execute("DELETE FROM monitors WHERE id = %s;", (monitor_id,))
     conn.commit()
     cur.close()
@@ -130,7 +204,11 @@ def toggle(monitor_id):
 
     if monitor:
         new_enabled = not monitor['enabled']
-        cur.execute("UPDATE monitors SET enabled = %s WHERE id = %s;",
+        # Toggling starts a fresh monitoring episode: reset the failure
+        # counter so the next down-episode after re-enable alerts
+        # correctly (otherwise a frozen failures = 2 would jump to 3
+        # and skip the == 2 alert condition).
+        cur.execute("UPDATE monitors SET enabled = %s, consecutive_failures = 0 WHERE id = %s;",
                     (new_enabled, monitor_id))
         conn.commit()
         state = "diaktifkan" if new_enabled else "dinonaktifkan"
@@ -164,13 +242,24 @@ def edit(monitor_id):
 
         if enabled:
             status, latency = check_target_health(target, type_check, port)
-            cur.execute("""
-                UPDATE monitors
-                SET name = %s, target = %s, type = %s, port = %s,
-                    enabled = %s, status = %s, latency = %s,
-                    last_check = CURRENT_TIMESTAMP
-                WHERE id = %s;
-            """, (name, target, type_check, port, enabled, status, latency, monitor_id))
+            if status == 'UP':
+                # UP resets the failure counter (same reason as check_now).
+                cur.execute("""
+                    UPDATE monitors
+                    SET name = %s, target = %s, type = %s, port = %s,
+                        enabled = %s, status = %s, latency = %s,
+                        last_check = CURRENT_TIMESTAMP,
+                        consecutive_failures = 0
+                    WHERE id = %s;
+                """, (name, target, type_check, port, enabled, status, latency, monitor_id))
+            else:
+                cur.execute("""
+                    UPDATE monitors
+                    SET name = %s, target = %s, type = %s, port = %s,
+                        enabled = %s, status = %s, latency = %s,
+                        last_check = CURRENT_TIMESTAMP
+                    WHERE id = %s;
+                """, (name, target, type_check, port, enabled, status, latency, monitor_id))
         else:
             cur.execute("""
                 UPDATE monitors
@@ -190,25 +279,106 @@ def edit(monitor_id):
     return render_template('uptime/edit.html', monitor=monitor, active_page='uptime')
 
 def run_all_checks():
-    """Re-check every monitor and persist status/latency/last_check.
+    """Re-check every enabled monitor and persist status/latency/last_check.
     Request-free: safe to call from a route OR from the scheduler thread.
-    Opens and closes its OWN db connection (never share across threads)."""
+    Opens and closes its OWN db connection (never share across threads).
+    Fires DOWN / RECOVERED alerts on transitions (see design decisions)."""
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM monitors WHERE enabled = TRUE;")
     monitors_list = cur.fetchall()
+    pending_telegrams = []
 
     for m in monitors_list:
+        old_status = m['status']
+        old_failures = m['consecutive_failures'] or 0
         status, latency = check_target_health(m['target'], m['type'], m['port'])
+        failures = old_failures + 1 if status == 'DOWN' else 0
         cur.execute("""
             UPDATE monitors
-            SET status = %s, latency = %s, last_check = CURRENT_TIMESTAMP
+            SET status = %s, latency = %s, last_check = CURRENT_TIMESTAMP,
+                consecutive_failures = %s
             WHERE id = %s;
-        """, (status, latency, m['id']))
+        """, (status, latency, failures, m['id']))
+
+        alert_type = None
+        if status == 'DOWN' and failures == 2:
+            alert_type = 'DOWN'
+        elif status == 'UP' and old_status == 'DOWN' and old_failures >= 2:
+            alert_type = 'RECOVERED'
+
+        if alert_type:
+            if alert_type == 'DOWN':
+                message = f"🔴 {m['name']} DOWN — tidak merespons ({m['target']})"
+            else:
+                message = f"🟢 {m['name']} pulih — kembali ONLINE ({m['target']})"
+            cur.execute("""
+                INSERT INTO uptime_alerts (monitor_id, alert_type, message)
+                VALUES (%s, %s, %s);
+            """, (m['id'], alert_type, message))
+            pending_telegrams.append(message)
 
     conn.commit()
     cur.close()
     conn.close()
+
+    # Telegram AFTER commit: alert rows are persisted even if Telegram fails.
+    for text in pending_telegrams:
+        send_telegram_alert(text)
+
+# --- PENGATURAN TELEGRAM (ADMIN ONLY) ---
+@uptime_bp.route('/telegram-settings', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin')
+def telegram_settings():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    if request.method == 'POST':
+        token = request.form.get('bot_token', '').strip()
+        chat_id = request.form.get('chat_id', '').strip()
+        # Empty token field = keep the saved token. To disable Telegram,
+        # clear the Chat ID and Save.
+        if token:
+            cur.execute("""
+                UPDATE telegram_settings
+                SET bot_token = %s, chat_id = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = 1;
+            """, (token, chat_id))
+        else:
+            cur.execute("""
+                UPDATE telegram_settings
+                SET chat_id = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = 1;
+            """, (chat_id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("Pengaturan Telegram berhasil disimpan.", "success")
+        return redirect(url_for('uptime.telegram_settings'))
+
+    cur.execute("SELECT * FROM telegram_settings WHERE id = 1;")
+    settings = cur.fetchone()
+    cur.close()
+    conn.close()
+    return render_template(
+        'uptime/telegram_settings.html', settings=settings, active_page='uptime'
+    )
+
+
+@uptime_bp.route('/telegram-test', methods=['POST'])
+@login_required
+@roles_required('admin')
+def telegram_test():
+    token, chat_id = get_telegram_config()
+    ok, error = send_telegram_message(
+        token, chat_id, "🔔 Tes koneksi Telegram MPS-ITHub — koneksi aktif."
+    )
+    if ok:
+        flash("Koneksi Telegram aktif — pesan tes terkirim.", "success")
+    else:
+        flash(f"Koneksi Telegram GAGAL: {error}", "danger")
+    return redirect(url_for('uptime.telegram_settings'))
 
 CHECK_INTERVAL_SECONDS = 300  # 5 minutes
 

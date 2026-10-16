@@ -60,9 +60,19 @@
 
         {% endif %}
 
+        {% if session['role'] == 'admin' %}
+        <a href="{{ url_for('uptime.telegram_settings') }}" class="btn-secondary">⚙️ Pengaturan Telegram</a>
+        {% endif %}
+
     </div>
 
 </div>
+
+{% if down_names %}
+<div style="background: #450a0a; border: 1px solid #ef4444; color: #fca5a5; padding: 12px 16px; border-radius: 6px; margin-bottom: 15px; font-weight: bold;">
+    ⚠️ Layanan sedang DOWN: {{ down_names }}
+</div>
+{% endif %}
 
 <div class="table-responsive">
 <table class="data-table">
@@ -163,6 +173,33 @@
 
     </tbody>
 
+</table>
+</div>
+
+<h3 style="color: #38bdf8; margin: 25px 0 15px;">Riwayat Alert</h3>
+<div class="table-responsive">
+<table class="data-table">
+    <thead>
+        <tr><th>WAKTU</th><th>LAYANAN</th><th>JENIS</th><th>PESAN</th></tr>
+    </thead>
+    <tbody>
+        {% for a in alerts %}
+        <tr>
+            <td><small style="color: #94a3b8;">{{ a.created_at.strftime('%Y-%m-%d %H:%M:%S') if a.created_at else '-' }}</small></td>
+            <td><strong>{{ a.monitor_name }}</strong></td>
+            <td>
+                {% if a.alert_type == 'DOWN' %}
+                <span class="badge badge-red">🔴 DOWN</span>
+                {% else %}
+                <span class="badge badge-green">🟢 PULIH</span>
+                {% endif %}
+            </td>
+            <td>{{ a.message }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align: center; color: #64748b;">Belum ada alert.</td></tr>
+        {% endfor %}
+    </tbody>
 </table>
 </div>
 {% endblock %}
