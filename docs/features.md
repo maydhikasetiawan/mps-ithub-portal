@@ -65,6 +65,12 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Pindai Ulang Mandiri (Check Now)**: Trigger uji kesehatan langsung untuk target tertentu.
 - **Pindai Seluruh Layanan (Check All)**: Trigger uji kesehatan sekaligus ke seluruh daftar target monitor.
 - **Hapus Target Monitor**: Menghapus target dari daftar pemantauan.
+- **Pengecekan Otomatis Terjadwal**: Scheduler in-app memeriksa monitor yang aktif tiap 300 detik (interval hardcoded).
+- **Toggle Pemantauan Otomatis**: Nyalakan/matikan pengecekan otomatis per monitor; monitor nonaktif tampil NONAKTIF + baris redup.
+- **Ubah Target Monitor**: Ubah nama/target/tipe/port monitor beserta re-check instan saat monitor aktif.
+- **Alert DOWN / PULIH**: Alert transisi status di Riwayat Alert halaman Uptime + Telegram; DOWN setelah 2 cek DOWN otomatis berurutan; banner DOWN saat ada layanan mati.
+- **Pengaturan Telegram (Admin)**: Simpan bot token + chat ID via halaman Pengaturan (token tidak pernah dirender); Tes Koneksi mengirim pesan tes beneran.
+- **Riwayat & Grafik per Monitor**: Halaman Riwayat dengan grafik latensi + statistik (uptime %, rata-rata/min/maks latensi, total cek, jumlah DOWN); rentang 24 jam / 7 hari / 30 hari; retensi 30 hari.
 
 ### G. Modul Reports Center (`routes/reports.py`)
 - **Ekspor CSV Aset TI**: Unduh berkas CSV dengan filter kategori, status, dan opsi menyertakan aset terhapus. Memuat header block (judul, tanggal dibuat laporan, pembuat laporan, filter), summary block (total aset, rincian status dan kategori), 18 kolom detail termasuk 4 kolom baru: `Serial Number`, `Assigned To`, `Purchase Date`, dan `Warranty Expiry`, serta footer total baris data (`Total Baris Data: N`).
@@ -129,8 +135,13 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Kelola Artikel (CRUD) | `/knowledge-base/add`, `edit/<id>`, `delete/<id>` | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` (delete: POST-only) |
 | **Uptime** | Daftar Monitor | `/uptime/` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
 | | Tambah Monitor | `/uptime/add` [GET, POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
+| | Ubah Monitor | `/uptime/edit/<id>` [GET, POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
+| | Toggle Pemantauan | `/uptime/toggle/<id>` [POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | | Pindai Target (Single/All) | `/uptime/check/<id>`, `/check-all` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
-| | Hapus Monitor | `/uptime/delete/<id>` [GET] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
+| | Riwayat Monitor | `/uptime/<id>/history` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
+| | Pengaturan Telegram | `/uptime/telegram-settings` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
+| | Tes Koneksi Telegram | `/uptime/telegram-test` [POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
+| | Hapus Monitor | `/uptime/delete/<id>` [POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | **Reports** | Halaman Laporan & Ekspor | `/reports/`, `/reports/export/*` [GET] | Ya | Ya | Ya** | Ya** | `@login_required` (**menu navbar disembunyikan untuk `user` & `guest`) |
 | **Users** | Kelola Akun Pengguna | `/users/`, `/add`, `/edit/*`, `/delete/*` | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Kelola Departemen | `/users/departments*` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |

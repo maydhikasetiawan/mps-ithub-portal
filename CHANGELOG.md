@@ -32,6 +32,26 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
   - Blok pesan flash ditambahkan pada `templates/login.html` menggunakan gaya `.alert`.
   - Terverifikasi: 4 kasus perilaku (idle > 30 menit, pengunjung baru, logout, salah password) lulus pengujian.
 
+## [2026-10-16] - Fase 5: Uptime Monitor
+- Fase 5.1 Pengecekan otomatis terjadwal (main `0bb1c00`, migrasi 015):
+  - Scheduler in-app (daemon thread, interval 300 detik hardcoded — keputusan product owner, tanpa env var / halaman pengaturan).
+  - Toggle pemantauan otomatis per monitor (kolom `enabled BOOLEAN DEFAULT TRUE`); monitor nonaktif tampil NONAKTIF + baris redup.
+  - Halaman edit monitor (form prefilled, Batal tanpa simpan).
+  - Terverifikasi live: toggle OFF/ON round-trip, 5 monitor tetap ON, end state identik.
+- Fase 5.2 Alert DOWN/PULIH (main `17e935b`, migrasi 016+017):
+  - Alert hanya pada transisi status; DOWN setelah tepat 2 cek DOWN otomatis berurutan (≈10 menit); tetap DOWN tidak re-alert; PULIH sekali setelah episode DOWN yang sudah di-alert kembali UP; Cek Now manual tidak dihitung menuju konfirmasi 2x.
+  - Riwayat Alert di halaman Uptime (20 terbaru dari tabel `uptime_alerts`) + banner DOWN + tombol Pengaturan Telegram (admin).
+  - Telegram: konfigurasi in-app via halaman Pengaturan disimpan pada tabel `telegram_settings` (admin only), token tidak pernah dirender, Tes Koneksi mengirim pesan tes beneran; alert row commit SEBELUM kirim Telegram; kirim via stdlib urllib, tanpa dependensi baru.
+  - Review menemukan bug desain counter basi (bukan salah eksekusi): diperbaiki dengan reset counter di check_now / edit / toggle sebelum merge.
+  - Terverifikasi live: DOWN alert x2 + PULIH alert, semua terkonfirmasi in-app + Telegram, tanpa duplikat, cleanup bersih.
+- Fase 5.3 Grafik riwayat uptime & response time (main `2d950c1`, migrasi 018):
+  - Tabel uptime_checks: tiap cek (scheduler, Check All, Cek Now, edit re-check, add) menulis tepat satu baris; cleanup otomatis baris > 30 hari di run_all_checks(); cascade app-level saat monitor dihapus.
+  - Halaman Riwayat per monitor: grafik latensi SVG server-rendered (tanpa library JS / CDN) + 6 statistik (uptime %, rata-rata / min / maks latensi, total cek, jumlah DOWN); rentang 24 jam (titik mentah) / 7 hari / 30 hari (bucket per jam).
+  - Terverifikasi live: monitor UP (Total 3, Uptime 100%, polyline), monitor DOWN (Total 1, Uptime 0%, titik merah baseline), fallback range=bogus → 24 jam, cleanup bersih.
+- Fase 5.3-fix Statistik 7d/30d (main `f0c0368`):
+  - Min/Maks/Avg latensi 7d/30d kini memakai agregat mentah (MIN/MAX/SUM), bukan lagi min/maks dari rata-rata per jam.
+  - Terverifikasi live di monitor Portfolio: 24j min 38 / maks 122 / avg 74,6 = 7h/30h min 38,0 / maks 122,0 / avg 74,6.
+
 ## [2026-10-15] - Fase 3: Asset Management
 - Pengelolaan siklus hidup aset dengan status pengadaan (*asset lifecycle*) (PR #31, main `37572c4`):
   - Penambahan status baru `Procurement` pada aset sehingga daftar status lengkap menjadi `Procurement`, `Active`, `Under Repair`, dan `Retired` (`ALLOWED_STATUSES`).

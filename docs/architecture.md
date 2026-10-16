@@ -111,13 +111,21 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - **Keamanan Nama Berkas**: Nama berkas di filesystem menggunakan `uuid4().hex` acak untuk mencegah *path traversal*. Nama asli diamankan via `secure_filename` dan disimpan di basis data untuk tampilan/unduhan. Akses unduh divalidasi via rute `send_file` (bukan static path).
 
 ### e. `uptime` (`routes/uptime.py`, URL prefix: `/uptime`)
-- **Tujuan**: Pemantauan ketersediaan target server/layanan melalui pengecekan TCP port atau HTTP request beserta pencatatan latensi (ms).
+- **Tujuan**: Pemantauan ketersediaan target server/layanan melalui pengecekan TCP port atau HTTP request beserta pencatatan latensi (ms). Pengecekan otomatis terjadwal tiap 300 detik (scheduler in-app, daemon thread), alert DOWN/PULIH berbasis transisi (in-app + Telegram), dan riwayat cek per monitor dengan grafik latensi.
 - **Rute Utama**:
-  - `GET /uptime/` — Dasbor status monitor dan ringkasan target aktif/mati.
-  - `GET, POST /uptime/add` — Menambahkan target baru dengan uji kesehatan instan.
-  - `GET /uptime/check/<int:monitor_id>` — Uji ulang kesehatan satu target.
-  - `GET /uptime/check-all` — Uji ulang seluruh target sekaligus.
-  - `GET /uptime/delete/<int:monitor_id>` — Menghapus target monitor.
+  - `GET /uptime/` — Dasbor status monitor dan ringkasan target aktif/mati (admin, it, guest).
+  - `GET, POST /uptime/add` — Menambahkan target baru dengan uji kesehatan instan (admin, it).
+  - `GET /uptime/check/<int:monitor_id>` — Uji ulang kesehatan satu target / Cek Now (admin, it, guest). Manual check does NOT count toward the 2-consecutive-DOWN alert confirmation.
+  - `GET /uptime/check-all` — Uji ulang seluruh target sekaligus (admin, it, guest).
+  - `GET, POST /uptime/edit/<int:monitor_id>` — Ubah target monitor; re-check instan saat monitor aktif (admin, it).
+  - `POST /uptime/toggle/<int:monitor_id>` — Nyalakan/matikan pemantauan otomatis per monitor (admin, it).
+  - `POST /uptime/delete/<int:monitor_id>` — Menghapus target monitor beserta alert dan riwayat cek-nya (cascade app-level) (admin, it).
+  - `GET /uptime/<int:monitor_id>/history` — Riwayat cek per monitor: grafik latensi SVG + statistik (uptime %, rata-rata/min/maks latensi, total cek, jumlah DOWN), rentang 24 jam / 7 hari / 30 hari (admin, it, guest).
+  - `GET, POST /uptime/telegram-settings` — Pengaturan Telegram (bot token + chat ID, disimpan di database, token tidak pernah dirender) — ADMIN ONLY.
+  - `POST /uptime/telegram-test` — Kirim pesan tes ke Chat ID tersimpan — ADMIN ONLY.
+- **Pengecekan Terjadwal (Scheduler)**: Daemon thread yang dijalankan saat startup aplikasi (`start_uptime_scheduler()`) dengan interval tetap 300 detik (keputusan *product owner* — tanpa variabel *environment* dan tanpa halaman pengaturan). Hanya memeriksa monitor dengan `enabled = TRUE`, menggunakan fungsi *helper* `run_all_checks()` yang sama dengan rute manual *Check All*.
+- **Mekanisme Alert (Transisi Status & Telegram)**: Alert hanya dikirim saat terjadi transisi status (`UP → DOWN` menghasilkan alert DOWN, `DOWN → UP` menghasilkan alert PULIH). Alert DOWN hanya terpicu setelah tepat 2 kali pengecekan DOWN otomatis berturut-turut (≈10 menit); kondisi layanan yang tetap DOWN tidak akan mengirim alert berulang. Baris alert disimpan dan di-*commit* ke basis data terlebih dahulu sebelum pengiriman pesan Telegram dicoba (*fail-safe*, kegagalan Telegram tidak membatalkan riwayat in-app maupun siklus scheduler). Pengiriman Telegram menggunakan pustaka standar Python `urllib` tanpa dependensi eksternal.
+- **Riwayat Pengecekan & Grafik**: Setiap pengecekan (scheduler, *Check All*, *Cek Now*, *re-check* saat edit, dan cek awal saat penambahan target) mencatat tepat satu baris riwayat ke tabel `uptime_checks`. Pembersihan otomatis (*retention cleanup*) menghapus data riwayat yang lebih lama dari 30 hari di dalam `run_all_checks()`. Tampilan rentang 24 jam menggunakan titik data mentah, sedangkan rentang 7 hari dan 30 hari menggunakan agregasi per jam (*hourly buckets*) dengan kalkulasi agregat mentah `MIN`/`MAX`/`SUM` untuk menjaga keakuratan nilai statistik latensi (fix f0c0368).
 
 ### f. `users` (`routes/users.py`, URL prefix: `/users`)
 - **Tujuan**: Administrasi pengguna dan struktur departemen organisasi, reset password administratif dengan flag wajib ganti, serta antarmuka penggantian kata sandi mandiri.
@@ -159,7 +167,7 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 
 ## 4. Skema Basis Data (Database Schema)
 
-Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–014`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
+Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–018`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
 
 1. **`users`**
    - Kolom: `id` (PK, Serial), `username` (VARCHAR 50, Unique), `email` (VARCHAR 100, Unique), `password_hash` (TEXT), `role` (VARCHAR 20, default 'staff'), `department` (VARCHAR 50, default 'IT'), `must_change_password` (BOOLEAN, default FALSE), `created_at` (TIMESTAMP).
@@ -174,7 +182,7 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
 5. **`departments`**
    - Kolom: `id` (PK, Serial), `name` (VARCHAR 50, Unique).
 6. **`monitors`**
-   - Kolom: `id` (PK, Serial), `name` (VARCHAR 100), `target` (VARCHAR 255), `type` (VARCHAR 20, default 'PING'), `port` (INT), `status` (VARCHAR 20, default 'UNKNOWN'), `latency` (INT, default 0), `last_check` (TIMESTAMP), `created_at` (TIMESTAMP).
+   - Kolom: `id` (PK, Serial), `name` (VARCHAR 100), `target` (VARCHAR 255), `type` (VARCHAR 20, default 'PING'), `port` (INT), `status` (VARCHAR 20, default 'UNKNOWN'), `latency` (INT, default 0), `last_check` (TIMESTAMP), `enabled` (BOOLEAN, default TRUE, migrasi 015), `consecutive_failures` (INT, default 0, migrasi 016), `created_at` (TIMESTAMP).
 7. **`service_monitors`** *(Tabel cadangan/inisial di db.py)*
    - Kolom: `id` (PK, Serial), `service_name` (VARCHAR 100), `target_url` (VARCHAR 255), `last_status` (VARCHAR 20), `response_time_ms` (INT), `last_checked` (TIMESTAMP). Catatan: Modul aktif `uptime` menggunakan tabel `monitors`.
 8. **`ticket_activities`**
@@ -198,6 +206,12 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
 14. **`asset_activities`** *(Migrasi 013)*
     - Kolom: `id` (PK, Serial), `asset_id` (INT, Not Null), `actor` (VARCHAR 50), `action` (VARCHAR 20, Not Null), `field_name` (VARCHAR 50), `old_value` (TEXT), `new_value` (TEXT), `created_at` (TIMESTAMP).
     - Tujuan: Menyimpan linimasa jejak audit (*audit trail*) riwayat perubahan data aset untuk aksi `created`, `updated`, `soft-deleted`, dan `restored`.
+15. **`uptime_alerts`** *(Migrasi 016)*
+    - Kolom: `id` (PK, Serial), `monitor_id` (INT, Not Null, NO foreign key — codebase convention), `alert_type` (VARCHAR 20: 'DOWN' / 'RECOVERED'), `message` (TEXT), `created_at` (TIMESTAMP). Deleted app-level with the monitor.
+16. **`telegram_settings`** *(Migrasi 017)*
+    - Kolom: singleton row (`id` = 1), `bot_token` (TEXT), `chat_id` (VARCHAR 64), `updated_at` (TIMESTAMP). Seeded by the migration.
+17. **`uptime_checks`** *(Migrasi 018)*
+    - Kolom: `id` (PK, Serial), `monitor_id` (INT, Not Null, NO foreign key), `checked_at` (TIMESTAMP), `status` (VARCHAR 10: 'UP' / 'DOWN'), `latency` (INT, ms). Index `idx_uptime_checks_monitor_time` on (`monitor_id`, `checked_at`). Deleted app-level with the monitor.
 
 *Relasi Relasional*:
 Hubungan antar-tabel dijaga secara logis di tingkat aplikasi:
@@ -210,6 +224,7 @@ Hubungan antar-tabel dijaga secara logis di tingkat aplikasi:
 - `tickets.category`, `kb_articles.category`, dan `canned_responses.category` berelasi logis ke `ticket_categories.name`.
 - Penghapusan permanen tiket (`delete_permanent`) membersihkan seluruh baris terkait pada `ticket_activities`, `ticket_attachments`, `ticket_ratings`, dan `ticket_relationships` di level aplikasi sebelum baris tiket dihapus (tanpa ON DELETE CASCADE / foreign keys).
 - Penghapusan permanen aset (`hard_delete`) membersihkan seluruh baris linimasa terkait pada `asset_activities` sebelum baris aset dihapus.
+- Penghapusan target monitor membersihkan seluruh baris terkait pada `uptime_alerts` dan `uptime_checks` di level aplikasi sebelum baris monitor dihapus.
 
 ---
 
