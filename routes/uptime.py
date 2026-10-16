@@ -531,7 +531,10 @@ def history(monitor_id):
                    COUNT(*) AS total,
                    COUNT(*) FILTER (WHERE status = 'UP') AS up_count,
                    COUNT(*) FILTER (WHERE status = 'DOWN') AS down_count,
-                   AVG(latency) FILTER (WHERE status = 'UP') AS avg_lat
+                   AVG(latency) FILTER (WHERE status = 'UP') AS avg_lat,
+                   MIN(latency) FILTER (WHERE status = 'UP') AS min_lat,
+                   MAX(latency) FILTER (WHERE status = 'UP') AS max_lat,
+                   SUM(latency) FILTER (WHERE status = 'UP') AS sum_lat
             FROM uptime_checks
             WHERE monitor_id = %s
               AND checked_at >= CURRENT_TIMESTAMP - INTERVAL '""" + days + """'
@@ -547,15 +550,22 @@ def history(monitor_id):
         total = sum(b['total'] for b in buckets)
         up_count = sum(b['up_count'] for b in buckets)
         down_count = total - up_count
-        up_lat = [float(b['avg_lat']) for b in buckets if b['avg_lat'] is not None]
+        bucket_mins = [float(b['min_lat']) for b in buckets if b['min_lat'] is not None]
+        bucket_maxs = [float(b['max_lat']) for b in buckets if b['max_lat'] is not None]
+        bucket_sum = sum(float(b['sum_lat']) for b in buckets if b['sum_lat'] is not None)
 
     cur.close()
     conn.close()
 
     uptime_pct = round(up_count / total * 100, 1) if total else 0.0
-    avg_lat = round(sum(up_lat) / len(up_lat), 1) if up_lat else None
-    min_lat = round(min(up_lat), 1) if up_lat else None
-    max_lat = round(max(up_lat), 1) if up_lat else None
+    if range_param == '24h':
+        avg_lat = round(sum(up_lat) / len(up_lat), 1) if up_lat else None
+        min_lat = round(min(up_lat), 1) if up_lat else None
+        max_lat = round(max(up_lat), 1) if up_lat else None
+    else:
+        avg_lat = round(bucket_sum / up_count, 1) if up_count else None
+        min_lat = round(min(bucket_mins), 1) if bucket_mins else None
+        max_lat = round(max(bucket_maxs), 1) if bucket_maxs else None
     chart_svg = build_latency_svg(points, range_param)
 
     return render_template(
