@@ -59,10 +59,42 @@ def export_assets():
     output = io.StringIO()
     writer = csv.writer(output)
 
+    # Header block
+    now = datetime.now()
+    now_str = now.strftime('%Y-%m-%d %H:%M:%S')
+    username = session.get('username', '')
+    filter_str = f"Kategori: {category or 'Semua'}; Status: {status or 'Semua'}; Termasuk Terhapus: {'Ya' if include_deleted == 'true' else 'Tidak'}"
+
+    writer.writerow(['Laporan Aset IT'])
+    writer.writerow(['Tanggal Dibuat Laporan', now_str])
+    writer.writerow(['Dibuat Oleh', username])
+    writer.writerow(['Filter', filter_str])
+    writer.writerow([])
+
+    # Summary block
+    writer.writerow(['Ringkasan'])
+    writer.writerow(['Total Aset', len(assets)])
+
+    writer.writerow(['Berdasarkan Status'])
+    status_counts = Counter(a['status'] for a in assets if a.get('status'))
+    known_statuses = ['Procurement', 'Active', 'Under Repair', 'Retired']
+    ordered_statuses = [st for st in known_statuses if status_counts.get(st, 0) > 0]
+    other_statuses = sorted([st for st in status_counts if st not in known_statuses and status_counts[st] > 0])
+    for st in ordered_statuses + other_statuses:
+        writer.writerow([f"  - {st}", status_counts[st]])
+
+    writer.writerow(['Berdasarkan Kategori'])
+    category_counts = Counter(a['category'] for a in assets if a.get('category'))
+    sorted_cats = sorted(category_counts.keys(), key=lambda c: (-category_counts[c], c))
+    for cat in sorted_cats:
+        writer.writerow([f"  - {cat}", category_counts[cat]])
+    writer.writerow([])
+
     # Header Kolom Excel
     writer.writerow([
         'ID', 'Asset Tag', 'Nama Perangkat', 'Kategori', 'IP Address',
-        'MAC Address', 'Status', 'Lokasi', 'Catatan', 'Tanggal Terdaftar',
+        'MAC Address', 'Serial Number', 'Status', 'Assigned To', 'Lokasi', 'Catatan',
+        'Purchase Date', 'Warranty Expiry', 'Tanggal Terdaftar',
         'Terakhir Diperbarui', 'Diperbarui Oleh', 'Status Penghapusan', 'Alasan Penghapusan'
     ])
 
@@ -78,15 +110,22 @@ def export_assets():
             a['category'],
             a['ip_address'] or '',
             a['mac_address'] or '',
+            a['serial_number'] or '',
             a['status'],
+            a['assigned_to'] or '',
             a['location'] or '',
             a['notes'] or '',
+            a['purchase_date'].strftime('%Y-%m-%d') if a['purchase_date'] else '',
+            a['warranty_expiry'].strftime('%Y-%m-%d') if a['warranty_expiry'] else '',
             created_str,
             updated_str,
             a['updated_by'] or '',
             deleted_status,
             a['delete_reason'] or ''
         ])
+
+    writer.writerow([])
+    writer.writerow([f"Total Baris Data: {len(assets)}"])
 
     filename = f"Laporan_Aset_IT_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
 
