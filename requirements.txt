@@ -4,3 +4,4 @@ Werkzeug==3.0.1
 alembic==1.13.1
 Pillow==10.2.0
 qrcode==8.2
+gunicorn==26.2.0
