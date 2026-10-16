@@ -10,7 +10,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Login Sesi**: Akses masuk berbasis username dan hash kata sandi (`Werkzeug`).
 - **Proteksi Brute-Force**: Membatasi kegagalan login maksimal 5 kali dalam 15 menit per kombinasi IP dan username; mengembalikan kode HTTP 429 saat terkunci.
 - **Logout Sesi**: Form POST khusus dengan modal konfirmasi interaktif ("Keluar dari aplikasi?") melalui dropdown profil di header; menghapus seluruh data sesi dan mengembalikan pengguna ke halaman login (rute `POST /logout` menolak metode GET dengan 405 Method Not Allowed).
-- **Idle Session Timeout (30 Menit)**: Sesi kedaluwarsa otomatis setelah 30 menit tanpa aktivitas (*server-side rolling idle timeout* melalui `PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)` dan `SESSION_REFRESH_EACH_REQUEST = True`). Permintaan berikutnya setelah kedaluwarsa dialihkan kembali ke halaman login.
+- **Idle Session Timeout (30 Menit)**: Sesi kedaluwarsa otomatis setelah 30 menit tanpa aktivitas (*server-side rolling idle timeout* melalui `PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)` dan `SESSION_REFRESH_EACH_REQUEST = True`). Permintaan berikutnya setelah kedaluwarsa dialihkan kembali ke halaman login dengan notifikasi satu kali bahwa sesi telah berakhir; pesan tidak muncul bagi pengunjung baru pertama kali maupun setelah aksi logout yang disengaja.
 - **Profile Dropdown**: Menu dropdown pengguna pada header (#profile-button) yang menampilkan nama pengguna, chevron rotasi, header status peran ("Masuk sebagai"), tautan Ganti Password, dan aksi Logout.
 - **Enforcement Ganti Kata Sandi**: Pengalihan otomatis bagi akun dengan status `must_change_password = TRUE`.
 
@@ -22,12 +22,12 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 ### C. Modul IT Assets / IPAM (`routes/assets.py`)
 - **Daftar Inventaris Aset**: Menampilkan seluruh perangkat aktif dengan kalkulasi umur perangkat otomatis, filter status (`Procurement`, `Active`, `Under Repair`, `Retired`), dan filter penugasan (`unassigned` atau spesifik pengguna).
 - **Pencarian Aset**: Pencarian fleksibel berdasarkan nama, tag aset, IP, atau lokasi.
-- **Tambah Aset**: Pendaftaran perangkat baru dengan validasi keunikan tag aset (*asset tag*), kategori (Server, PC/Laptop, Network, Docker Container, Printer/Peripherals), status, penugasan pengguna, tanggal beli, dan tanggal garansi habis.
-- **Detail & Spesifikasi**: Informasi rinci perangkat keras, alamat IP, alamat MAC, status penugasan, status masa garansi dinamis, dan kalkulasi usia perangkat.
+- **Tambah Aset**: Pendaftaran perangkat baru dengan validasi keunikan tag aset (*asset tag*), nomor seri perangkat (`serial_number`), kategori (Server, PC/Laptop, Network, Docker Container, Printer/Peripherals), status, penugasan pengguna, tanggal beli, dan tanggal garansi habis.
+- **Detail & Spesifikasi**: Informasi rinci perangkat keras, nomor seri perangkat (`serial_number`), alamat IP, alamat MAC, status penugasan, status masa garansi dinamis, dan kalkulasi usia perangkat.
 - **Pengingat & Manajemen Garansi**: Validasi tanggal beli (`purchase_date`) dan habis garansi (`warranty_expiry`), opsi eksplisit **Tanpa Garansi** (`no_warranty`) yang menonaktifkan input tanggal habis garansi saat dicentang, serta indikator status garansi dinamis pada halaman detail aset.
 - **Jejak Audit Aktivitas Aset (Riwayat Perubahan)**: Linimasa pencatatan perubahan pada detail aset yang melacak aksi pembuatan (`created`), pembaruan per kolom data (`updated`), penghapusan sementara (`soft-deleted`), dan pemulihan (`restored`) melalui tabel `asset_activities`.
-- **Ubah Aset**: Pembaruan data perangkat keras, penugasan, garansi, status, lokasi, dan catatan teknis dengan audit pencatatan perubahan otomatis.
-- **Impor Massal Aset via CSV**: Fitur impor massal hingga 200 baris per berkas melalui `/assets/import` dengan validasi ketat 12 kolom header dan sifat transaksi atomik (*all-or-nothing*). Dilengkapi fasilitas pengunduhan berkas template CSV siap pakai (`/assets/import/template`).
+- **Ubah Aset**: Pembaruan data perangkat keras, nomor seri perangkat (`serial_number`), penugasan, garansi, status, lokasi, dan catatan teknis dengan audit pencatatan perubahan otomatis.
+- **Impor Massal Aset via CSV**: Fitur impor massal hingga 200 baris per berkas melalui `/assets/import` menggunakan template 13 kolom (dengan `serial_number` bersifat opsional; berkas CSV lama 12 kolom tetap diterima) dan transaksi atomik (*all-or-nothing*). Dilengkapi fasilitas pengunduhan berkas template CSV siap pakai (`/assets/import/template`).
 - **Cetak Label QR Fisik**: Halaman cetak stiker label QR perangkat (`/assets/<id>/label`) dengan pembangkitan kode QR *server-side* (menghasilkan URL detail aset ber-HTTPS via ProxyFix) dan format siap cetak yang otomatis menyembunyikan tombol cetak pada media cetak.
 - **Soft Delete Aset**: Pemindahan aset ke riwayat terhapus dengan pencatatan alasan dan pengguna yang menghapus.
 - **Restore Aset**: Mengembalikan aset terhapus ke daftar aktif via form POST instan.
@@ -67,8 +67,8 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Hapus Target Monitor**: Menghapus target dari daftar pemantauan.
 
 ### G. Modul Reports Center (`routes/reports.py`)
-- **Ekspor CSV Aset TI**: Unduh berkas CSV dengan filter kategori, status, dan opsi menyertakan aset terhapus.
-- **Ekspor CSV Service Desk**: Unduh berkas CSV tiket dengan filter rentang tanggal, kategori, dan status tiket.
+- **Ekspor CSV Aset TI**: Unduh berkas CSV dengan filter kategori, status, dan opsi menyertakan aset terhapus. Memuat header block (judul, tanggal dibuat laporan, pembuat laporan, filter), summary block (total aset, rincian status dan kategori), 18 kolom detail termasuk 4 kolom baru: `Serial Number`, `Assigned To`, `Purchase Date`, dan `Warranty Expiry`, serta footer total baris data (`Total Baris Data: N`).
+- **Ekspor CSV Service Desk**: Unduh berkas CSV tiket dengan filter rentang tanggal, kategori, dan status tiket. Memuat header block (judul, tanggal dibuat laporan, pembuat laporan, periode, filter), summary block (total tiket, rincian status, prioritas, kategori, rata-rata durasi penyelesaian, % SLA terpenuhi, rata-rata CSAT), 17 kolom detail termasuk 5 kolom baru: `Assignee`, `SLA`, `Durasi Penyelesaian`, `CSAT`, dan `Terakhir Diperbarui`, serta footer total baris data (`Total Baris Data: N`).
 - **Kompatibilitas Excel**: Berkas CSV disandikan dengan format UTF-8-SIG (`\ufeff`) agar kolom dan pemisah terbaca rapi pada Microsoft Excel.
 
 ### H. Modul User Management & Profil (`routes/users.py`)

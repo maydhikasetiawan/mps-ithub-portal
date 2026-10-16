@@ -109,6 +109,9 @@ Lalu lengkapi nilai variabel sesuai kredensial server PostgreSQL lokal Anda.
 
 Server akan aktif dan mendengarkan permintaan pada `http://0.0.0.0:5000`.
 
+> [!NOTE]
+> **Catatan Produksi**: Perintah `python app.py` hanya digunakan untuk pengembangan lokal (*local development*). Di lingkungan produksi, aplikasi dijalankan menggunakan server WSGI Gunicorn 26.2.0 melalui `entrypoint.sh` di dalam container Docker (lihat rincian pada `docs/architecture.md`).
+
 ---
 
 ## 6. Verifikasi Instalasi

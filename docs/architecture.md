@@ -7,6 +7,7 @@ Dokumen ini menjelaskan rancangan arsitektur, tumpukan teknologi (*technology st
 ## 1. Tumpukan Teknologi (Tech Stack)
 
 - **Backend Framework**: Python 3.11, Flask 3.0.2, Werkzeug 3.0.1 (dengan middleware `ProxyFix` untuk reverse proxy)
+- **Production WSGI Server**: Gunicorn 26.2.0 (server pengembangan Flask bawaan tidak digunakan di lingkungan produksi)
 - **Template Engine & UI**: Jinja2 dengan Vanilla Custom CSS (tanpa framework CSS eksternal seperti Bootstrap/Tailwind)
 - **Database & Migration**: PostgreSQL, driver `psycopg2-binary` 2.9.9 (`RealDictCursor`), skema migrasi menggunakan Alembic 1.13.1
 - **Image Processing & QR**: Pillow 10.2.0, qrcode 8.2 (pembangkitan QR server-side in-memory)
@@ -35,6 +36,7 @@ my-web-app/
 ├── alembic.ini           # Berkas konfigurasi logging & metadata Alembic
 ├── app.py                # Titik masuk utama aplikasi Flask & registrasi rute
 ├── Dockerfile            # Konfigurasi container image Python
+├── entrypoint.sh         # Container entrypoint (menjalankan alembic upgrade head, lalu memulai Gunicorn)
 └── requirements.txt      # Daftar dependensi Python
 ```
 
@@ -56,14 +58,14 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET /` & `GET /dashboard` — Agregasi total aset aktif, jumlah tiket terbuka/dalam pengerjaan, dan persentase ketersediaan layanan (*uptime percentage*).
 
 ### c. `assets` (`routes/assets.py`, URL prefix: `/assets`)
-- **Tujuan**: Manajemen inventaris aset TI dan IP Address Management (IPAM). Mendukung pencatatan aset, penghitungan usia perangkat, validasi keunikan tag aset, penugasan perangkat, pemantauan masa garansi dan opsi tanpa garansi, jejak audit riwayat perubahan (*asset activities*), impor massal dari CSV, pencetakan label fisik QR, soft delete beralasan, pemulihan (*restore*), serta penghapusan permanen khusus admin dengan verifikasi ganda.
+- **Tujuan**: Manajemen inventaris aset TI dan IP Address Management (IPAM). Mendukung pencatatan aset, nomor seri perangkat (`serial_number` pada formulir tambah/edit, halaman detail, dan impor), penghitungan usia perangkat, validasi keunikan tag aset, penugasan perangkat, pemantauan masa garansi dan opsi tanpa garansi, jejak audit riwayat perubahan (*asset activities*), impor massal dari CSV, pencetakan label fisik QR, soft delete beralasan, pemulihan (*restore*), serta penghapusan permanen khusus admin dengan verifikasi ganda.
 - **Rute Utama**:
   - `GET /assets/` — Daftar aset aktif dengan filter pencarian, status, dan penugasan pengguna.
-  - `GET, POST /assets/add` — Formulir penambahan aset baru dengan penugasan dan masa garansi.
-  - `GET /assets/<int:asset_id>` — Detail spesifikasi, linimasa riwayat perubahan, status garansi dinamis, dan kalkulasi usia aset.
-  - `GET, POST /assets/edit/<int:asset_id>` — Pembaruan informasi perangkat dengan pencatatan jejak audit otomatis.
-  - `GET, POST /assets/import` — Impor massal data aset dari berkas CSV dengan validasi 12 kolom dan transaksi atomik (*all-or-nothing*).
-  - `GET /assets/import/template` — Unduh template CSV aset siap pakai (`template_import_aset.csv`) yang dibangkitkan secara *in-memory*.
+  - `GET, POST /assets/add` — Formulir penambahan aset baru dengan penugasan, nomor seri, dan masa garansi.
+  - `GET /assets/<int:asset_id>` — Detail spesifikasi (termasuk nomor seri), linimasa riwayat perubahan, status garansi dinamis, dan kalkulasi usia aset.
+  - `GET, POST /assets/edit/<int:asset_id>` — Pembaruan informasi perangkat (termasuk nomor seri) dengan pencatatan jejak audit otomatis.
+  - `GET, POST /assets/import` — Impor massal data aset dari berkas CSV dengan template 13 kolom dengan `serial_number` opsional (CSV lama 12 kolom tetap diterima) dan transaksi atomik (*all-or-nothing*).
+  - `GET /assets/import/template` — Unduh template CSV aset siap pakai (`template_import_aset.csv`) yang dibangkitkan secara *in-memory* (header 13 kolom).
   - `GET /assets/<int:asset_id>/label` — Tampilan label QR fisik siap cetak untuk perangkat tertentu (pembangkitan QR *server-side* via qrcode/Pillow).
   - `GET, POST /assets/delete/<int:asset_id>` — Soft delete aset ke riwayat terhapus.
   - `POST /assets/restore/<int:asset_id>` — Mengembalikan aset terhapus ke status aktif.
@@ -129,11 +131,15 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET, POST /users/change-password` — Penggantian kata sandi mandiri bagi pengguna aktif.
 
 ### g. `reports` (`routes/reports.py`, URL prefix: `/reports`)
-- **Tujuan**: Penyediaan laporan analitis dan ekspor data tabular ke berkas CSV dengan format UTF-8-SIG untuk kompatibilitas Microsoft Excel.
+- **Tujuan**: Penyediaan laporan analitis dan ekspor data tabular ke berkas CSV dengan format UTF-8-SIG untuk kompatibilitas Microsoft Excel. Mengikuti struktur 4 bagian standar Fase 4:
+  - **Header Block**: Judul laporan (`Laporan IT Service Desk & Helpdesk` / `Laporan Aset IT`), tanggal dibuat laporan, pembuat laporan (`Dibuat Oleh`), dan filter aktif.
+  - **Summary Block**: Total data dan rekapitulasi ringkasan (laporan tiket: total tiket, breakdown status, prioritas, kategori, rata-rata durasi penyelesaian, % SLA terpenuhi, rata-rata CSAT; laporan aset: total aset, breakdown status, breakdown kategori).
+  - **Detail Columns**: Baris detail data tabular. Ekspor tiket terdiri dari 17 kolom termasuk `Assignee`, `SLA`, `Durasi Penyelesaian`, `CSAT`, dan `Terakhir Diperbarui`. Ekspor aset terdiri dari 18 kolom termasuk `Serial Number`, `Assigned To`, `Purchase Date`, dan `Warranty Expiry`.
+  - **Footer**: Baris penutup yang memuat total baris data (`Total Baris Data: N`).
 - **Rute Utama**:
   - `GET /reports/` — Antarmuka pemilihan filter laporan.
-  - `GET /reports/export/assets` — Unduh data aset dalam bentuk CSV.
-  - `GET /reports/export/tickets` — Unduh data tiket helpdesk dalam bentuk CSV.
+  - `GET /reports/export/assets` — Unduh data aset dalam bentuk CSV (18 kolom detail dengan header, summary, dan footer).
+  - `GET /reports/export/tickets` — Unduh data tiket helpdesk dalam bentuk CSV (17 kolom detail dengan header, summary, dan footer).
 
 ### h. `health` (`app.py`, URL prefix: root)
 - **Tujuan**: Endpoint pemantauan kondisi service tanpa autentikasi.
@@ -153,13 +159,13 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 
 ## 4. Skema Basis Data (Database Schema)
 
-Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–013`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
+Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–014`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
 
 1. **`users`**
    - Kolom: `id` (PK, Serial), `username` (VARCHAR 50, Unique), `email` (VARCHAR 100, Unique), `password_hash` (TEXT), `role` (VARCHAR 20, default 'staff'), `department` (VARCHAR 50, default 'IT'), `must_change_password` (BOOLEAN, default FALSE), `created_at` (TIMESTAMP).
    - Data bawaan: akun `admin` (role admin) dan `guest` (role guest).
 2. **`assets`**
-   - Kolom: `id` (PK, Serial), `asset_tag` (VARCHAR 50, Unique), `name` (VARCHAR 100), `category` (VARCHAR 50), `ip_address` (VARCHAR 45), `mac_address` (VARCHAR 45), `status` (VARCHAR 20, default 'Active'), `location` (VARCHAR 100), `notes` (TEXT), `assigned_to` (VARCHAR 50, Migrasi 010), `purchase_date` (DATE, Migrasi 011), `warranty_expiry` (DATE, Migrasi 011), `no_warranty` (BOOLEAN, default FALSE, Migrasi 012), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP), `updated_by` (VARCHAR 50).
+   - Kolom: `id` (PK, Serial), `asset_tag` (VARCHAR 50, Unique), `serial_number` (VARCHAR 100, Migrasi 014), `name` (VARCHAR 100), `category` (VARCHAR 50), `ip_address` (VARCHAR 45), `mac_address` (VARCHAR 45), `status` (VARCHAR 20, default 'Active'), `location` (VARCHAR 100), `notes` (TEXT), `assigned_to` (VARCHAR 50, Migrasi 010), `purchase_date` (DATE, Migrasi 011), `warranty_expiry` (DATE, Migrasi 011), `no_warranty` (BOOLEAN, default FALSE, Migrasi 012), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP), `updated_by` (VARCHAR 50).
 3. **`tickets`**
    - Kolom: `id` (PK, Serial), `ticket_code` (VARCHAR 20, Unique), `title` (VARCHAR 150), `category` (VARCHAR 50), `priority` (VARCHAR 20, default 'Medium'), `status` (VARCHAR 20, default 'Open'), `description` (TEXT), `created_by` (VARCHAR 50), `assigned_to` (VARCHAR 50), `department` (VARCHAR 50), `resolution_note` (TEXT), `resolved_by` (VARCHAR 50), `resolved_at` (TIMESTAMP), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP).
 4. **`ticket_categories`**
@@ -217,7 +223,7 @@ Sistem menggunakan session cookies terenkripsi (`SECRET_KEY`) dengan proteksi du
 - Dikonfigurasi dengan batas waktu tidak aktif 30 menit melalui `PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)`.
 - Pengaturan `SESSION_REFRESH_EACH_REQUEST = True` memastikan cookie kedaluwarsa diperbarui setiap ada permintaan baru (*rolling idle timeout*).
 - Status permanen sesi diaktifkan khusus saat login berhasil (`session.permanent = True` di `routes/auth.py`). Sesi anonim tidak pernah dijadikan permanen.
-- Jika pengguna idle melampaui 30 menit, permintaan atau klik berikutnya mendapati sesi telah kedaluwarsa dan `@login_required` otomatis mengarahkan ke `/login`.
+- Jika pengguna idle melampaui 30 menit, permintaan atau klik berikutnya mendapati sesi telah kedaluwarsa dan `@login_required` maupun `@roles_required` otomatis mengarahkan ke `/login` disertai notifikasi flash satu kali: `Sesi Anda telah berakhir. Silakan login kembali.`. Mekanisme ini menggunakan marker cookie `mps_had_session` yang disetel saat login dan dihapus pada respon pengalihan kedaluwarsa (pesan tidak pernah muncul bagi pengunjung baru pertama kali maupun setelah aksi logout yang disengaja).
 
 ### Middleware ProxyFix (Reverse Proxy Trust):
 - Aplikasi dibungkus oleh middleware Werkzeug `ProxyFix` pada `app.py`:
@@ -255,4 +261,4 @@ Otomatisasi pengiriman kode ke server produksi diatur melalui GitHub Actions pad
      - Melakukan `docker pull` image terbaru dari `ghcr.io`.
      - Menghentikan dan menghapus container lama `my-web-app`.
      - Menyiapkan jaringan docker `app-monitoring_default`.
-     - Menjalankan container baru di port `5000:5000` dengan kebijakan restart otomatis (`--restart always`) serta menginjeksikan secrets: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, dan `SECRET_KEY`. Container memulai proses via `entrypoint.sh` yang menjalankan migrasi otomatis `alembic upgrade head` (bersifat idempoten — no-op bila sudah di head) sebelum menjalankan aplikasi Flask.
+     - Menjalankan container baru di port `5000:5000` dengan kebijakan restart otomatis (`--restart always`) serta menginjeksikan secrets: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, dan `SECRET_KEY`. Container memulai proses via `entrypoint.sh` yang menjalankan migrasi otomatis `alembic upgrade head` (bersifat idempoten — no-op bila sudah di head) sebelum menjalankan server produksi Gunicorn 26.2.0 dengan perintah: `gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 4 --timeout 45 --graceful-timeout 30 --forwarded-allow-ips="*" --access-logfile - --error-logfile - --log-level info app:app` (model worker `gthread`, PID 1, log akses dan error ke stdout). Prosedur rollback dilakukan dengan melakukan revert commit pada Git (`git revert`).

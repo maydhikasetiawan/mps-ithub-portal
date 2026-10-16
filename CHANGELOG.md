@@ -6,6 +6,32 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [2026-10-16]
+- Migrasi Gunicorn (main `16fdf15`):
+  - Migrasi server produksi dari server pengembangan Flask bawaan ke Gunicorn 26.2.0 (`1` worker `gthread`, `4` threads, timeout `45`, graceful-timeout `30`, `--forwarded-allow-ips="*"`, log akses dan error ke stdout, PID 1).
+  - Perintah eksekusi dipusatkan pada `entrypoint.sh` yang menjalankan migrasi Alembic sebelum menjalankan Gunicorn.
+  - Middleware `ProxyFix` tetap berfungsi normal (terverifikasi secara empiris: Gunicorn tidak menghapus `X-Forwarded-Proto`).
+  - Prosedur rollback dilakukan dengan melakukan revert commit pada Git (`git revert`).
+- Fase 4.1 Laporan Tiket (main `90e4ba6`):
+  - Penyempurnaan ekspor laporan tiket CSV (`routes/reports.py`): penambahan header block (judul, tanggal dibuat laporan, pembuat laporan, filter), summary block (total tiket, rincian status, prioritas, kategori, rata-rata durasi penyelesaian, % SLA terpenuhi, rata-rata CSAT), dan footer total baris data (`Total Baris Data`).
+  - Penambahan 5 kolom detail baru pada CSV tiket: `Assignee`, `SLA`, `Durasi Penyelesaian`, `CSAT`, dan `Terakhir Diperbarui` (total 17 kolom).
+  - Anggaran kueri efisien tepat 3 kueri tanpa masalah N+1 (*no N+1*).
+  - Terverifikasi live: 6 tiket, 16.7% SLA, CSAT 5.0/5.
+- Serial Number prerequisite (main `a703ab6`, migrasi 014):
+  - Penambahan kolom nullable `serial_number VARCHAR(100)` pada tabel `assets` melalui migrasi Alembic `014_add_asset_serial_number.py` dan `init_db()`.
+  - Dukungan field nomor seri pada formulir tambah aset, ubah aset, halaman detail spesifikasi, dan pelacakan jejak audit aktivitas (`asset_activities`).
+  - Pembaruan template impor CSV menjadi 13 kolom dengan `serial_number` bersifat opsional; berkas CSV lama 12 kolom tetap diterima.
+- Fase 4.2+4.3 Laporan Aset (gabung) (main `16f1b26`):
+  - Penyempurnaan ekspor laporan aset CSV (`routes/reports.py`): penambahan header block (judul, tanggal dibuat laporan, pembuat laporan, filter), summary block (total aset, rincian status dan kategori), dan footer total baris data (`Total Baris Data`).
+  - Penambahan 4 kolom detail baru pada CSV aset: `Serial Number`, `Assigned To`, `Purchase Date`, dan `Warranty Expiry` (total 18 kolom).
+  - Tanpa kueri tambahan (tetap 1 kueri tunggal `SELECT *`).
+  - Terverifikasi live: 10 aset, seluruh perhitungan konsisten.
+- Notifikasi sesi habis (main `eb161c5`):
+  - Penerapan marker cookie `mps_had_session` saat login berhasil dan penghapusan saat logout.
+  - Penampilan notifikasi flash satu kali `Sesi Anda telah berakhir. Silakan login kembali.` saat pengalihan sesi kedaluwarsa via dekorator `login_required` dan `roles_required`.
+  - Blok pesan flash ditambahkan pada `templates/login.html` menggunakan gaya `.alert`.
+  - Terverifikasi: 4 kasus perilaku (idle > 30 menit, pengunjung baru, logout, salah password) lulus pengujian.
+
 ## [2026-10-15] - Fase 3: Asset Management
 - Pengelolaan siklus hidup aset dengan status pengadaan (*asset lifecycle*) (PR #31, main `37572c4`):
   - Penambahan status baru `Procurement` pada aset sehingga daftar status lengkap menjadi `Procurement`, `Active`, `Under Repair`, dan `Retired` (`ALLOWED_STATUSES`).
