@@ -11,7 +11,7 @@ from routes.reports import reports_bp
 from routes.users import users_bp # 1. Import Blueprint Users
 from routes.knowledge_base import knowledge_base_bp
 from flask import session, redirect, url_for, request, flash
-from routes.uptime import uptime_bp
+from routes.uptime import uptime_bp, start_uptime_scheduler
 
 app = Flask(__name__)
 # Trust X-Forwarded-* headers from the single Nginx reverse
@@ -44,6 +44,12 @@ def ensure_db_initialized():
     if not getattr(app, '_got_first_request', False):
         init_db()
         app._got_first_request = True
+
+@app.before_request
+def ensure_scheduler_started():
+    if not getattr(app, '_scheduler_started', False):
+        start_uptime_scheduler()
+        app._scheduler_started = True
 
 @app.before_request
 def check_mandatory_password_change():

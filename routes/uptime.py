@@ -1,6 +1,8 @@
 import socket
 import time
 import urllib.request
+import logging
+import threading
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from routes.auth import login_required, roles_required
 from database.db import get_db_connection
@@ -44,10 +46,11 @@ def index():
 
     # Hitung Statistik Ringkasan
     total = len(monitors_list)
-    up_count = sum(1 for m in monitors_list if m['status'] == 'UP')
-    down_count = sum(1 for m in monitors_list if m['status'] == 'DOWN')
+    up_count = sum(1 for m in monitors_list if m['enabled'] and m['status'] == 'UP')
+    down_count = sum(1 for m in monitors_list if m['enabled'] and m['status'] == 'DOWN')
+    paused_count = sum(1 for m in monitors_list if not m['enabled'])
 
-    return render_template('uptime/index.html', monitors=monitors_list, total=total, up_count=up_count, down_count=down_count, active_page='uptime')
+    return render_template('uptime/index.html', monitors=monitors_list, total=total, up_count=up_count, down_count=down_count, paused_count=paused_count, active_page='uptime')
 
 # --- TAMBAH TARGET MONITOR BARU ---
 @uptime_bp.route('/add', methods=['GET', 'POST'])
@@ -115,14 +118,84 @@ def delete(monitor_id):
     flash("Target monitor berhasil dihapus.", "danger")
     return redirect(url_for('uptime.index'))
 
-# --- TRIGGER CHECK SEMUA SERVICE SEKALIGUS ---
-@uptime_bp.route('/check-all')
+# --- TOGGLE MONITOR OTOMATIS (ON/OFF) ---
+@uptime_bp.route('/toggle/<int:monitor_id>', methods=['POST'])
 @login_required
-@roles_required('admin', 'it', 'guest')
-def check_all():
+@roles_required('admin', 'it')
+def toggle(monitor_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM monitors;")
+    cur.execute("SELECT * FROM monitors WHERE id = %s;", (monitor_id,))
+    monitor = cur.fetchone()
+
+    if monitor:
+        new_enabled = not monitor['enabled']
+        cur.execute("UPDATE monitors SET enabled = %s WHERE id = %s;",
+                    (new_enabled, monitor_id))
+        conn.commit()
+        state = "diaktifkan" if new_enabled else "dinonaktifkan"
+        flash(f"Monitoring otomatis '{monitor['name']}' {state}.", "info")
+
+    cur.close()
+    conn.close()
+    return redirect(url_for('uptime.index'))
+
+# --- EDIT TARGET MONITOR ---
+@uptime_bp.route('/edit/<int:monitor_id>', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin', 'it')
+def edit(monitor_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM monitors WHERE id = %s;", (monitor_id,))
+    monitor = cur.fetchone()
+
+    if not monitor:
+        cur.close()
+        conn.close()
+        return redirect(url_for('uptime.index'))
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        target = request.form.get('target', '').strip()
+        type_check = request.form.get('type', 'TCP')
+        port = request.form.get('port') or None
+        enabled = 'enabled' in request.form
+
+        if enabled:
+            status, latency = check_target_health(target, type_check, port)
+            cur.execute("""
+                UPDATE monitors
+                SET name = %s, target = %s, type = %s, port = %s,
+                    enabled = %s, status = %s, latency = %s,
+                    last_check = CURRENT_TIMESTAMP
+                WHERE id = %s;
+            """, (name, target, type_check, port, enabled, status, latency, monitor_id))
+        else:
+            cur.execute("""
+                UPDATE monitors
+                SET name = %s, target = %s, type = %s, port = %s,
+                    enabled = %s
+                WHERE id = %s;
+            """, (name, target, type_check, port, enabled, monitor_id))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash(f"Monitor '{name}' berhasil diperbarui.", "success")
+        return redirect(url_for('uptime.index'))
+
+    cur.close()
+    conn.close()
+    return render_template('uptime/edit.html', monitor=monitor, active_page='uptime')
+
+def run_all_checks():
+    """Re-check every monitor and persist status/latency/last_check.
+    Request-free: safe to call from a route OR from the scheduler thread.
+    Opens and closes its OWN db connection (never share across threads)."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM monitors WHERE enabled = TRUE;")
     monitors_list = cur.fetchall()
 
     for m in monitors_list:
@@ -137,5 +210,38 @@ def check_all():
     cur.close()
     conn.close()
 
+CHECK_INTERVAL_SECONDS = 300  # 5 minutes
+
+
+def _scheduler_loop():
+    """Run checks immediately, then every CHECK_INTERVAL_SECONDS, forever.
+    Any exception is logged and the loop CONTINUES — a failed run must
+    never kill the scheduler."""
+    while True:
+        try:
+            run_all_checks()
+        except Exception:
+            logging.exception("Uptime scheduler run failed")
+        time.sleep(CHECK_INTERVAL_SECONDS)
+
+
+def start_uptime_scheduler():
+    # Assumes exactly 1 Gunicorn worker (current production). If workers
+    # ever increase, this scheduler MUST be reworked (duplicate runs) —
+    # e.g. a dedicated scheduler process or a DB advisory lock.
+    thread = threading.Thread(
+        target=_scheduler_loop, daemon=True, name="uptime-scheduler"
+    )
+    thread.start()
+    logging.info(
+        "Uptime scheduler started (interval %ss)", CHECK_INTERVAL_SECONDS
+    )
+
+# --- TRIGGER CHECK SEMUA SERVICE SEKALIGUS ---
+@uptime_bp.route('/check-all')
+@login_required
+@roles_required('admin', 'it', 'guest')
+def check_all():
+    run_all_checks()
     flash("Seluruh target service berhasil dipindai ulang!", "success")
     return redirect(url_for('uptime.index'))

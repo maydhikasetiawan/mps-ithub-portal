@@ -24,6 +24,7 @@
         <span style="color: #94a3b8; font-size: 12px; font-weight: bold;">TOTAL SERVICE DIPANTAU</span>
 
         <h2 style="color: #f8fafc; margin-top: 5px;">{{ total }}</h2>
+        {% if paused_count %}<small style="color: #f59e0b;">⏸️ {{ paused_count }} nonaktif</small>{% endif %}
 
     </div>
 
@@ -92,7 +93,11 @@
 
         {% for m in monitors %}
 
+        {% if not m.enabled %}
+        <tr style="opacity: 0.6;">
+        {% else %}
         <tr>
+        {% endif %}
 
             <td><strong>{{ m.name }}</strong></td>
 
@@ -102,11 +107,15 @@
 
             <td>
 
+                {% if not m.enabled %}
+                <span class="badge badge-yellow">⏸️ NONAKTIF</span>
+                {% else %}
                 <span class="badge {% if m.status == 'UP' %}badge-green{% elif m.status == 'DOWN' %}badge-red{% else %}badge-yellow{% endif %}">
 
                     {% if m.status == 'UP' %}🟢 ONLINE{% elif m.status == 'DOWN' %}🔴 OFFLINE{% else %}🟡 UNKNOWN{% endif %}
 
                 </span>
+                {% endif %}
 
             </td>
 
@@ -121,6 +130,14 @@
                     <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="btn-primary">🔄 Cek Now</a>
 
                     {% if session['role'] in ['admin', 'it'] %}
+
+                    <a href="{{ url_for('uptime.edit', monitor_id=m.id) }}" class="btn-secondary">✏️ Edit</a>
+
+                    <form method="POST" action="{{ url_for('uptime.toggle', monitor_id=m.id) }}" style="display: inline; margin: 0;">
+                        <button type="submit" class="btn-secondary" style="cursor: pointer; border: none;">
+                            {% if m.enabled %}⏸️ Nonaktifkan{% else %}▶️ Aktifkan{% endif %}
+                        </button>
+                    </form>
 
                     <form method="POST" action="{{ url_for('uptime.delete', monitor_id=m.id) }}" style="display: inline; margin: 0;" data-confirm="Hapus target ini?">
                         <button type="submit" class="btn-danger" style="cursor: pointer; border: none;">Hapus</button>
