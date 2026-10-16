@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Riwayat {{ monitor.name }} - MPS-ITHub{% endblock %}
+{% block header_title %}Riwayat: {{ monitor.name }}{% endblock %}
+
+{% block content %}
+<style>
+.range-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: bold;
+    color: #cbd5e1;
+    background: #1e293b;
+    border: 1px solid #334155;
+}
+.range-btn:hover {
+    background: #334155;
+}
+.range-btn.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #38bdf8;
+}
+.history-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.history-stat-card {
+    background: #0f172a;
+    padding: 12px 15px;
+    border-radius: 6px;
+    border: 1px solid #334155;
+}
+.history-stat-label {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: bold;
+    display: block;
+    text-transform: uppercase;
+}
+.history-stat-value {
+    color: #f8fafc;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 4px;
+}
+</style>
+
+<div style="margin-bottom: 20px;">
+    <div style="color: #94a3b8; font-size: 14px; margin-bottom: 12px;">
+        Target: <code style="color: #38bdf8;">{{ monitor.target }}{% if monitor.type == 'TCP' and monitor.port %}:{{ monitor.port }}{% endif %}</code> ({{ monitor.type }})
+    </div>
+
+    <!-- Range Selector -->
+    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 20px;">
+        <span style="color: #94a3b8; font-size: 13px; margin-right: 4px;">Rentang:</span>
+        <a href="{{ url_for('uptime.history', monitor_id=monitor.id, range='24h') }}" class="range-btn {% if range_param == '24h' %}active{% endif %}">24 Jam</a>
+        <a href="{{ url_for('uptime.history', monitor_id=monitor.id, range='7d') }}" class="range-btn {% if range_param == '7d' %}active{% endif %}">7 Hari</a>
+        <a href="{{ url_for('uptime.history', monitor_id=monitor.id, range='30d') }}" class="range-btn {% if range_param == '30d' %}active{% endif %}">30 Hari</a>
+    </div>
+
+    <!-- Stats row (6 cards/boxes) -->
+    <div class="history-stats-grid">
+        <div class="history-stat-card">
+            <span class="history-stat-label">Uptime</span>
+            <div class="history-stat-value" style="color: {% if uptime_pct >= 99 %}#22c55e{% elif uptime_pct >= 95 %}#f59e0b{% else %}#ef4444{% endif %};">{{ uptime_pct }}%</div>
+        </div>
+        <div class="history-stat-card">
+            <span class="history-stat-label">Rata-rata Latency</span>
+            <div class="history-stat-value">{% if avg_lat is not none %}{{ avg_lat }} ms{% else %}—{% endif %}</div>
+        </div>
+        <div class="history-stat-card">
+            <span class="history-stat-label">Min Latency</span>
+            <div class="history-stat-value">{% if min_lat is not none %}{{ min_lat }} ms{% else %}—{% endif %}</div>
+        </div>
+        <div class="history-stat-card">
+            <span class="history-stat-label">Maks Latency</span>
+            <div class="history-stat-value">{% if max_lat is not none %}{{ max_lat }} ms{% else %}—{% endif %}</div>
+        </div>
+        <div class="history-stat-card">
+            <span class="history-stat-label">Total Cek</span>
+            <div class="history-stat-value">{{ total }}</div>
+        </div>
+        <div class="history-stat-card">
+            <span class="history-stat-label">DOWN</span>
+            <div class="history-stat-value" style="color: {% if down_count > 0 %}#ef4444{% else %}#94a3b8{% endif %};">{{ down_count }}</div>
+        </div>
+    </div>
+
+    <!-- Chart Box -->
+    <div style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 15px; margin-bottom: 10px;">
+        <h4 style="color: #38bdf8; margin-bottom: 12px; font-size: 14px;">Grafik Latency (ms)</h4>
+        {% if chart_svg %}
+            {{ chart_svg|safe }}
+        {% else %}
+            <p style="color: #64748b; text-align: center; padding: 40px 0;">Belum ada data riwayat untuk rentang ini.</p>
+        {% endif %}
+    </div>
+    <small style="color: #64748b; display: block; margin-bottom: 20px;">Data riwayat disimpan 30 hari terakhir.</small>
+
+    <div>
+        <a href="{{ url_for('uptime.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 14px;">← Kembali ke Uptime Monitor</a>
+    </div>
+</div>
+{% endblock %}

@@ -131,8 +131,15 @@ def add():
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO monitors (name, target, type, port, status, latency, last_check)
-            VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);
+            VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            RETURNING id;
         """, (name, target, type_check, port, status, latency))
+        new_row = cur.fetchone()
+        monitor_id = new_row['id']
+        cur.execute("""
+            INSERT INTO uptime_checks (monitor_id, status, latency)
+            VALUES (%s, %s, %s);
+        """, (monitor_id, status, latency))
         conn.commit()
         cur.close()
         conn.close()
@@ -170,6 +177,10 @@ def check_now(monitor_id):
                 SET status = %s, latency = %s, last_check = CURRENT_TIMESTAMP
                 WHERE id = %s;
             """, (status, latency, monitor_id))
+        cur.execute("""
+            INSERT INTO uptime_checks (monitor_id, status, latency)
+            VALUES (%s, %s, %s);
+        """, (monitor_id, status, latency))
         conn.commit()
         flash(f"Status '{monitor['name']}' berhasil diperbarui ({status} - {latency}ms).", "info")
 
@@ -185,6 +196,7 @@ def delete(monitor_id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("DELETE FROM uptime_alerts WHERE monitor_id = %s;", (monitor_id,))
+    cur.execute("DELETE FROM uptime_checks WHERE monitor_id = %s;", (monitor_id,))
     cur.execute("DELETE FROM monitors WHERE id = %s;", (monitor_id,))
     conn.commit()
     cur.close()
@@ -260,6 +272,10 @@ def edit(monitor_id):
                         last_check = CURRENT_TIMESTAMP
                     WHERE id = %s;
                 """, (name, target, type_check, port, enabled, status, latency, monitor_id))
+            cur.execute("""
+                INSERT INTO uptime_checks (monitor_id, status, latency)
+                VALUES (%s, %s, %s);
+            """, (monitor_id, status, latency))
         else:
             cur.execute("""
                 UPDATE monitors
@@ -300,6 +316,10 @@ def run_all_checks():
                 consecutive_failures = %s
             WHERE id = %s;
         """, (status, latency, failures, m['id']))
+        cur.execute("""
+            INSERT INTO uptime_checks (monitor_id, status, latency)
+            VALUES (%s, %s, %s);
+        """, (m['id'], status, latency))
 
         alert_type = None
         if status == 'DOWN' and failures == 2:
@@ -317,6 +337,11 @@ def run_all_checks():
                 VALUES (%s, %s, %s);
             """, (m['id'], alert_type, message))
             pending_telegrams.append(message)
+
+    cur.execute("""
+        DELETE FROM uptime_checks
+        WHERE checked_at < CURRENT_TIMESTAMP - INTERVAL '30 days';
+    """)
 
     conn.commit()
     cur.close()
@@ -379,6 +404,168 @@ def telegram_test():
     else:
         flash(f"Koneksi Telegram GAGAL: {error}", "danger")
     return redirect(url_for('uptime.telegram_settings'))
+
+
+def build_latency_svg(points, range_param):
+    """Build a server-rendered SVG latency chart. Returns '' when there
+    are no points. UP checks = polyline; DOWN checks (raw mode) = red
+    dots at the baseline; hourly buckets with down_count > 0 get a red
+    dot at the baseline too. Y-scale = max latency in the data (min 1)."""
+    if not points:
+        return ''
+
+    if range_param == '24h':
+        up_lats = [p['latency'] for p in points if p.get('status') == 'UP']
+    else:
+        up_lats = [p['avg_lat'] for p in points if p.get('avg_lat') is not None]
+
+    raw_max = max(up_lats) if up_lats else 1.0
+    max_lat = max(float(raw_max), 1.0)
+
+    n = len(points)
+    segments = []
+    current_segment = []
+    down_dots = []
+
+    for i, p in enumerate(points):
+        x = 20.0 if n == 1 else (20.0 + (680.0 * i / (n - 1)))
+        if range_param == '24h':
+            is_up = (p.get('status') == 'UP')
+            lat = p.get('latency', 0)
+            is_down = (p.get('status') == 'DOWN')
+        else:
+            is_up = (p.get('avg_lat') is not None)
+            lat = p.get('avg_lat', 0) or 0
+            is_down = (p.get('down_count', 0) > 0)
+
+        if is_up:
+            y = round(240.0 - (lat / max_lat) * 220.0, 1)
+            current_segment.append(f"{round(x, 1)},{y}")
+        else:
+            if current_segment:
+                segments.append(current_segment)
+                current_segment = []
+
+        if is_down:
+            down_dots.append(f'<circle cx="{round(x, 1)}" cy="240" r="4" fill="#ef4444" />')
+
+    if current_segment:
+        segments.append(current_segment)
+
+    polylines = []
+    for seg in segments:
+        if len(seg) == 1:
+            pts_str = f"{seg[0]} {seg[0]}"
+        else:
+            pts_str = " ".join(seg)
+        polylines.append(f'<polyline points="{pts_str}" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />')
+
+    first_t = points[0]['t'].strftime('%d %b %H:%M') if hasattr(points[0]['t'], 'strftime') else str(points[0]['t'])
+    last_t = points[-1]['t'].strftime('%d %b %H:%M') if hasattr(points[-1]['t'], 'strftime') else str(points[-1]['t'])
+
+    half_max = int(round(max_lat / 2))
+    full_max = int(round(max_lat))
+
+    svg_parts = [
+        '<svg viewBox="0 0 720 260" width="100%" style="height:auto; display:block;" xmlns="http://www.w3.org/2000/svg">',
+        '<!-- Gridlines -->',
+        '<line x1="20" y1="75" x2="700" y2="75" stroke="#1e293b" stroke-width="1" />',
+        '<line x1="20" y1="130" x2="700" y2="130" stroke="#1e293b" stroke-width="1" />',
+        '<line x1="20" y1="185" x2="700" y2="185" stroke="#1e293b" stroke-width="1" />',
+        '<line x1="20" y1="240" x2="700" y2="240" stroke="#334155" stroke-width="1" />',
+        '<!-- Y Labels -->',
+        f'<text x="25" y="25" fill="#64748b" font-size="10" font-family="sans-serif">{full_max} ms</text>',
+        f'<text x="25" y="125" fill="#64748b" font-size="10" font-family="sans-serif">{half_max} ms</text>',
+        '<text x="25" y="235" fill="#64748b" font-size="10" font-family="sans-serif">0 ms</text>',
+        '<!-- Data -->',
+        "".join(polylines),
+        "".join(down_dots),
+        '<!-- X Labels -->',
+        f'<text x="20" y="255" fill="#94a3b8" font-size="11" font-family="sans-serif" text-anchor="start">{first_t}</text>',
+        f'<text x="700" y="255" fill="#94a3b8" font-size="11" font-family="sans-serif" text-anchor="end">{last_t}</text>',
+        '</svg>'
+    ]
+
+    return "".join(svg_parts)
+
+
+# --- RIWAYAT DAN GRAFIK MONITOR ---
+@uptime_bp.route('/<int:monitor_id>/history')
+@login_required
+@roles_required('admin', 'it', 'guest')
+def history(monitor_id):
+    range_param = request.args.get('range', '24h')
+    if range_param not in ('24h', '7d', '30d'):
+        range_param = '24h'
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM monitors WHERE id = %s;", (monitor_id,))
+    monitor = cur.fetchone()
+    if not monitor:
+        cur.close()
+        conn.close()
+        flash("Monitor tidak ditemukan.", "danger")
+        return redirect(url_for('uptime.index'))
+
+    if range_param == '24h':
+        cur.execute("""
+            SELECT checked_at, status, latency FROM uptime_checks
+            WHERE monitor_id = %s
+              AND checked_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+            ORDER BY checked_at ASC;
+        """, (monitor_id,))
+        rows = cur.fetchall()
+        points = [
+            {'t': r['checked_at'], 'status': r['status'], 'latency': r['latency']}
+            for r in rows
+        ]
+        total = len(rows)
+        up_count = sum(1 for r in rows if r['status'] == 'UP')
+        down_count = total - up_count
+        up_lat = [r['latency'] for r in rows if r['status'] == 'UP']
+    else:
+        days = '7 days' if range_param == '7d' else '30 days'
+        cur.execute("""
+            SELECT date_trunc('hour', checked_at) AS bucket,
+                   COUNT(*) AS total,
+                   COUNT(*) FILTER (WHERE status = 'UP') AS up_count,
+                   COUNT(*) FILTER (WHERE status = 'DOWN') AS down_count,
+                   AVG(latency) FILTER (WHERE status = 'UP') AS avg_lat
+            FROM uptime_checks
+            WHERE monitor_id = %s
+              AND checked_at >= CURRENT_TIMESTAMP - INTERVAL '""" + days + """'
+            GROUP BY bucket
+            ORDER BY bucket ASC;
+        """, (monitor_id,))
+        buckets = cur.fetchall()
+        points = [
+            {'t': b['bucket'], 'avg_lat': float(b['avg_lat']) if b['avg_lat'] is not None else None,
+             'down_count': b['down_count']}
+            for b in buckets
+        ]
+        total = sum(b['total'] for b in buckets)
+        up_count = sum(b['up_count'] for b in buckets)
+        down_count = total - up_count
+        up_lat = [float(b['avg_lat']) for b in buckets if b['avg_lat'] is not None]
+
+    cur.close()
+    conn.close()
+
+    uptime_pct = round(up_count / total * 100, 1) if total else 0.0
+    avg_lat = round(sum(up_lat) / len(up_lat), 1) if up_lat else None
+    min_lat = round(min(up_lat), 1) if up_lat else None
+    max_lat = round(max(up_lat), 1) if up_lat else None
+    chart_svg = build_latency_svg(points, range_param)
+
+    return render_template(
+        'uptime/history.html',
+        monitor=monitor, range_param=range_param, points=points,
+        total=total, up_count=up_count, down_count=down_count,
+        uptime_pct=uptime_pct, avg_lat=avg_lat, min_lat=min_lat,
+        max_lat=max_lat, chart_svg=chart_svg, active_page='uptime',
+    )
+
 
 CHECK_INTERVAL_SECONDS = 300  # 5 minutes
 
