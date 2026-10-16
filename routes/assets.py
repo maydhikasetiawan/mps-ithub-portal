@@ -125,6 +125,7 @@ def add():
         category = request.form.get('category')
         ip_address = request.form.get('ip_address', '').strip()
         mac_address = request.form.get('mac_address', '').strip()
+        serial_number = request.form.get('serial_number', '').strip()
         status = request.form.get('status')
         assigned_to_raw = request.form.get('assigned_to', '').strip()
         no_warranty = (request.form.get('no_warranty') == '1')
@@ -182,10 +183,10 @@ def add():
 
         try:
             cur.execute("""
-                INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, updated_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, serial_number, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, updated_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id;
-            """, (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, user_now))
+            """, (asset_tag, name, category, ip_address, mac_address, serial_number, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, user_now))
             new_asset_id = cur.fetchone()['id']
             cur.execute("""
                 INSERT INTO asset_activities (asset_id, actor, action, field_name, old_value, new_value)
@@ -211,8 +212,8 @@ def add():
 @roles_required('admin', 'it')
 def import_template():
     body = (
-        "asset_tag,name,category,ip_address,mac_address,status,assigned_to,purchase_date,warranty_expiry,no_warranty,location,notes\n"
-        "CONTOH-001,Contoh Aset,PC/Laptop,192.168.1.100,,Active,,2026-01-10,2027-01-10,0,Ruang Contoh,Hapus baris ini sebelum import\n"
+        "asset_tag,name,category,ip_address,mac_address,serial_number,status,assigned_to,purchase_date,warranty_expiry,no_warranty,location,notes\n"
+        "CONTOH-001,Contoh Aset,PC/Laptop,192.168.1.100,,,Active,,2026-01-10,2027-01-10,0,Ruang Contoh,Hapus baris ini sebelum import\n"
     )
     return Response(
         body,
@@ -252,21 +253,23 @@ def import_assets():
 
     headers = [h.strip() for h in reader.fieldnames if h is not None]
     header_set = set(headers)
-    expected_columns = {
+    required_columns = {
         'asset_tag', 'name', 'category', 'ip_address', 'mac_address',
         'status', 'assigned_to', 'purchase_date', 'warranty_expiry',
         'no_warranty', 'location', 'notes'
     }
+    allowed_columns = required_columns | {'serial_number'}
 
-    missing = sorted(list(expected_columns - header_set))
-    extra = sorted(list(header_set - expected_columns))
-    if missing or extra or len(headers) != len(expected_columns):
+    missing = sorted(list(required_columns - header_set))
+    extra = sorted(list(header_set - allowed_columns))
+    has_duplicates = len(headers) != len(header_set)
+    if missing or extra or has_duplicates:
         reasons = []
         if missing:
             reasons.append(f"Kolom hilang: {', '.join(missing)}")
         if extra:
             reasons.append(f"Kolom tidak dikenal: {', '.join(extra)}")
-        if not reasons and len(headers) != len(expected_columns):
+        if has_duplicates:
             reasons.append("Terdapat duplikasi kolom pada header")
         flash(f"Header CSV tidak sesuai. {'; '.join(reasons)}", "danger")
         return render_template('assets/import.html', active_page='assets')
@@ -369,10 +372,13 @@ def import_assets():
             if p_ok and w_ok and purchase_date and warranty_expiry and warranty_expiry < purchase_date:
                 errors.append({'row': idx, 'asset_tag': tag, 'reason': "Tanggal garansi habis tidak boleh sebelum tanggal beli."})
 
+            serial_number = row.get('serial_number', '').strip() or None
+
             validated_rows.append((
                 tag, name, cat,
                 row.get('ip_address') or None,
                 row.get('mac_address') or None,
+                serial_number,
                 status, assigned_to,
                 purchase_date, warranty_expiry, no_warranty,
                 row.get('location') or None,
@@ -388,8 +394,8 @@ def import_assets():
         user_now = session.get('username')
         for item in validated_rows:
             cur.execute("""
-                INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, updated_by)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO assets (asset_tag, name, category, ip_address, mac_address, serial_number, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, updated_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id;
             """, (*item, user_now))
             new_asset_id = cur.fetchone()['id']
@@ -492,6 +498,7 @@ def edit(asset_id):
     if request.method == 'POST':
         ip_address = request.form.get('ip_address')
         mac_address = request.form.get('mac_address')
+        serial_number = request.form.get('serial_number', '')
         status = request.form.get('status')
         assigned_to_raw = request.form.get('assigned_to', '').strip()
         no_warranty = (request.form.get('no_warranty') == '1')
@@ -548,14 +555,15 @@ def edit(asset_id):
         try:
             cur.execute("""
                 UPDATE assets
-                SET ip_address = %s, mac_address = %s, status = %s, assigned_to = %s, purchase_date = %s, warranty_expiry = %s, no_warranty = %s, location = %s, notes = %s,
+                SET ip_address = %s, mac_address = %s, serial_number = %s, status = %s, assigned_to = %s, purchase_date = %s, warranty_expiry = %s, no_warranty = %s, location = %s, notes = %s,
                     updated_at = CURRENT_TIMESTAMP, updated_by = %s
                 WHERE id = %s;
-            """, (ip_address, mac_address, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, user_now, asset_id))
+            """, (ip_address, mac_address, serial_number, status, assigned_to, purchase_date, warranty_expiry, no_warranty, location, notes, user_now, asset_id))
 
             new_values_map = {
                 'ip_address': ip_address,
                 'mac_address': mac_address,
+                'serial_number': serial_number,
                 'status': status,
                 'assigned_to': assigned_to,
                 'purchase_date': purchase_date,
@@ -565,7 +573,7 @@ def edit(asset_id):
                 'notes': notes
             }
 
-            for field_name in ['ip_address', 'mac_address', 'status', 'assigned_to', 'purchase_date', 'warranty_expiry', 'no_warranty', 'location', 'notes']:
+            for field_name in ['ip_address', 'mac_address', 'serial_number', 'status', 'assigned_to', 'purchase_date', 'warranty_expiry', 'no_warranty', 'location', 'notes']:
                 old_val_rendered = render_audit_value(field_name, old_asset.get(field_name))
                 new_val_rendered = render_audit_value(field_name, new_values_map.get(field_name))
                 if old_val_rendered != new_val_rendered:

@@ -50,6 +50,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS assets (
                 id SERIAL PRIMARY KEY,
                 asset_tag VARCHAR(50) UNIQUE NOT NULL,
+                serial_number VARCHAR(100),
                 name VARCHAR(100) NOT NULL,
                 category VARCHAR(50) NOT NULL,
                 ip_address VARCHAR(45),
