@@ -46,11 +46,18 @@ def _reset_attempts(ip, username):
     if key in _login_attempts:
         del _login_attempts[key]
 
+def _redirect_to_login_with_expiry_notice():
+    response = redirect(url_for('auth.login'))
+    if request.cookies.get('mps_had_session'):
+        flash("Sesi Anda telah berakhir. Silakan login kembali.", "warning")
+        response.delete_cookie('mps_had_session', path='/')
+    return response
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('auth.login'))
+            return _redirect_to_login_with_expiry_notice()
         return f(*args, **kwargs)
     return decorated_function
 
@@ -60,7 +67,7 @@ def roles_required(*allowed_roles):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if 'user_id' not in session:
-                return redirect(url_for('auth.login'))
+                return _redirect_to_login_with_expiry_notice()
 
             user_role = session.get('role', 'guest')
             if user_role not in allowed_roles:
@@ -105,7 +112,9 @@ def login():
                 session['department'] = user.get('department', 'IT')
                 session['must_change_password'] = user.get('must_change_password', False)
 
-                return redirect(url_for('dashboard.index'))
+                response = redirect(url_for('dashboard.index'))
+                response.set_cookie('mps_had_session', '1', max_age=2592000, httponly=True, samesite='Lax', path='/')
+                return response
             else:
                 _record_failed_attempt(ip, username)
                 error = "Username atau password salah!"
@@ -117,4 +126,6 @@ def login():
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     session.clear()
-    return redirect(url_for('auth.login'))
+    response = redirect(url_for('auth.login'))
+    response.delete_cookie('mps_had_session', path='/')
+    return response

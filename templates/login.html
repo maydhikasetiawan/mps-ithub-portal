@@ -27,6 +27,14 @@
         <h2>MPS-ITHub</h2>
         <p class="subtitle">IT Service Desk & Infrastructure Portal</p>
 
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
         {% if error %}
         <div class="alert">{{ error }}</div>
         {% endif %}
