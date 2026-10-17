@@ -18,6 +18,9 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Statistik Aset Aktif**: Perhitungan total aset yang tidak berstatus terhapus (`is_deleted = FALSE`).
 - **Statistik Tiket Aktif**: Perhitungan tiket dengan status `Open` atau `In Progress`.
 - **Persentase Ketersediaan Layanan**: Perhitungan rasio layanan berstatus `UP` dari tabel monitor.
+- **Grafik Analitis SVG Server-Rendered**: 4 grafik server-rendered SVG (grafik harian "Tiket Baru — 30 Hari Terakhir" / `daily_chart_svg`, tiket per kategori, tiket per status, dan aset per status) yang menggunakan palet warna Fase 5.3 tanpa dependensi script/CDN eksternal.
+- **Tabel Garansi Akan Habis**: Tabel HTML kondisional yang merinci perangkat dengan garansi mendekati habis (tampil hanya jika terdapat data aset relevan).
+- **Tren Komparasi 30 Hari**: Statistik komparasi tiket dibuat dan diselesaikan (30 hari berjalan vs 30 hari sebelumnya) diturunkan langsung dari data tanpa migrasi basis data.
 
 ### C. Modul IT Assets / IPAM (`routes/assets.py`)
 - **Daftar Inventaris Aset**: Menampilkan seluruh perangkat aktif dengan kalkulasi umur perangkat otomatis, filter status (`Procurement`, `Active`, `Under Repair`, `Retired`), dan filter penugasan (`unassigned` atau spesifik pengguna).
@@ -37,7 +40,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 ### D. Modul Service Desk (`routes/tickets.py`)
 - **Daftar Tiket**: Menampilkan antrean tiket bantuan. Pengguna reguler (`user`) hanya melihat tiket miliknya sendiri; badge status ditumpuk vertikal tepat di atas badge SLA secara terpusat, dan header beserta sel kolom STATUS rata tengah (*centered*).
 - **Buat Tiket**: Form pembuatan tiket masalah dengan penomoran otomatis (`TCK-YYYYMMDD-XXX`).
-- **Detail Tiket**: Rincian permasalahan, data pelapor, dan departemen pelapor.
+- **Detail Tiket**: Rincian permasalahan, data pelapor, departemen pelapor, meta tanggal pembuatan dan pembaruan ("Dibuat: <created_at> | Terakhir diperbarui: <last_updated>" berbasis linimasa aktivitas terbaru dengan fallback `created_at`), serta baris "Diselesaikan oleh" yang hanya tampil bila `resolved_at` terisi (dengan fallback `-` jika resolver kosong).
 - **Penugasan Tiket (Assign Ticket)**: Penugasan tiket kepada staf IT atau Admin tertentu serta opsi mengosongkan penugasan (*Unassigned*).
 - **Penyelesaian Masalah**: Pembaruan status pengerjaan tiket dan input laporan solusi (*resolution note*). Tiket berstatus `Resolved` atau `Closed` dikunci dari modifikasi lebih lanjut.
 - **Komentar Tiket**: Penambahan catatan komunikasi atau komentar oleh Admin, IT, maupun pelapor (User pada tiket miliknya).
@@ -81,9 +84,15 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Daftar Pengguna**: Menampilkan seluruh data akun, peran, dan departemen terkait.
 - **Tambah Pengguna**: Pendaftaran akun baru dengan hashing kata sandi aman.
 - **Edit Pengguna & Reset Password**: Pembaruan data akun serta opsi reset kata sandi administratif (mengaktifkan flag wajib ganti password).
-- **Hapus Pengguna**: Penghapusan akun dengan penjaga (*guard*) keamanan mencegah penghapusan akun diri sendiri yang sedang aktif.
+- **Hapus Pengguna (Soft Delete)**: Penghapusan akun beralih ke soft delete dengan pencatatan alasan penghapusan serta penjaga (*guard*) keamanan mencegah penghapusan akun diri sendiri yang sedang aktif. Akun terhapus dicegah login dan kueri operasional memfilter `is_deleted = FALSE`.
+- **Riwayat User Terhapus & Pemulihan**: Halaman riwayat pengguna terhapus (`/users/deleted-history`) dengan fitur pencarian, halaman detail akun terhapus, pemulihan akun (*restore*), dan penghapusan permanen (*hard delete*) khusus Admin dengan konfirmasi ganda (ketik username + kata sandi admin).
 - **Manajemen Departemen**: Tambah dan hapus departemen organisasi (penghapusan ditolak jika masih terdapat pengguna di departemen tersebut).
 - **Ganti Kata Sandi Mandiri**: Fasilitas pembaruan kata sandi oleh masing-masing pengguna dengan validasi kata sandi lama.
+
+### I. Modul REST API v1 (`routes/api.py`, prefix `/api/v1`)
+- **API Read-Only**: Endpoint `GET` terpusat untuk integrasi data tiket bantuan, aset TI, dan monitor layanan tanpa izin operasi tulis (`POST`/`PUT`/`DELETE`).
+- **Autentikasi Header API Key**: Autentikasi kunci tunggal dari variabel lingkungan `API_KEY` via header `X-API-Key` dengan verifikasi *constant-time* (`hmac.compare_digest`) dan fail-closed 401 saat tidak diset atau salah.
+- **Paginasi & Filter**: Parameter paginasi standar (`limit` default 20 max 100, `offset` default 0), filter exact-match status/kategori/prioritas/assignee, otomatis mengecualikan entitas soft-deleted, serta pemetaan kolom tabel riil `monitors`. Referensi lengkap: [docs/API.md](API.md).
 
 ---
 

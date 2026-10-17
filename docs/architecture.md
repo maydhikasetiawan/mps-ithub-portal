@@ -53,9 +53,9 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `POST /logout` — Menghapus sesi dan mengarahkan kembali ke halaman login (POST-only; dipicu melalui dropdown profil dengan konfirmasi modal "Keluar dari aplikasi?").
 
 ### b. `dashboard` (`routes/dashboard.py`, URL prefix: root)
-- **Tujuan**: Menampilkan statistik ringkasan operasional secara waktu nyata.
+- **Tujuan**: Menampilkan statistik ringkasan operasional secara waktu nyata, 4 grafik server-rendered SVG (grafik harian "Tiket Baru — 30 Hari Terakhir" / `daily_chart_svg`, tiket per kategori, tiket per status, dan aset per status) yang menggunakan palet Fase 5.3, tabel HTML kondisional "Garansi Akan Habis" (muncul hanya jika terdapat aset mendekati habis garansi), serta baris tren komparasi 30 hari (tiket dibuat/diselesaikan periode 30 hari berjalan vs 30 hari sebelumnya) tanpa dependensi eksternal maupun migrasi basis data.
 - **Rute Utama**:
-  - `GET /` & `GET /dashboard` — Agregasi total aset aktif, jumlah tiket terbuka/dalam pengerjaan, dan persentase ketersediaan layanan (*uptime percentage*).
+  - `GET /` & `GET /dashboard` — Agregasi total aset aktif, jumlah tiket terbuka/dalam pengerjaan, persentase ketersediaan layanan (*uptime percentage*), 4 grafik analitis SVG 30 hari, tabel HTML garansi kondisional, dan metrik tren.
 
 ### c. `assets` (`routes/assets.py`, URL prefix: `/assets`)
 - **Tujuan**: Manajemen inventaris aset TI dan IP Address Management (IPAM). Mendukung pencatatan aset, nomor seri perangkat (`serial_number` pada formulir tambah/edit, halaman detail, dan impor), penghitungan usia perangkat, validasi keunikan tag aset, penugasan perangkat, pemantauan masa garansi dan opsi tanpa garansi, jejak audit riwayat perubahan (*asset activities*), impor massal dari CSV, pencetakan label fisik QR, soft delete beralasan, pemulihan (*restore*), serta penghapusan permanen khusus admin dengan verifikasi ganda.
@@ -128,12 +128,16 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 - **Riwayat Pengecekan & Grafik**: Setiap pengecekan (scheduler, *Check All*, *Cek Now*, *re-check* saat edit, dan cek awal saat penambahan target) mencatat tepat satu baris riwayat ke tabel `uptime_checks`. Pembersihan otomatis (*retention cleanup*) menghapus data riwayat yang lebih lama dari 30 hari di dalam `run_all_checks()`. Tampilan rentang 24 jam menggunakan titik data mentah, sedangkan rentang 7 hari dan 30 hari menggunakan agregasi per jam (*hourly buckets*) dengan kalkulasi agregat mentah `MIN`/`MAX`/`SUM` untuk menjaga keakuratan nilai statistik latensi (fix f0c0368).
 
 ### f. `users` (`routes/users.py`, URL prefix: `/users`)
-- **Tujuan**: Administrasi pengguna dan struktur departemen organisasi, reset password administratif dengan flag wajib ganti, serta antarmuka penggantian kata sandi mandiri.
+- **Tujuan**: Administrasi pengguna dan struktur departemen organisasi, reset password administratif dengan flag wajib ganti, antarmuka penggantian kata sandi mandiri, soft-delete akun dengan formulir pencatatan alasan, halaman riwayat user terhapus, pemulihan (*restore*), serta penghapusan permanen (*hard delete*) khusus admin dengan verifikasi ganda (ketik username + kata sandi admin). Seluruh kueri operasional memfilter `is_deleted = FALSE` (termasuk autentikasi login), dan konstrain UNIQUE username/email tetap mencegah duplikasi identitas.
 - **Rute Utama**:
-  - `GET /users/` — Daftar pengguna terdaftar.
+  - `GET /users/` — Daftar pengguna aktif (`is_deleted = FALSE`).
   - `GET, POST /users/add` — Pendaftaran akun pengguna baru.
   - `GET, POST /users/edit/<int:user_id>` — Pembaruan data pengguna dan opsi reset kata sandi.
-  - `GET /users/delete/<int:user_id>` — Penghapusan akun pengguna (proteksi akun sendiri).
+  - `GET, POST /users/delete/<int:user_id>` — Soft delete akun pengguna dengan konfirmasi alasan (proteksi akun sendiri).
+  - `GET /users/deleted-history` — Riwayat user terhapus dengan fitur pencarian username/email/alasan.
+  - `GET /users/deleted-detail/<int:user_id>` — Detail akun user terhapus.
+  - `POST /users/restore/<int:user_id>` — Mengembalikan akun user terhapus ke daftar aktif.
+  - `GET, POST /users/hard-delete/<int:user_id>` — Penghapusan permanen akun user (verifikasi username + kata sandi admin).
   - `GET, POST /users/departments` — Pengelolaan daftar departemen.
   - `GET /users/departments/delete/<int:dept_id>` — Hapus departemen (proteksi bila masih ada user terkait).
   - `GET, POST /users/change-password` — Penggantian kata sandi mandiri bagi pengguna aktif.
@@ -163,14 +167,21 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET, POST /knowledge-base/edit/<int:article_id>` — Edit artikel pengetahuan (Admin/IT).
   - `POST /knowledge-base/delete/<int:article_id>` — Hapus artikel pengetahuan (Admin/IT).
 
+### j. `api` (`routes/api.py`, URL prefix: `/api/v1`)
+- **Tujuan**: REST API read-only terpusat untuk integrasi eksternal (tiket, aset TI, dan target monitor). Autentikasi kunci tunggal dari variabel lingkungan `API_KEY` via header `X-API-Key` (fail-closed 401). Mendukung paginasi `limit`/`offset` dan otomatis mengecualikan entitas yang berstatus soft-deleted. Endpoint monitor membaca tabel riil `monitors`. Dokumentasi referensi lengkap: [docs/API.md](API.md).
+- **Rute Utama**:
+  - `GET /api/v1/tickets` & `GET /api/v1/tickets/<int:ticket_id>` — Daftar dan detail tiket bantuan aktif.
+  - `GET /api/v1/assets` & `GET /api/v1/assets/<int:asset_id>` — Daftar dan detail aset TI aktif.
+  - `GET /api/v1/monitors` & `GET /api/v1/monitors/<int:monitor_id>` — Daftar dan detail status target uptime monitor.
+
 ---
 
 ## 4. Skema Basis Data (Database Schema)
 
-Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–018`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
+Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–019`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
 
 1. **`users`**
-   - Kolom: `id` (PK, Serial), `username` (VARCHAR 50, Unique), `email` (VARCHAR 100, Unique), `password_hash` (TEXT), `role` (VARCHAR 20, default 'staff'), `department` (VARCHAR 50, default 'IT'), `must_change_password` (BOOLEAN, default FALSE), `created_at` (TIMESTAMP).
+   - Kolom: `id` (PK, Serial), `username` (VARCHAR 50, Unique), `email` (VARCHAR 100, Unique), `password_hash` (TEXT), `role` (VARCHAR 20, default 'staff'), `department` (VARCHAR 50, default 'IT'), `must_change_password` (BOOLEAN, default FALSE), `is_deleted` (BOOLEAN, default FALSE, Migrasi 019), `deleted_at` (TIMESTAMP, Migrasi 019), `deleted_by` (VARCHAR 50, Migrasi 019), `delete_reason` (TEXT, Migrasi 019), `created_at` (TIMESTAMP). Indeks: `idx_users_is_deleted`.
    - Data bawaan: akun `admin` (role admin) dan `guest` (role guest).
 2. **`assets`**
    - Kolom: `id` (PK, Serial), `asset_tag` (VARCHAR 50, Unique), `serial_number` (VARCHAR 100, Migrasi 014), `name` (VARCHAR 100), `category` (VARCHAR 50), `ip_address` (VARCHAR 45), `mac_address` (VARCHAR 45), `status` (VARCHAR 20, default 'Active'), `location` (VARCHAR 100), `notes` (TEXT), `assigned_to` (VARCHAR 50, Migrasi 010), `purchase_date` (DATE, Migrasi 011), `warranty_expiry` (DATE, Migrasi 011), `no_warranty` (BOOLEAN, default FALSE, Migrasi 012), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP), `updated_by` (VARCHAR 50).
@@ -183,8 +194,8 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
    - Kolom: `id` (PK, Serial), `name` (VARCHAR 50, Unique).
 6. **`monitors`**
    - Kolom: `id` (PK, Serial), `name` (VARCHAR 100), `target` (VARCHAR 255), `type` (VARCHAR 20, default 'PING'), `port` (INT), `status` (VARCHAR 20, default 'UNKNOWN'), `latency` (INT, default 0), `last_check` (TIMESTAMP), `enabled` (BOOLEAN, default TRUE, migrasi 015), `consecutive_failures` (INT, default 0, migrasi 016), `created_at` (TIMESTAMP).
-7. **`service_monitors`** *(Tabel cadangan/inisial di db.py)*
-   - Kolom: `id` (PK, Serial), `service_name` (VARCHAR 100), `target_url` (VARCHAR 255), `last_status` (VARCHAR 20), `response_time_ms` (INT), `last_checked` (TIMESTAMP). Catatan: Modul aktif `uptime` menggunakan tabel `monitors`.
+7. **`service_monitors`** *(Definisi drift di db.py / init_db)*
+   - Kolom: `id` (PK, Serial), `service_name` (VARCHAR 100), `target_url` (VARCHAR 255), `last_status` (VARCHAR 20), `response_time_ms` (INT), `last_checked` (TIMESTAMP). Catatan: Definisi drift di `init_db`, **TIDAK DIGUNAKAN**, dan tidak ada kode yang membaca tabel ini. Tabel riil yang digunakan adalah `monitors`.
 8. **`ticket_activities`**
    - Kolom: `id` (PK, Serial), `ticket_id` (INT, Not Null), `actor` (VARCHAR 50), `type` (VARCHAR 20), `content` (TEXT), `created_at` (TIMESTAMP).
    - Menyimpan seluruh linimasa peristiwa tiket: `'created'`, `'status'`, `'assignment'`, dan `'comment'`.
@@ -276,4 +287,4 @@ Otomatisasi pengiriman kode ke server produksi diatur melalui GitHub Actions pad
      - Melakukan `docker pull` image terbaru dari `ghcr.io`.
      - Menghentikan dan menghapus container lama `my-web-app`.
      - Menyiapkan jaringan docker `app-monitoring_default`.
-     - Menjalankan container baru di port `5000:5000` dengan kebijakan restart otomatis (`--restart always`) serta menginjeksikan secrets: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, dan `SECRET_KEY`. Container memulai proses via `entrypoint.sh` yang menjalankan migrasi otomatis `alembic upgrade head` (bersifat idempoten — no-op bila sudah di head) sebelum menjalankan server produksi Gunicorn 26.2.0 dengan perintah: `gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 4 --timeout 45 --graceful-timeout 30 --forwarded-allow-ips="*" --access-logfile - --error-logfile - --log-level info app:app` (model worker `gthread`, PID 1, log akses dan error ke stdout). Prosedur rollback dilakukan dengan melakukan revert commit pada Git (`git revert`).
+     - Menjalankan container baru di port `5000:5000` dengan kebijakan restart otomatis (`--restart always`) serta menginjeksikan secrets: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, `SECRET_KEY`, dan `API_KEY` (via `-e API_KEY=${{ secrets.API_KEY }}`). Container memulai proses via `entrypoint.sh` yang menjalankan migrasi otomatis `alembic upgrade head` (bersifat idempoten — no-op bila sudah di head) sebelum menjalankan server produksi Gunicorn 26.2.0 dengan perintah: `gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 4 --timeout 45 --graceful-timeout 30 --forwarded-allow-ips="*" --access-logfile - --error-logfile - --log-level info app:app` (model worker `gthread`, PID 1, log akses dan error ke stdout). Prosedur rollback dilakukan dengan melakukan revert commit pada Git (`git revert`).

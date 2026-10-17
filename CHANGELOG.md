@@ -6,6 +6,25 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [2026-10-18] - Fase 6: Dashboard, Integrasi & REST API
+- Fase 6.1 Grafik & Tren Dasbor (main `69b6c71`, `bd49bdc`):
+  - 4 grafik SVG server-rendered tanpa dependensi/CDN (grafik harian "Tiket Baru — 30 Hari Terakhir" / `daily_chart_svg`, tiket per kategori, tiket per status, aset per status) yang menggunakan kembali palet grafik Fase 5.3, serta tabel kondisional "Garansi Akan Habis" (tabel HTML ketika ada aset bergaransi mendekati batas).
+  - Baris tren komparasi 30 hari (tiket dibuat dan diselesaikan: 30 hari berjalan vs 30 hari sebelumnya) tanpa migrasi basis data.
+- Fase 6.2 Baris Penyelesaian Tiket (main `8a96b45`):
+  - Baris "Diselesaikan oleh" hanya dirender jika `resolved_at` terisi; resolver memiliki fallback `-` bila `resolved_by` kosong.
+- Fase 6.3 Tanggal Pembuatan & Pembaruan Tiket (main `f0e1b5d`):
+  - Halaman detail tiket menampilkan meta tanggal "Dibuat: <created_at> | Terakhir diperbarui: <last_updated>" di mana `last_updated` diambil dari aktivitas tiket terbaru dengan fallback `created_at`.
+- Fase 6.4 Soft-Delete User & Riwayat Terhapus (main `3660c7a`, migrasi 019):
+  - Migrasi `019_user_soft_delete.py` menambahkan kolom `is_deleted`, `deleted_at`, `deleted_by`, `delete_reason`, dan indeks `idx_users_is_deleted`.
+  - Penghapusan user beralih ke soft delete dengan form alasan penghapusan; seluruh query user memfilter `is_deleted = FALSE`, termasuk autentikasi login (user terhapus dilarang login).
+  - Halaman riwayat user terhapus (`/users/deleted-history`) dengan pencarian, detail user terhapus (`/users/deleted-detail/<id>`), pemulihan (`restore`), dan hapus permanen (`hard-delete`) dengan konfirmasi ganda (ketik username + kata sandi admin).
+  - Batasan UNIQUE username dan email tetap berlaku sehingga mencegah penggunaan ulang nama user yang berstatus soft-deleted; tanpa tabel audit baru.
+- Fase 6.5 REST API v1 & Dokumentasi (main `9b1fa15`, `761102a`, `d38ac0a`):
+  - Endpoint REST API read-only berprefix `/api/v1` untuk tiket, aset, dan uptime monitor (`GET /api/v1/tickets`, `/api/v1/tickets/<id>`, `/api/v1/assets`, `/api/v1/assets/<id>`, `/api/v1/monitors`, `/api/v1/monitors/<id>`).
+  - Autentikasi kunci tunggal dari variabel lingkungan `API_KEY` via header `X-API-Key` dengan verifikasi *constant-time* (`hmac.compare_digest`) dan fail-closed 401; pengecualian data soft-deleted; paginasi standar (`limit` default 20 max 100, `offset` default 0); dokumentasi lengkap di `docs/API.md`.
+  - Perbaikan endpoint monitor agar membaca tabel riil `monitors` (migrasi 001/015/016), bukan `service_monitors` warisan `init_db`.
+  - Workflow deployment meneruskan rahasia `-e API_KEY=${{ secrets.API_KEY }}` ke container aplikasi.
+
 ## [2026-10-16]
 - Migrasi Gunicorn (main `16fdf15`):
   - Migrasi server produksi dari server pengembangan Flask bawaan ke Gunicorn 26.2.0 (`1` worker `gthread`, `4` threads, timeout `45`, graceful-timeout `30`, `--forwarded-allow-ips="*"`, log akses dan error ke stdout, PID 1).
