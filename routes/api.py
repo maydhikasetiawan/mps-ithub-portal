@@ -87,12 +87,16 @@ def serialize_asset(row):
 def serialize_monitor(row):
     return {
         'id': row['id'],
-        'service_name': row['service_name'],
-        'target_url': row['target_url'],
-        'last_status': row['last_status'],
-        'response_time_ms': row['response_time_ms'],
-        'last_checked': serialize_date(row['last_checked']),
-        'enabled': bool(row['enabled'])
+        'service_name': row['name'],
+        'target_url': row['target'],
+        'type': row['type'],
+        'port': row['port'],
+        'last_status': row['status'],
+        'response_time_ms': row['latency'],
+        'last_checked': serialize_date(row['last_check']),
+        'enabled': bool(row['enabled']),
+        'consecutive_failures': row['consecutive_failures'],
+        'created_at': serialize_date(row['created_at'])
     }
 
 
@@ -220,13 +224,13 @@ def list_monitors():
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) AS total FROM service_monitors;")
+    cur.execute("SELECT COUNT(*) AS total FROM monitors;")
     total = cur.fetchone()['total']
 
     cur.execute("""
-        SELECT id, service_name, target_url, last_status,
-               response_time_ms, last_checked, enabled
-        FROM service_monitors
+        SELECT id, name, target, type, port, status, latency,
+               last_check, created_at, enabled, consecutive_failures
+        FROM monitors
         ORDER BY id ASC LIMIT %s OFFSET %s;
     """, (limit, offset))
     rows = cur.fetchall()
@@ -245,9 +249,9 @@ def get_monitor(monitor_id):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, service_name, target_url, last_status,
-               response_time_ms, last_checked, enabled
-        FROM service_monitors WHERE id = %s;
+        SELECT id, name, target, type, port, status, latency,
+               last_check, created_at, enabled, consecutive_failures
+        FROM monitors WHERE id = %s;
     """, (monitor_id,))
     row = cur.fetchone()
     cur.close()

@@ -28,8 +28,10 @@ Read-only REST API for integrations (tickets, assets, monitors).
 - `GET /api/v1/assets/<int:asset_id>` — single asset (404 if missing or soft-deleted).
 
 ### 3. Monitors
-- `GET /api/v1/monitors` — list monitors from `service_monitors` (`ORDER BY id ASC`).
+- `GET /api/v1/monitors` — list monitors from `monitors` (`ORDER BY id ASC`).
 - `GET /api/v1/monitors/<int:monitor_id>` — single monitor (404 if missing).
+- Real-column mapping: `name` → `service_name`, `target` → `target_url`, `status` → `last_status`, `latency` → `response_time_ms`, `last_check` → `last_checked`.
+- Additional fields: `type` (e.g. `PING`/`TCP`/`HTTP`), `port`, `consecutive_failures`, `created_at`.
 
 ## Curl Examples
 ```bash
