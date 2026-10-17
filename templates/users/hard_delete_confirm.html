@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Hapus Permanen - {{ user.username }}{% endblock %}
+{% block header_title %}Hapus Permanen (Hard Delete){% endblock %}
+
+{% block content %}
+<div class="form-card" style="max-width: 550px; border-color: #ef4444;">
+    <h3 style="color: #ef4444; margin-bottom: 10px;">🚨 Peringatan: Hapus Permanen</h3>
+    <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 20px;">
+        Tindakan ini akan <strong>MENGHAPUS PERMANEN</strong> data user dari database PostgreSQL. Data yang terhapus permanen tidak dapat dipulihkan kembali!
+    </p>
+
+    {% if error %}
+    <div style="background: #ef444422; border: 1px solid #ef4444; color: #fca5a5; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 20px;">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST">
+        <!-- Lapis 1: Konfirmasi Username -->
+        <div class="form-group">
+            <label style="color: #f8fafc; font-weight: bold;">
+                1. Ketik Username User untuk Konfirmasi: <code style="color: #fca5a5; background: #0f172a; padding: 2px 6px; border-radius: 4px;">{{ user.username }}</code>
+            </label>
+            <input type="text" name="confirm_username" class="form-control" required placeholder="Ketik persis username di atas..." autocomplete="off">
+        </div>
+
+        <!-- Lapis 2: Konfirmasi Password Admin yang Login -->
+        <div class="form-group" style="margin-top: 15px;">
+            <label style="color: #f8fafc; font-weight: bold;">
+                2. Masukkan Password Akun Anda Sendiri (Admin)
+            </label>
+            <input type="password" name="confirm_password" class="form-control" required placeholder="Password login Anda saat ini..." autocomplete="current-password">
+            <small style="color: #94a3b8; font-size: 11px;">Dibutuhkan verifikasi keamanan ganda untuk eksekusi Hard Delete.</small>
+        </div>
+
+        <div style="margin-top: 25px; display: flex; align-items: center; gap: 15px;">
+            <button type="submit" class="btn-danger" style="padding: 10px 20px; font-weight: bold; cursor: pointer; border: none; font-size: 13px;">
+                Saya Yakin, Hapus Permanen Sekarang
+            </button>
+            <a href="{{ url_for('users.deleted_history') }}" style="color: #94a3b8; font-size: 13px; text-decoration: none;">Batal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

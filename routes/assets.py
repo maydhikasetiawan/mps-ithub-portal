@@ -39,7 +39,7 @@ def render_audit_value(field, val):
 def get_assignable_users():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT username FROM users WHERE role IN ('admin', 'it', 'user') ORDER BY username;")
+    cur.execute("SELECT username FROM users WHERE role IN ('admin', 'it', 'user') AND is_deleted = FALSE ORDER BY username;")
     users = [row['username'] for row in cur.fetchall()]
     cur.close()
     conn.close()
@@ -740,7 +740,7 @@ def hard_delete(asset_id):
         input_password = request.form.get('confirm_password', '')
         user_id = session.get('user_id')
 
-        cur.execute("SELECT password_hash FROM users WHERE id = %s;", (user_id,))
+        cur.execute("SELECT password_hash FROM users WHERE id = %s AND is_deleted = FALSE;", (user_id,))
         user_data = cur.fetchone()
 
         if input_name != asset['name']:

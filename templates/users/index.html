@@ -18,7 +18,10 @@
 
     </div>
 
-    <a href="{{ url_for('users.add') }}" class="btn-primary">+ Tambah User Baru</a>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <a href="{{ url_for('users.add') }}" class="btn-primary">+ Tambah User Baru</a>
+        <a href="{{ url_for('users.deleted_history') }}" style="background:#334155; color:#cbd5e1; padding:8px 14px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold;">📜 Riwayat Terhapus</a>
+    </div>
 
 </div>
 
@@ -81,9 +84,7 @@
 
                     {% if u.id != session['user_id'] %}
 
-                    <form method="POST" action="{{ url_for('users.delete', user_id=u.id) }}" style="display: inline; margin: 0;" data-confirm="Hapus user ini?">
-                        <button type="submit" class="btn-danger" style="cursor: pointer; border: none;">Hapus</button>
-                    </form>
+                    <a href="{{ url_for('users.delete', user_id=u.id) }}" class="btn-danger" style="padding: 4px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold;">Hapus</a>
 
                     {% else %}
 

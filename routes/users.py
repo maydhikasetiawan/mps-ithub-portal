@@ -1,8 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from routes.auth import login_required, roles_required
 from database.db import get_db_connection
-from werkzeug.security import generate_password_hash, check_password_hash
 
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
@@ -13,7 +12,7 @@ users_bp = Blueprint('users', __name__, url_prefix='/users')
 def index():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, username, email, role, department, created_at FROM users ORDER BY id ASC;")
+    cur.execute("SELECT id, username, email, role, department, created_at FROM users WHERE is_deleted = FALSE ORDER BY id ASC;")
     users_list = cur.fetchall()
     cur.close()
     conn.close()
@@ -57,8 +56,8 @@ def add():
 
     return render_template('users/add.html', departments=departments, active_page='users')
 
-# --- HAPUS USER ---
-@users_bp.route('/delete/<int:user_id>', methods=['POST'])
+# --- HAPUS USER (SOFT DELETE) ---
+@users_bp.route('/delete/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 @roles_required('admin')
 def delete(user_id):
@@ -68,12 +67,148 @@ def delete(user_id):
 
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM users WHERE id = %s;", (user_id,))
+
+    if request.method == 'POST':
+        reason = request.form.get('delete_reason')
+        reason_val = reason.strip() if reason and reason.strip() else None
+        user_now = session.get('username')
+
+        cur.execute("""
+            UPDATE users
+            SET is_deleted = TRUE,
+                deleted_at = CURRENT_TIMESTAMP,
+                deleted_by = %s,
+                delete_reason = %s
+            WHERE id = %s;
+        """, (user_now, reason_val, user_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("User berhasil dipindahkan ke Riwayat User Terhapus.", "success")
+        return redirect(url_for('users.index'))
+
+    cur.execute("SELECT * FROM users WHERE id = %s AND is_deleted = FALSE;", (user_id,))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not user:
+        return "User tidak ditemukan", 404
+
+    return render_template('users/delete_confirm.html', user=user, active_page='users')
+
+# --- RIWAYAT USER TERHAPUS ---
+@users_bp.route('/deleted-history')
+@login_required
+@roles_required('admin')
+def deleted_history():
+    search_query = request.args.get('q', '').strip()
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    if search_query:
+        cur.execute("""
+            SELECT * FROM users
+            WHERE is_deleted = TRUE
+              AND (username ILIKE %s OR email ILIKE %s OR delete_reason ILIKE %s)
+            ORDER BY deleted_at DESC;
+        """, (f'%{search_query}%', f'%{search_query}%', f'%{search_query}%'))
+    else:
+        cur.execute("SELECT * FROM users WHERE is_deleted = TRUE ORDER BY deleted_at DESC;")
+
+    deleted_users = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return render_template('users/deleted_history.html', users=deleted_users, search_query=search_query, active_page='users')
+
+# --- DETAIL USER TERHAPUS ---
+@users_bp.route('/deleted-detail/<int:user_id>')
+@login_required
+@roles_required('admin')
+def deleted_detail(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE id = %s AND is_deleted = TRUE;", (user_id,))
+    user = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if not user:
+        return "User terhapus tidak ditemukan", 404
+
+    return render_template('users/deleted_detail.html', user=user, active_page='users')
+
+# --- RESTORE USER ---
+@users_bp.route('/restore/<int:user_id>', methods=['POST'])
+@login_required
+@roles_required('admin')
+def restore(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE id = %s AND is_deleted = TRUE;", (user_id,))
+    user = cur.fetchone()
+
+    if not user:
+        cur.close()
+        conn.close()
+        return "User terhapus tidak ditemukan", 404
+
+    cur.execute("""
+        UPDATE users
+        SET is_deleted = FALSE,
+            deleted_at = NULL,
+            deleted_by = NULL,
+            delete_reason = NULL
+        WHERE id = %s;
+    """, (user_id,))
     conn.commit()
     cur.close()
     conn.close()
-    flash("User berhasil dihapus.", "success")
-    return redirect(url_for('users.index'))
+
+    flash(f"User '{user['username']}' berhasil dikembalikan.", "success")
+    return redirect(url_for('users.deleted_history'))
+
+# --- HARD DELETE (HAPUS PERMANEN) ---
+@users_bp.route('/hard-delete/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin')
+def hard_delete(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM users WHERE id = %s AND is_deleted = TRUE;", (user_id,))
+    user = cur.fetchone()
+
+    if not user:
+        cur.close()
+        conn.close()
+        return "User tidak ditemukan di riwayat terhapus", 404
+
+    error = None
+    if request.method == 'POST':
+        input_username = request.form.get('confirm_username', '').strip()
+        input_password = request.form.get('confirm_password', '')
+        admin_id = session.get('user_id')
+
+        cur.execute("SELECT password_hash FROM users WHERE id = %s AND is_deleted = FALSE;", (admin_id,))
+        admin_data = cur.fetchone()
+
+        if input_username != user['username']:
+            error = f"Username tidak sesuai! Anda memasukkan '{input_username}', seharusnya '{user['username']}'."
+        elif not admin_data or not check_password_hash(admin_data['password_hash'], input_password):
+            error = "Password Anda salah! Hapus permanen dibatalkan."
+        else:
+            cur.execute("DELETE FROM users WHERE id = %s;", (user_id,))
+            conn.commit()
+            cur.close()
+            conn.close()
+            flash(f"User '{user['username']}' telah dihapus secara permanen dari database.", "danger")
+            return redirect(url_for('users.deleted_history'))
+
+    cur.close()
+    conn.close()
+    return render_template('users/hard_delete_confirm.html', user=user, error=error, active_page='users')
 
 # --- MANAJEMEN DEPARTEMEN MODULAR ---
 @users_bp.route('/departments', methods=['GET', 'POST'])
@@ -114,7 +249,7 @@ def delete_department(dept_id):
 
     if dept:
         # Cek apakah ada user yang masih terdaftar di departemen ini
-        cur.execute("SELECT COUNT(*) as count FROM users WHERE department = %s;", (dept['name'],))
+        cur.execute("SELECT COUNT(*) as count FROM users WHERE department = %s AND is_deleted = FALSE;", (dept['name'],))
         user_count = cur.fetchone()['count']
 
         if user_count > 0:
@@ -136,7 +271,7 @@ def edit(user_id):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT * FROM users WHERE id = %s;", (user_id,))
+    cur.execute("SELECT * FROM users WHERE id = %s AND is_deleted = FALSE;", (user_id,))
     target_user = cur.fetchone()
 
     if not target_user:
@@ -182,9 +317,7 @@ def edit(user_id):
     departments = cur.fetchall()
     cur.close()
     conn.close()
-
     return render_template('users/edit.html', user=target_user, departments=departments, active_page='users')
-
 
 # --- GANTI PASSWORD MANDIRI (UNTUK SEMUA USER) ---
 @users_bp.route('/change-password', methods=['GET', 'POST'])
@@ -202,7 +335,8 @@ def change_password():
         user_id = session.get('user_id')
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT password_hash FROM users WHERE id = %s;", (user_id,))
+
+        cur.execute("SELECT password_hash FROM users WHERE id = %s AND is_deleted = FALSE;", (user_id,))
         user_data = cur.fetchone()
 
         if not user_data or not check_password_hash(user_data['password_hash'], old_password):

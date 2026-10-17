@@ -98,7 +98,7 @@ def login():
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("SELECT * FROM users WHERE username = %s;", (username,))
+            cur.execute("SELECT * FROM users WHERE username = %s AND is_deleted = FALSE;", (username,))
             user = cur.fetchone()
             cur.close()
             conn.close()

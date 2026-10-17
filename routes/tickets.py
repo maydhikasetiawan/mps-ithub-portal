@@ -794,7 +794,7 @@ def detail(ticket_id):
             assigned_to = raw_assigned if raw_assigned and raw_assigned.lower() != 'unassigned' else None
 
             if assigned_to:
-                cur.execute("SELECT id FROM users WHERE username = %s AND role IN ('admin', 'it');", (assigned_to,))
+                cur.execute("SELECT id FROM users WHERE username = %s AND role IN ('admin', 'it') AND is_deleted = FALSE;", (assigned_to,))
                 if not cur.fetchone():
                     cur.close()
                     conn.close()
@@ -854,7 +854,7 @@ def detail(ticket_id):
 
     assignees = []
     if user_role in ['admin', 'it']:
-        cur.execute("SELECT username FROM users WHERE role IN ('admin', 'it') ORDER BY username ASC;")
+        cur.execute("SELECT username FROM users WHERE role IN ('admin', 'it') AND is_deleted = FALSE ORDER BY username ASC;")
         assignees = cur.fetchall()
 
     cur.execute("""
@@ -1146,7 +1146,7 @@ def delete_permanent(ticket_id):
         input_password = request.form.get('confirm_password', '')
         user_id = session.get('user_id')
 
-        cur.execute("SELECT password_hash FROM users WHERE id = %s;", (user_id,))
+        cur.execute("SELECT password_hash FROM users WHERE id = %s AND is_deleted = FALSE;", (user_id,))
         admin_data = cur.fetchone()
 
         if not admin_data or not check_password_hash(admin_data['password_hash'], input_password):

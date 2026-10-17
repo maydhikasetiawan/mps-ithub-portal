@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Hapus User - {{ user.username }}{% endblock %}
+{% block header_title %}Konfirmasi Penghapusan User{% endblock %}
+
+{% block content %}
+<div class="form-card" style="max-width: 550px;">
+    <h3 style="color: #ef4444; margin-bottom: 10px;">⚠️ Konfirmasi Soft Delete</h3>
+    <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 20px;">
+        User <strong>{{ user.username }}</strong> ({{ user.email }}) akan dipindahkan ke <strong>Riwayat User Terhapus</strong> dan di-nonaktifkan dari sistem.
+    </p>
+
+    <form method="POST">
+        <div class="form-group">
+            <label style="color: #f8fafc; font-weight: bold;">Alasan Penghapusan User (opsional)</label>
+            <textarea name="delete_reason" class="form-control" rows="4" placeholder="Contoh: Karyawan resign, mutasi divisi, atau akun tidak aktif."></textarea>
+        </div>
+
+        <button type="submit" class="btn-danger" style="padding: 10px 18px; font-weight: bold; font-size: 13px; cursor: pointer;">Pindahkan ke Riwayat Terhapus</button>
+        <a href="{{ url_for('users.index') }}" style="color: #94a3b8; margin-left: 15px; font-size: 13px; text-decoration: none;">Batal</a>
+    </form>
+</div>
+{% endblock %}
