@@ -34,6 +34,7 @@ Sistem membaca konfigurasi lingkungan melalui variabel sistem (*environment vari
 | `DB_USER` | `database/db.py` (baris 9), `migrations/env.py` (baris 17) | Pengguna basis data (contoh: `admin_server`). |
 | `DB_PASS` | `database/db.py` (baris 10), `migrations/env.py` (baris 18) | Kata sandi pengguna basis data. |
 | `DB_PORT` | `migrations/env.py` (baris 19) | Port koneksi basis data untuk runner Alembic (opsional, default: `'5432'`). Pada koneksi utama `database/db.py`, port 5432 digunakan secara langsung. |
+| `API_KEY` | `routes/api.py` | Kunci rahasia bersama untuk autentikasi endpoint REST API v1 (`/api/v1/*`). Harus berupa string acak yang kuat (disimpan sebagai GitHub Secrets `API_KEY` saat deployment). Mengadopsi prinsip *fail-closed*: jika variabel ini tidak disetel atau header `X-API-Key` salah/hilang, permintaan API akan ditolak dengan status HTTP 401. |
 
 Salin template berkas `.env.example` ke `.env`:
 ```bash
