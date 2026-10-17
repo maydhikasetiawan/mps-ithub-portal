@@ -865,6 +865,7 @@ def detail(ticket_id):
         ORDER BY ta.created_at DESC, ta.id DESC;
     """, (ticket_id,))
     activities = cur.fetchall()
+    last_updated = activities[0]['created_at'] if activities else ticket['created_at']
 
     cur.execute("""
         SELECT * FROM ticket_attachments
@@ -910,7 +911,7 @@ def detail(ticket_id):
 
     cur.close()
     conn.close()
-    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, related_articles=related_articles, rating=rating, canned_templates=canned_templates, canned_templates_json=canned_templates_json, relations=relations, active_page='tickets')
+    return render_template('tickets/detail.html', ticket=ticket, assignees=assignees, activities=activities, attachments=attachments, related_articles=related_articles, rating=rating, canned_templates=canned_templates, canned_templates_json=canned_templates_json, relations=relations, last_updated=last_updated, active_page='tickets')
 
 # --- UNDUH LAMPIRAN TIKET ---
 @tickets_bp.route('/<int:ticket_id>/attachments/<int:att_id>/download')
