@@ -1,9 +1,69 @@
+import html
 from flask import Blueprint, render_template, session
 from routes.auth import login_required
 from database.db import get_db_connection
 from datetime import date, timedelta
 
 dashboard_bp = Blueprint('dashboard', __name__)
+
+
+def build_daily_vertical_svg(series):
+    """Build server-rendered SVG vertical bar chart for 30-day ticket trend. Empty data returns ''."""
+    if not series or all(p['count'] == 0 for p in series):
+        return ''
+    max_count = max(p['count'] for p in series)
+    slot_w, bar_w = 680.0 / len(series), 14.0
+    elements = [
+        '<svg viewBox="0 0 720 220" width="100%" style="height:auto; display:block;" xmlns="http://www.w3.org/2000/svg">',
+        '<line x1="20" y1="175" x2="700" y2="175" stroke="#334155" stroke-width="1" />',
+        '<line x1="20" y1="40" x2="700" y2="40" stroke="#1e293b" stroke-width="1" stroke-dasharray="4" />',
+    ]
+    for i, p in enumerate(series):
+        xc = round(20.0 + i * slot_w + (slot_w / 2.0), 1)
+        bx = round(xc - (bar_w / 2.0), 1)
+        val = p['count']
+        bh = round((val / max_count) * 125.0, 1) if val > 0 else 0
+        by = round(175.0 - bh, 1)
+        if val > 0:
+            elements.append(f'<rect x="{bx}" y="{by}" width="{bar_w}" height="{bh}" fill="#38bdf8" rx="2" />')
+            elements.append(f'<text x="{xc}" y="{by - 4}" fill="#f8fafc" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle">{val}</text>')
+        else:
+            elements.append(f'<text x="{xc}" y="169" fill="#64748b" font-size="8" font-family="sans-serif" text-anchor="middle">0</text>')
+        lbl = html.escape(str(p['label']))
+        elements.append(f'<text x="{xc}" y="188" fill="#94a3b8" font-size="8" font-family="sans-serif" text-anchor="end" transform="rotate(-45 {xc} 188)">{lbl}</text>')
+    elements.append('</svg>')
+    return ''.join(elements)
+
+
+def build_horizontal_bar_svg(items):
+    """Build server-rendered SVG horizontal bar chart. Empty data returns ''."""
+    if not items or all(it['count'] == 0 for it in items):
+        return ''
+    max_count = max(it['count'] for it in items)
+    row_h, pad = 36, 15
+    h = pad * 2 + len(items) * row_h
+    elements = [
+        f'<svg viewBox="0 0 720 {h}" width="100%" style="height:auto; display:block;" xmlns="http://www.w3.org/2000/svg">',
+        f'<line x1="180" y1="{pad}" x2="180" y2="{h - pad}" stroke="#334155" stroke-width="1" />',
+    ]
+    for i, it in enumerate(items):
+        y = pad + i * row_h
+        val = it['count']
+        color = it.get('color', '#38bdf8')
+        bw = round((val / max_count) * 450.0, 1) if val > 0 else 0
+        ty = y + 23
+        lbl = html.escape(str(it['label']))
+        elements.append(f'<text x="170" y="{ty}" fill="#94a3b8" font-size="12" font-family="sans-serif" text-anchor="end">{lbl}</text>')
+        if bw > 0:
+            elements.append(f'<rect x="180" y="{y + 8}" width="{bw}" height="20" fill="{color}" rx="3" />')
+        elements.append(f'<text x="{round(180 + bw + 10, 1)}" y="{ty}" fill="{color if val > 0 else "#64748b"}" font-size="12" font-weight="bold" font-family="sans-serif" text-anchor="start">{val}</text>')
+    elements.append('</svg>')
+    return ''.join(elements)
+
+
+def format_trend_delta(delta):
+    return f"+{delta}" if delta > 0 else (f"{delta}" if delta < 0 else "0")
+
 
 @dashboard_bp.route('/')
 @dashboard_bp.route('/dashboard')
@@ -64,12 +124,102 @@ def index():
             'days_remaining': diff
         })
 
+    # a. Tickets per category
+    cur.execute("""
+        SELECT category, COUNT(*) as count
+        FROM tickets
+        WHERE is_deleted = FALSE
+        GROUP BY category
+        ORDER BY count DESC;
+    """)
+    cat_rows = cur.fetchall()
+    category_items = [{'label': r['category'] or 'Lainnya', 'count': r['count'], 'color': '#38bdf8'} for r in cat_rows]
+    total_tickets_cat = sum(it['count'] for it in category_items)
+    top_category = category_items[0]['label'] if category_items else '-'
+
+    # b. Tickets created per day for the last 30 days (inclusive of today)
+    cur.execute("""
+        SELECT date_trunc('day', created_at)::date AS day, COUNT(*) as count
+        FROM tickets
+        WHERE is_deleted = FALSE
+          AND created_at >= CURRENT_DATE - INTERVAL '29 days'
+        GROUP BY date_trunc('day', created_at)
+        ORDER BY day ASC;
+    """)
+    created_rows = cur.fetchall()
+    created_by_day = {}
+    for r in created_rows:
+        raw_d = r['day']
+        d = raw_d.date() if hasattr(raw_d, 'date') else (date.fromisoformat(raw_d[:10]) if isinstance(raw_d, str) else raw_d)
+        created_by_day[d] = r['count']
+
+    daily_series = [{'date': today - timedelta(days=i), 'label': (today - timedelta(days=i)).strftime('%d/%m'), 'count': created_by_day.get(today - timedelta(days=i), 0)} for i in range(29, -1, -1)]
+    total_created_30d = sum(p['count'] for p in daily_series)
+    avg_created_per_day = round(total_created_30d / 30.0, 1)
+
+    # Created trend: days 0-6 vs days 7-13
+    created_this_week = sum(p['count'] for p in daily_series[-7:])
+    created_prev_week = sum(p['count'] for p in daily_series[-14:-7])
+    created_delta = created_this_week - created_prev_week
+    created_delta_str = format_trend_delta(created_delta)
+
+    # c. Tickets per status
+    cur.execute("SELECT status, COUNT(*) as count FROM tickets WHERE is_deleted = FALSE GROUP BY status;")
+    t_status_map = {r['status']: r['count'] for r in cur.fetchall()}
+    t_colors = {'Open': '#f97316', 'In Progress': '#facc15', 'Resolved': '#34d399', 'Closed': '#ef4444'}
+    ticket_status_items = [{'label': s, 'count': t_status_map.pop(s, 0), 'color': t_colors.get(s, '#38bdf8')} for s in ['Open', 'In Progress', 'Resolved', 'Closed']]
+    ticket_status_items += [{'label': s, 'count': c, 'color': t_colors.get(s, '#38bdf8')} for s, c in t_status_map.items()]
+
+    # d. Assets per status
+    cur.execute("SELECT status, COUNT(*) as count FROM assets WHERE is_deleted = FALSE GROUP BY status;")
+    a_status_map = {r['status']: r['count'] for r in cur.fetchall()}
+    a_colors = {'Procurement': '#facc15', 'Active': '#34d399', 'Under Repair': '#fbbf24', 'Retired': '#ef4444'}
+    asset_status_items = [{'label': s, 'count': a_status_map.pop(s, 0), 'color': a_colors.get(s, '#38bdf8')} for s in ['Procurement', 'Active', 'Under Repair', 'Retired']]
+    asset_status_items += [{'label': s, 'count': c, 'color': a_colors.get(s, '#38bdf8')} for s, c in a_status_map.items()]
+
+    # e. Tickets resolved per week
+    cur.execute("""
+        SELECT
+            COALESCE(SUM(CASE WHEN resolved_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 ELSE 0 END), 0) AS resolved_this_week,
+            COALESCE(SUM(CASE WHEN resolved_at >= CURRENT_DATE - INTERVAL '14 days' AND resolved_at < CURRENT_DATE - INTERVAL '7 days' THEN 1 ELSE 0 END), 0) AS resolved_prev_week
+        FROM tickets
+        WHERE is_deleted = FALSE
+          AND resolved_at IS NOT NULL;
+    """)
+    res_row = cur.fetchone()
+    resolved_this_week = int(res_row['resolved_this_week'] or 0)
+    resolved_prev_week = int(res_row['resolved_prev_week'] or 0)
+    resolved_delta = resolved_this_week - resolved_prev_week
+    resolved_delta_str = format_trend_delta(resolved_delta)
+
+    # SVG charts
+    daily_chart_svg = build_daily_vertical_svg(daily_series)
+    category_chart_svg = build_horizontal_bar_svg(category_items)
+    ticket_status_chart_svg = build_horizontal_bar_svg(ticket_status_items)
+    asset_status_chart_svg = build_horizontal_bar_svg(asset_status_items)
+
     cur.close()
     conn.close()
 
-    return render_template('dashboard.html',
-                           total_assets=total_assets,
-                           open_tickets=open_tickets,
-                           uptime_percentage=uptime_percentage,
-                           expiring_warranties=expiring_warranties,
-                           active_page='dashboard')
+    return render_template(
+        'dashboard.html',
+        total_assets=total_assets,
+        open_tickets=open_tickets,
+        uptime_percentage=uptime_percentage,
+        expiring_warranties=expiring_warranties,
+        daily_chart_svg=daily_chart_svg,
+        total_created_30d=total_created_30d,
+        avg_created_per_day=avg_created_per_day,
+        category_chart_svg=category_chart_svg,
+        total_tickets_cat=total_tickets_cat,
+        top_category=top_category,
+        ticket_status_chart_svg=ticket_status_chart_svg,
+        asset_status_chart_svg=asset_status_chart_svg,
+        created_this_week=created_this_week,
+        created_prev_week=created_prev_week,
+        created_delta_str=created_delta_str,
+        resolved_this_week=resolved_this_week,
+        resolved_prev_week=resolved_prev_week,
+        resolved_delta_str=resolved_delta_str,
+        active_page='dashboard'
+    )

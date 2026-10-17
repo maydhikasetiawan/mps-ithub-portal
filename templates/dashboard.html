@@ -19,6 +19,80 @@
     </div>
 </div>
 
+<div class="card">
+    <h3 class="chart-card-title">Tiket Baru — 30 Hari Terakhir</h3>
+    <div class="chart-stats-sub">
+        <span>Total 30 hari: <strong>{{ total_created_30d }}</strong></span>
+        <span>Rata-rata: <strong>{{ avg_created_per_day }} / hari</strong></span>
+    </div>
+    {% if daily_chart_svg %}
+        {{ daily_chart_svg|safe }}
+    {% else %}
+        <p class="chart-empty">Belum ada data</p>
+    {% endif %}
+</div>
+
+<div class="card-grid-2">
+    <div class="card">
+        <h3 class="chart-card-title">Tiket per Kategori</h3>
+        <div class="chart-stats-sub">
+            <span>Total: <strong>{{ total_tickets_cat }}</strong></span>
+            <span>Kategori terbanyak: <strong>{{ top_category }}</strong></span>
+        </div>
+        {% if category_chart_svg %}
+            {{ category_chart_svg|safe }}
+        {% else %}
+            <p class="chart-empty">Belum ada data</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3 class="chart-card-title">Tiket per Status</h3>
+        {% if ticket_status_chart_svg %}
+            {{ ticket_status_chart_svg|safe }}
+        {% else %}
+            <p class="chart-empty">Belum ada data</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card-grid-2">
+    <div class="card">
+        <h3 class="chart-card-title">Aset per Status</h3>
+        {% if asset_status_chart_svg %}
+            {{ asset_status_chart_svg|safe }}
+        {% else %}
+            <p class="chart-empty">Belum ada data</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3 class="chart-card-title">Tren Minggu Ini</h3>
+        <div class="trend-grid">
+            <div class="trend-stat">
+                <div class="trend-stat-label">Tiket dibuat minggu ini vs minggu lalu</div>
+                <div class="trend-stat-val">
+                    {{ created_this_week }}
+                    <span class="trend-stat-delta {% if created_delta_str.startswith('+') %}trend-delta-plus{% elif created_delta_str.startswith('-') %}trend-delta-minus{% endif %}">
+                        ({{ created_delta_str }})
+                    </span>
+                </div>
+                <div class="trend-stat-sub">Minggu lalu: {{ created_prev_week }}</div>
+            </div>
+            <div class="trend-stat">
+                <div class="trend-stat-label">Tiket diselesaikan minggu ini vs minggu lalu</div>
+                <div class="trend-stat-val">
+                    {{ resolved_this_week }}
+                    <span class="trend-stat-delta {% if resolved_delta_str.startswith('+') %}trend-delta-plus{% elif resolved_delta_str.startswith('-') %}trend-delta-minus{% endif %}">
+                        ({{ resolved_delta_str }})
+                    </span>
+                </div>
+                <div class="trend-stat-sub">Minggu lalu: {{ resolved_prev_week }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if expiring_warranties %}
 <div class="card" style="margin-top: 25px;">
     <h3 style="color: #f59e0b; margin-bottom: 15px; font-size: 16px;">⚠️ Garansi Akan Habis</h3>
