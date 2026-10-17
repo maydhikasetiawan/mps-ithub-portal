@@ -283,9 +283,9 @@
         <p style="font-size: 13px; color: #cbd5e1;">{{ ticket.resolution_note or 'Belum ada catatan penyelesaian.' }}</p>
         {% endif %}
 
-        {% if ticket.resolved_by %}
+        {% if ticket.resolved_at %}
         <div style="margin-top: 15px; font-size: 11px; color: #10b981; border-top: 1px solid #1e293b; padding-top: 10px;">
-            Diselesaikan oleh: <strong>{{ ticket.resolved_by }}</strong> pada <strong>{{ ticket.resolved_at.strftime('%Y-%m-%d %H:%M') if ticket.resolved_at else '-' }}</strong>
+            Diselesaikan oleh: <strong>{{ ticket.resolved_by or '-' }}</strong> pada <strong>{{ ticket.resolved_at.strftime('%Y-%m-%d %H:%M') if ticket.resolved_at else '-' }}</strong>
         </div>
         {% endif %}
     </div>
