@@ -16,6 +16,8 @@ from PIL import Image
 
 tickets_bp = Blueprint('tickets', __name__, url_prefix='/tickets')
 
+PER_PAGE = 20
+
 # SLA Target Constants (calendar hours from created_at)
 SLA_TARGETS = {
     'Critical': {'response': 1, 'resolution': 4},
@@ -363,37 +365,63 @@ def index():
     status_filter = request.args.get('status', '')
     assignee_filter = request.args.get('assignee', 'all').strip()
     search_query = request.args.get('q', '')
+    page = request.args.get('page', 1, type=int) or 1
+    page = max(1, page)
     user_role = session.get('role', 'guest')
     username = session.get('username')
 
     conn = get_db_connection()
     cur = conn.cursor()
 
-    query = "SELECT * FROM tickets WHERE is_deleted = FALSE"
+    where_clause = "WHERE is_deleted = FALSE"
     params = []
 
     # Regular User dan Guest hanya melihat tiket miliknya sendiri
     if user_role in ('user', 'guest'):
-        query += " AND created_by = %s"
+        where_clause += " AND created_by = %s"
         params.append(username)
 
     if status_filter:
-        query += " AND status = %s"
+        where_clause += " AND status = %s"
         params.append(status_filter)
 
     if assignee_filter == 'unassigned':
-        query += " AND assigned_to IS NULL"
+        where_clause += " AND assigned_to IS NULL"
     elif assignee_filter == 'me' and user_role in ['admin', 'it']:
-        query += " AND assigned_to = %s"
+        where_clause += " AND assigned_to = %s"
         params.append(username)
 
     if search_query:
-        query += " AND (ticket_code ILIKE %s OR title ILIKE %s OR created_by ILIKE %s)"
+        where_clause += " AND (ticket_code ILIKE %s OR title ILIKE %s OR created_by ILIKE %s)"
         params.extend([f'%{search_query}%', f'%{search_query}%', f'%{search_query}%'])
 
-    query += " ORDER BY id DESC;"
-    cur.execute(query, tuple(params))
+    count_query = "SELECT COUNT(*) AS total, COALESCE(MAX(id), 0) AS max_id FROM tickets " + where_clause
+    data_query = "SELECT * FROM tickets " + where_clause + " ORDER BY id DESC LIMIT %s OFFSET %s"
+
+    cur.execute(count_query, tuple(params))
+    count_row = cur.fetchone()
+    total = count_row['total']
+    total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
+    page = min(page, total_pages)
+    offset = (page - 1) * PER_PAGE
+    cur.execute(data_query, tuple(params) + (PER_PAGE, offset))
     tickets_list = cur.fetchall()
+
+    latest_ticket_id = count_row['max_id']
+
+    def _page_url(p):
+        return url_for('tickets.index', page=p if p != 1 else None,
+                       status=status_filter or None,
+                       assignee=assignee_filter if assignee_filter != 'all' else None,
+                       q=search_query or None)
+
+    page_urls = [(p, _page_url(p)) for p in range(max(1, page - 3), min(total_pages, page + 3) + 1)]
+    pagination = {
+        'page': page, 'total_pages': total_pages, 'total': total,
+        'prev_url': _page_url(page - 1) if page > 1 else None,
+        'next_url': _page_url(page + 1) if page < total_pages else None,
+        'page_urls': page_urls,
+    }
 
     open_ticket_ids = [t['id'] for t in tickets_list if t['status'] not in ['Resolved', 'Closed']]
     responded_ids = set()
@@ -416,9 +444,7 @@ def index():
     cur.close()
     conn.close()
 
-    latest_ticket_id = tickets_list[0]['id'] if tickets_list else 0
-
-    return render_template('tickets/index.html', tickets=tickets_list, status_filter=status_filter, assignee_filter=assignee_filter, search_query=search_query, active_page='tickets', latest_ticket_id=latest_ticket_id)
+    return render_template('tickets/index.html', tickets=tickets_list, status_filter=status_filter, assignee_filter=assignee_filter, search_query=search_query, active_page='tickets', latest_ticket_id=latest_ticket_id, pagination=pagination)
 
 # --- BUAT TIKET BARU ---
 @tickets_bp.route('/add', methods=['GET', 'POST'])

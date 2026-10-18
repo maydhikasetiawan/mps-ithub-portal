@@ -307,7 +307,6 @@ def run_all_checks():
     pending_telegrams = []
 
     for m in monitors_list:
-        old_status = m['status']
         old_failures = m['consecutive_failures'] or 0
         old_alerted = m['is_alerted'] or False
         status, latency = check_target_health(m['target'], m['type'], m['port'])

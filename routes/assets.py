@@ -10,6 +10,8 @@ from datetime import datetime, date
 
 assets_bp = Blueprint('assets', __name__, url_prefix='/assets')
 
+PER_PAGE = 20
+
 ALLOWED_STATUSES = ['Procurement', 'Active', 'Under Repair', 'Retired']
 ALLOWED_CATEGORIES = ['Server', 'PC/Laptop', 'Network', 'Docker Container', 'Printer/Peripherals']
 
@@ -80,37 +82,61 @@ def index():
     if assigned_filter != 'unassigned' and assigned_filter not in assignable_users:
         assigned_filter = ''
 
+    page = request.args.get('page', 1, type=int) or 1
+    page = max(1, page)
+
     conn = get_db_connection()
     cur = conn.cursor()
 
-    query = "SELECT * FROM assets WHERE is_deleted = FALSE"
+    where_clause = "WHERE is_deleted = FALSE"
     params = []
 
     if status_filter:
-        query += " AND status = %s"
+        where_clause += " AND status = %s"
         params.append(status_filter)
 
     if assigned_filter == 'unassigned':
-        query += " AND assigned_to IS NULL"
+        where_clause += " AND assigned_to IS NULL"
     elif assigned_filter:
-        query += " AND assigned_to = %s"
+        where_clause += " AND assigned_to = %s"
         params.append(assigned_filter)
 
     if search_query:
-        query += " AND (name ILIKE %s OR asset_tag ILIKE %s OR ip_address ILIKE %s OR location ILIKE %s)"
+        where_clause += " AND (name ILIKE %s OR asset_tag ILIKE %s OR ip_address ILIKE %s OR location ILIKE %s)"
         params.extend([f'%{search_query}%', f'%{search_query}%', f'%{search_query}%', f'%{search_query}%'])
 
-    query += " ORDER BY id DESC;"
-    cur.execute(query, tuple(params))
+    count_query = "SELECT COUNT(*) AS total FROM assets " + where_clause
+    data_query = "SELECT * FROM assets " + where_clause + " ORDER BY id DESC LIMIT %s OFFSET %s"
+
+    cur.execute(count_query, tuple(params))
+    total = cur.fetchone()['total']
+    total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
+    page = min(page, total_pages)
+    offset = (page - 1) * PER_PAGE
+    cur.execute(data_query, tuple(params) + (PER_PAGE, offset))
 
     assets_list = cur.fetchall()
     cur.close()
     conn.close()
 
+    def _page_url(p):
+        return url_for('assets.index', page=p if p != 1 else None,
+                       status=status_filter or None,
+                       assigned=assigned_filter or None,
+                       q=search_query or None)
+
+    page_urls = [(p, _page_url(p)) for p in range(max(1, page - 3), min(total_pages, page + 3) + 1)]
+    pagination = {
+        'page': page, 'total_pages': total_pages, 'total': total,
+        'prev_url': _page_url(page - 1) if page > 1 else None,
+        'next_url': _page_url(page + 1) if page < total_pages else None,
+        'page_urls': page_urls,
+    }
+
     for asset in assets_list:
         asset['age'] = calculate_age(asset['created_at'])
 
-    return render_template('assets/index.html', assets=assets_list, search_query=search_query, status_filter=status_filter, assigned_filter=assigned_filter, users=assignable_users, active_page='assets')
+    return render_template('assets/index.html', assets=assets_list, search_query=search_query, status_filter=status_filter, assigned_filter=assigned_filter, users=assignable_users, active_page='assets', pagination=pagination)
 
 # --- TAMBAH ASET BARU ---
 @assets_bp.route('/add', methods=['GET', 'POST'])

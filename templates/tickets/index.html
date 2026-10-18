@@ -114,6 +114,25 @@
 </table>
 </div>
 
+{% if pagination and pagination.total_pages > 1 %}
+<div style="display: flex; gap: 8px; align-items: center; justify-content: center; margin: 20px 0; flex-wrap: wrap;">
+    {% if pagination.prev_url %}
+    <a href="{{ pagination.prev_url }}" style="background: #1e293b; color: #cbd5e1; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; border: 1px solid #334155;">« Sebelumnya</a>
+    {% endif %}
+    {% for p, u in pagination.page_urls %}
+    {% if p == pagination.page %}
+    <span style="background: #0284c7; color: #ffffff; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: bold;">{{ p }}</span>
+    {% else %}
+    <a href="{{ u }}" style="background: #1e293b; color: #cbd5e1; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; border: 1px solid #334155;">{{ p }}</a>
+    {% endif %}
+    {% endfor %}
+    {% if pagination.next_url %}
+    <a href="{{ pagination.next_url }}" style="background: #1e293b; color: #cbd5e1; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; border: 1px solid #334155;">Berikutnya »</a>
+    {% endif %}
+    <span style="color: #94a3b8; font-size: 13px;">Halaman {{ pagination.page }} dari {{ pagination.total_pages }} ({{ pagination.total }} data)</span>
+</div>
+{% endif %}
+
 {% if session['role'] in ['admin', 'it'] %}
 <script>
 (function() {
