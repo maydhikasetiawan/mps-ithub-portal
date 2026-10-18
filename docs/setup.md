@@ -131,3 +131,11 @@ Server akan aktif dan mendengarkan permintaan pada `http://0.0.0.0:5000`.
      - **Username**: `admin`
      - **Password**: `AdminPass123!`
    - Pastikan halaman beralih ke Dasbor Operasional dengan metrik aktif.
+
+---
+
+## 7. Fresh Deploys & Schema Management
+
+- **Fresh Deploys**: `alembic upgrade head` creates ALL tables (base tables in `001`, seeds in `020`) — `init_db()` no longer exists.
+- **Admin Account**: The first admin account is NOT seeded. Create it via `psql` with a strong password hashed via `generate_password_hash` (e.g. `<choose-a-strong-password>`).
+- **Seed Accounts Removed**: The old `init_db` seed accounts are removed and must not be reused.

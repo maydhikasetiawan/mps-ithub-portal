@@ -2,7 +2,6 @@ import os
 from datetime import timedelta
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
-from database.db import init_db
 from routes.auth import auth_bp
 from routes.dashboard import dashboard_bp
 from routes.assets import assets_bp
@@ -40,12 +39,6 @@ app.register_blueprint(knowledge_base_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(users_bp) # 2. Register Blueprint Users
 app.register_blueprint(api_bp)
-
-@app.before_request
-def ensure_db_initialized():
-    if not getattr(app, '_got_first_request', False):
-        init_db()
-        app._got_first_request = True
 
 @app.before_request
 def ensure_scheduler_started():
