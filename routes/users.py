@@ -5,6 +5,12 @@ from database.db import get_db_connection
 
 users_bp = Blueprint('users', __name__, url_prefix='/users')
 
+def log_user_activity(cur, user_id, actor, activity_type, content):
+    cur.execute("""
+        INSERT INTO user_activities (user_id, actor, type, content)
+        VALUES (%s, %s, %s, %s);
+    """, (user_id, actor, activity_type, content))
+
 # --- DAFTAR USER (KHUSUS SUPER ADMIN) ---
 @users_bp.route('/')
 @login_required
@@ -40,6 +46,8 @@ def add():
                 INSERT INTO users (username, email, password_hash, role, department)
                 VALUES (%s, %s, %s, %s, %s);
             """, (username, email, password_hash, role, department))
+            log_user_activity(cur, None, session.get('username'), 'user_created',
+                f"User '{username}' created with role '{role}', department '{department or '-'}'.")
             conn.commit()
             cur.close()
             conn.close()
@@ -73,6 +81,9 @@ def delete(user_id):
         reason_val = reason.strip() if reason and reason.strip() else None
         user_now = session.get('username')
 
+        cur.execute("SELECT username FROM users WHERE id = %s;", (user_id,))
+        target = cur.fetchone()
+
         cur.execute("""
             UPDATE users
             SET is_deleted = TRUE,
@@ -81,6 +92,9 @@ def delete(user_id):
                 delete_reason = %s
             WHERE id = %s;
         """, (user_now, reason_val, user_id))
+        if target:
+            log_user_activity(cur, user_id, user_now, 'user_soft_deleted',
+                f"User '{target['username']}' soft-deleted by '{user_now}'." + (f" Reason: {reason_val}" if reason_val else ""))
         conn.commit()
         cur.close()
         conn.close()
@@ -162,6 +176,8 @@ def restore(user_id):
             delete_reason = NULL
         WHERE id = %s;
     """, (user_id,))
+    log_user_activity(cur, user_id, session.get('username'), 'user_restored',
+        f"User '{user['username']}' restored by '{session.get('username')}'.")
     conn.commit()
     cur.close()
     conn.close()
@@ -200,6 +216,8 @@ def hard_delete(user_id):
             error = "Password Anda salah! Hapus permanen dibatalkan."
         else:
             cur.execute("DELETE FROM users WHERE id = %s;", (user_id,))
+            log_user_activity(cur, user_id, session.get('username'), 'user_hard_deleted',
+                f"User '{user['username']}' permanently deleted by '{session.get('username')}'.")
             conn.commit()
             cur.close()
             conn.close()
@@ -226,6 +244,8 @@ def departments():
                 flash(f"Departemen '{dept_name}' sudah ada!", "danger")
             else:
                 cur.execute("INSERT INTO departments (name) VALUES (%s);", (dept_name,))
+                log_user_activity(cur, None, session.get('username'), 'department_created',
+                    f"Department '{dept_name}' created by '{session.get('username')}'.")
                 conn.commit()
                 flash(f"Departemen '{dept_name}' berhasil ditambahkan!", "success")
 
@@ -256,6 +276,8 @@ def delete_department(dept_id):
             flash(f"Gagal menghapus! Masih ada {user_count} user di departemen '{dept['name']}'. Pindahkan user terlebih dahulu.", "danger")
         else:
             cur.execute("DELETE FROM departments WHERE id = %s;", (dept_id,))
+            log_user_activity(cur, None, session.get('username'), 'department_deleted',
+                f"Department '{dept['name']}' deleted by '{session.get('username')}'.")
             conn.commit()
             flash(f"Departemen '{dept['name']}' berhasil dihapus.", "success")
 
@@ -304,6 +326,19 @@ def edit(user_id):
                 """, (email, role, department, user_id))
                 flash(f"Data user '{target_user['username']}' berhasil diperbarui!", "success")
 
+            if role != target_user['role']:
+                log_user_activity(cur, user_id, session.get('username'), 'role_changed',
+                    f"User '{target_user['username']}' role changed from '{target_user['role']}' to '{role}' by '{session.get('username')}'.")
+            if new_password:
+                log_user_activity(cur, user_id, session.get('username'), 'password_reset',
+                    f"Password reset for user '{target_user['username']}' by '{session.get('username')}'.")
+            if email != target_user['email']:
+                log_user_activity(cur, user_id, session.get('username'), 'email_changed',
+                    f"User '{target_user['username']}' email changed from '{target_user['email']}' to '{email}' by '{session.get('username')}'.")
+            if department != target_user['department']:
+                log_user_activity(cur, user_id, session.get('username'), 'department_changed',
+                    f"User '{target_user['username']}' department changed from '{target_user['department']}' to '{department}' by '{session.get('username')}'.")
+
             conn.commit()
             cur.close()
             conn.close()
@@ -351,6 +386,8 @@ def change_password():
             SET password_hash = %s, must_change_password = FALSE
             WHERE id = %s;
         """, (new_hash, user_id))
+        log_user_activity(cur, user_id, session.get('username'), 'password_changed',
+            f"User '{session.get('username')}' changed their own password.")
         conn.commit()
         cur.close()
         conn.close()
