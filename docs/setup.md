@@ -53,12 +53,7 @@ Lalu lengkapi nilai variabel sesuai kredensial server PostgreSQL lokal Anda.
    ```
 
 2. **Inisialisasi Tabel Awal**:
-   Aplikasi memiliki hook `@app.before_request` yang akan secara otomatis mengeksekusi fungsi `init_db()` pada request HTTP pertama. Fungsi ini membuat tabel dasar serta menambahkan akun bawaan:
-   - Pengguna `admin` (kata sandi: `AdminPass123!`, role: `admin`)
-   - Pengguna `guest` (kata sandi: `GuestPass123!`, role: `guest`)
-
-   > [!WARNING]
-   > Change the default admin/guest passwords immediately after first login — never run production with the seed passwords.
+   Jalankan `alembic upgrade head` — Alembic membuat SEMUA tabel (tabel dasar di migrasi `001`, seed kategori di `020`). Tidak ada akun seed; akun admin pertama dibuat via `psql` (lihat §7).
 
 3. **Menjalankan Migrasi Skema (Alembic)**:
    Eksekusi migrasi untuk membentuk tabel `departments`, `monitors`, dan penambahan kolom pelengkap:
@@ -127,9 +122,7 @@ Server akan aktif dan mendengarkan permintaan pada `http://0.0.0.0:5000`.
 2. **Verifikasi Melalui Peramban (Browser Check)**:
    - Buka `http://localhost:5000/health`: Memastikan API hidup dengan respon JSON `{"status": "healthy"}` (HTTP 200).
    - Buka `http://localhost:5000`: Halaman akan otomatis diarahkan ke `/login`.
-   - Masuk menggunakan akun bawaan:
-     - **Username**: `admin`
-     - **Password**: `AdminPass123!`
+   - Masuk menggunakan akun admin yang kamu buat via `psql` (lihat §2 / §7).
    - Pastikan halaman beralih ke Dasbor Operasional dengan metrik aktif.
 
 ---

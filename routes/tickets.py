@@ -9,6 +9,9 @@ import json
 import urllib.request
 import uuid
 import mimetypes
+import threading
+import time
+from psycopg2.extras import Json
 from PIL import Image
 
 tickets_bp = Blueprint('tickets', __name__, url_prefix='/tickets')
@@ -128,35 +131,94 @@ def compute_sla(ticket, activities=None, has_response=None, now=None):
         'elapsed_label': elapsed_label,
     }
 
-def send_webhook(event, ticket, actor):
+def enqueue_webhook(event, ticket, actor):
+    """Queue a webhook delivery (async). Never raises: webhook failure must
+    never break the ticket flow."""
     webhook_url = os.environ.get('WEBHOOK_URL', '').strip()
     if not webhook_url:
         return
-
+    payload = {
+        'event': event,
+        'ticket_code': ticket.get('ticket_code'),
+        'ticket_id': ticket.get('id'),
+        'title': ticket.get('title'),
+        'status': ticket.get('status'),
+        'priority': ticket.get('priority'),
+        'assigned_to': ticket.get('assigned_to') or None,
+        'actor': actor,
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'url': f"/tickets/{ticket.get('id')}",
+    }
     try:
-        payload = {
-            'event': event,
-            'ticket_code': ticket.get('ticket_code'),
-            'ticket_id': ticket.get('id'),
-            'title': ticket.get('title'),
-            'status': ticket.get('status'),
-            'priority': ticket.get('priority'),
-            'assigned_to': ticket.get('assigned_to') or None,
-            'actor': actor,
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'url': f"/tickets/{ticket.get('id')}",
-        }
-        data = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(
-            webhook_url,
-            data=data,
-            headers={'Content-Type': 'application/json'},
-            method='POST'
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """INSERT INTO webhook_deliveries
+               (event, ticket_id, ticket_code, payload, webhook_url)
+               VALUES (%s, %s, %s, %s, %s) RETURNING id;""",
+            (event, ticket.get('id'), ticket.get('ticket_code'),
+             Json(payload), webhook_url)
         )
-        with urllib.request.urlopen(req, timeout=5):
-            pass
-    except Exception:
-        pass
+        delivery_id = cur.fetchone()['id']
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Webhook enqueue failed: {e}")
+        return
+    threading.Thread(target=_deliver_webhook, args=(delivery_id,), daemon=True).start()
+
+
+def _deliver_webhook(delivery_id):
+    """Delivery worker: up to 3 attempts with backoff (2s, 4s)."""
+    try:
+        for attempt in (1, 2, 3):
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM webhook_deliveries WHERE id = %s;", (delivery_id,))
+            row = cur.fetchone()
+            if not row or row['status'] != 'pending':
+                cur.close()
+                conn.close()
+                return
+            payload = row['payload']
+            webhook_url = row['webhook_url']
+            data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(
+                webhook_url, data=data,
+                headers={'Content-Type': 'application/json'}, method='POST')
+            error = None
+            status_code = None
+            try:
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    status_code = resp.status
+                if 200 <= status_code < 300:
+                    cur.execute(
+                        """UPDATE webhook_deliveries
+                           SET status='delivered', attempts=%s, response_status=%s,
+                               last_error=NULL, delivered_at=CURRENT_TIMESTAMP
+                           WHERE id=%s;""",
+                        (attempt, status_code, delivery_id))
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    return
+                error = f"HTTP {status_code}"
+            except Exception as e:
+                error = str(e)[:500]
+            cur.execute(
+                """UPDATE webhook_deliveries
+                   SET attempts=%s, response_status=%s, last_error=%s,
+                       status=CASE WHEN %s >= 3 THEN 'failed' ELSE 'pending' END
+                   WHERE id=%s;""",
+                (attempt, status_code, error, attempt, delivery_id))
+            conn.commit()
+            cur.close()
+            conn.close()
+            if attempt < 3:
+                time.sleep(2 ** attempt)
+    except Exception as e:
+        print(f"Webhook delivery failed: {e}")
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'txt', 'log', 'doc', 'docx', 'xls', 'xlsx', 'csv'}
 MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # 5 MB
@@ -403,7 +465,7 @@ def add():
                 'priority': priority,
                 'assigned_to': None,
             }
-            send_webhook('ticket.created', created_ticket, created_by)
+            enqueue_webhook('ticket.created', created_ticket, created_by)
 
             flash(f"Tiket {ticket_code} berhasil dibuat!", "success")
             return redirect(url_for('tickets.index'))
@@ -647,7 +709,7 @@ def detail(ticket_id):
                 'resolved_at': None,
                 'resolution_note': None
             })
-            send_webhook('ticket.status_changed', updated_ticket, username)
+            enqueue_webhook('ticket.status_changed', updated_ticket, username)
             return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
         elif action == 'link':
@@ -738,7 +800,7 @@ def detail(ticket_id):
                 updated_ticket['status'] = 'Closed'
                 updated_ticket['resolved_by'] = username
                 updated_ticket['resolution_note'] = resolution_note
-                send_webhook('ticket.status_changed', updated_ticket, username)
+                enqueue_webhook('ticket.status_changed', updated_ticket, username)
                 flash("Tiket ditandai sebagai duplikat dan ditutup.", "success")
             else:
                 flash("Relasi tiket berhasil ditambahkan!", "success")
@@ -863,10 +925,10 @@ def detail(ticket_id):
             updated_ticket['assigned_to'] = assigned_to
 
             if status_changed:
-                send_webhook('ticket.status_changed', updated_ticket, user_now)
+                enqueue_webhook('ticket.status_changed', updated_ticket, user_now)
 
             if assigned_changed:
-                send_webhook('ticket.assigned', updated_ticket, user_now)
+                enqueue_webhook('ticket.assigned', updated_ticket, user_now)
 
             flash("Status dan laporan penyelesaian tiket berhasil diperbarui!", "success")
             return redirect(url_for('tickets.detail', ticket_id=ticket_id))
