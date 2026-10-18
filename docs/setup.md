@@ -35,6 +35,8 @@ Sistem membaca konfigurasi lingkungan melalui variabel sistem (*environment vari
 | `DB_PASS` | `database/db.py` (baris 10), `migrations/env.py` (baris 18) | Kata sandi pengguna basis data. |
 | `DB_PORT` | `migrations/env.py` (baris 19) | Port koneksi basis data untuk runner Alembic (opsional, default: `'5432'`). Pada koneksi utama `database/db.py`, port 5432 digunakan secara langsung. |
 | `API_KEY` | `routes/api.py` | Kunci rahasia bersama untuk autentikasi endpoint REST API v1 (`/api/v1/*`). Harus berupa string acak yang kuat (disimpan sebagai GitHub Secrets `API_KEY` saat deployment). Mengadopsi prinsip *fail-closed*: jika variabel ini tidak disetel atau header `X-API-Key` salah/hilang, permintaan API akan ditolak dengan status HTTP 401. |
+| `WEBHOOK_URL` | `routes/tickets.py` | URL receiver webhook outbound; kosong = pengiriman dilewati (tidak ada percobaan pengiriman). |
+| `UPTIME_CHECK_INTERVAL` | `routes/uptime.py` | Interval scheduler pengecekan uptime dalam detik (default: 300). |
 
 Salin template berkas `.env.example` ke `.env`:
 ```bash
@@ -56,7 +58,7 @@ Lalu lengkapi nilai variabel sesuai kredensial server PostgreSQL lokal Anda.
    Jalankan `alembic upgrade head` — Alembic membuat SEMUA tabel (tabel dasar di migrasi `001`, seed kategori di `020`). Tidak ada akun seed; akun admin pertama dibuat via `psql` (lihat §7).
 
 3. **Menjalankan Migrasi Skema (Alembic)**:
-   Eksekusi migrasi untuk membentuk tabel `departments`, `monitors`, dan penambahan kolom pelengkap:
+   Eksekusi migrasi untuk membentuk SEMUA tabel (satu perintah, sama seperti §2):
    ```bash
    alembic upgrade head
    ```

@@ -23,7 +23,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Tren Komparasi 30 Hari**: Statistik komparasi tiket dibuat dan diselesaikan (30 hari berjalan vs 30 hari sebelumnya) diturunkan langsung dari data tanpa migrasi basis data.
 
 ### C. Modul IT Assets / IPAM (`routes/assets.py`)
-- **Daftar Inventaris Aset**: Menampilkan seluruh perangkat aktif dengan kalkulasi umur perangkat otomatis, filter status (`Procurement`, `Active`, `Under Repair`, `Retired`), dan filter penugasan (`unassigned` atau spesifik pengguna).
+- **Daftar Inventaris Aset**: Menampilkan seluruh perangkat aktif dengan kalkulasi umur perangkat otomatis, paginasi (20 data per halaman dengan pembatasan halaman dan navigasi nomor), filter status (`Procurement`, `Active`, `Under Repair`, `Retired`), dan filter penugasan (`unassigned` atau spesifik pengguna).
 - **Pencarian Aset**: Pencarian fleksibel berdasarkan nama, tag aset, IP, atau lokasi.
 - **Tambah Aset**: Pendaftaran perangkat baru dengan validasi keunikan tag aset (*asset tag*), nomor seri perangkat (`serial_number`), kategori (Server, PC/Laptop, Network, Docker Container, Printer/Peripherals), status, penugasan pengguna, tanggal beli, dan tanggal garansi habis.
 - **Detail & Spesifikasi**: Informasi rinci perangkat keras, nomor seri perangkat (`serial_number`), alamat IP, alamat MAC, status penugasan, status masa garansi dinamis, dan kalkulasi usia perangkat.
@@ -38,15 +38,15 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Hard Delete (Hapus Permanen)**: Penghapusan total dari database khusus Admin dengan konfirmasi nama aset dan kata sandi.
 
 ### D. Modul Service Desk (`routes/tickets.py`)
-- **Daftar Tiket**: Menampilkan antrean tiket bantuan. Pengguna reguler (`user`) hanya melihat tiket miliknya sendiri; badge status ditumpuk vertikal tepat di atas badge SLA secara terpusat, dan header beserta sel kolom STATUS rata tengah (*centered*).
+- **Daftar Tiket**: Menampilkan antrean tiket bantuan dengan paginasi (20 data per halaman dengan pembatasan halaman dan navigasi nomor). Pengguna reguler (`user` dan `guest`) hanya melihat tiket miliknya sendiri; badge status ditumpuk vertikal tepat di atas badge SLA secara terpusat, dan header beserta sel kolom STATUS rata tengah (*centered*).
 - **Buat Tiket**: Form pembuatan tiket masalah dengan penomoran otomatis (`TCK-YYYYMMDD-XXX`).
 - **Detail Tiket**: Rincian permasalahan, data pelapor, departemen pelapor, meta tanggal pembuatan dan pembaruan ("Dibuat: <created_at> | Terakhir diperbarui: <last_updated>" berbasis linimasa aktivitas terbaru dengan fallback `created_at`), serta baris "Diselesaikan oleh" yang hanya tampil bila `resolved_at` terisi (dengan fallback `-` jika resolver kosong).
 - **Penugasan Tiket (Assign Ticket)**: Penugasan tiket kepada staf IT atau Admin tertentu serta opsi mengosongkan penugasan (*Unassigned*).
 - **Penyelesaian Masalah**: Pembaruan status pengerjaan tiket dan input laporan solusi (*resolution note*). Tiket berstatus `Resolved` atau `Closed` dikunci dari modifikasi lebih lanjut.
 - **Komentar Tiket**: Penambahan catatan komunikasi atau komentar oleh Admin, IT, maupun pelapor (User pada tiket miliknya).
-- **Riwayat Aktivitas (Timeline)**: Pencatatan kronologis terpadu untuk pembuatan tiket, perubahan status, penugasan, dan komentar.
+- **Riwayat Aktivitas (Timeline)**: Pencatatan kronologis terpadu untuk pembuatan tiket, perubahan status, penugasan, komentar, unggah lampiran berkas (`attachment`), pemberian rating CSAT (`rating`), dan pembaruan catatan penyelesaian tiket saja (`note`).
 - **Target & Peringatan SLA**: Perhitungan target waktu respon dan resolusi otomatis berbasis prioritas (Critical, High, Medium, Low) dengan indikator status otomatis (*SLA Terpenuhi*, *Mendekati SLA*, *SLA Terlewati*).
-- **Notifikasi Webhook**: Pengiriman notifikasi HTTP POST berformat JSON ke URL eksternal (`WEBHOOK_URL`) saat tiket dibuat (`ticket.created`), status berubah (`ticket.status_changed`), atau penugasan diperbarui (`ticket.assigned`). Penambahan komentar tidak memicu webhook, dan notifikasi email ditunda (*deferred*).
+- **Notifikasi Webhook**: Pengiriman notifikasi HTTP POST asinkron berformat JSON ke URL eksternal (`WEBHOOK_URL`) saat tiket dibuat (`ticket.created`), status berubah (`ticket.status_changed`), atau penugasan diperbarui (`ticket.assigned`). Pengiriman diantrekan secara non-blocking dengan pencatatan log pengiriman ke tabel `webhook_deliveries`, diproses via background daemon thread dengan mekanisme coba ulang (*retry*) hingga 3 kali (backoff 2s, 4s). Penambahan komentar tidak memicu webhook, dan notifikasi email ditunda (*deferred*).
 - **Lampiran Berkas (Attachments)**: Fasilitas unggah berkas pendukung pada pembuatan dan detail tiket (maksimal 2 berkas per tiket, batas 5 MB per berkas; gambar, dokumen, log). Gambar dikompresi otomatis ke format JPEG (maksimal 1920px, kualitas 70 via Pillow), dan berkas dilindungi otorisasi saat diunduh. Penyimpanan berkas persisten melalui Docker volume mount host (`/home/ubuntu/my-web-app-uploads` ↔ `/app/uploads`), didukung konfigurasi Nginx `client_max_body_size 15m`.
 - **Penilaian Kepuasan (CSAT)**: Satu penilaian per tiket (bintang 1–5, komentar opsional maks 1000 karakter) oleh pelapor tiket pada tiket berstatus `Resolved` atau `Closed`. Pengiriman ulang memperbarui penilaian yang ada (*upsert*); peran `guest` ditolak.
 - **Buka Ulang Tiket (Reopen)**: Pelapor atau Admin/IT dapat membuka kembali tiket `Resolved` atau `Closed` ke status `Open` dengan alasan opsional (maks 500 karakter). Mengosongkan data penyelesaian (`resolved_by`, `resolved_at`, `resolution_note`) namun tetap mempertahankan penugasan (*assignee*) dan rating CSAT sebelumnya; mencatat aktivitas bertipe `status` dan memicu webhook `ticket.status_changed`; perhitungan SLA tetap mengacu pada `created_at` awal.
@@ -68,10 +68,10 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Pindai Ulang Mandiri (Check Now)**: Trigger uji kesehatan langsung untuk target tertentu.
 - **Pindai Seluruh Layanan (Check All)**: Trigger uji kesehatan sekaligus ke seluruh daftar target monitor.
 - **Hapus Target Monitor**: Menghapus target dari daftar pemantauan.
-- **Pengecekan Otomatis Terjadwal**: Scheduler in-app memeriksa monitor yang aktif tiap 300 detik (interval hardcoded).
+- **Pengecekan Otomatis Terjadwal**: Scheduler in-app memeriksa monitor yang aktif dengan interval dari variabel lingkungan `UPTIME_CHECK_INTERVAL` (default 300 detik).
 - **Toggle Pemantauan Otomatis**: Nyalakan/matikan pengecekan otomatis per monitor; monitor nonaktif tampil NONAKTIF + baris redup.
 - **Ubah Target Monitor**: Ubah nama/target/tipe/port monitor beserta re-check instan saat monitor aktif.
-- **Alert DOWN / PULIH**: Alert transisi status di Riwayat Alert halaman Uptime + Telegram; DOWN setelah 2 cek DOWN otomatis berurutan; banner DOWN saat ada layanan mati.
+- **Alert DOWN / PULIH**: Alert transisi status di Riwayat Alert halaman Uptime + Telegram; DOWN setelah 2 cek DOWN otomatis berurutan dengan flag `is_alerted` (mencegah duplikasi DOWN akibat reset counter; alert PULIH hanya dikirim jika flag `is_alerted` aktif); banner DOWN saat ada layanan mati.
 - **Pengaturan Telegram (Admin)**: Simpan bot token + chat ID via halaman Pengaturan (token tidak pernah dirender); Tes Koneksi mengirim pesan tes beneran.
 - **Riwayat & Grafik per Monitor**: Halaman Riwayat dengan grafik latensi + statistik (uptime %, rata-rata/min/maks latensi, total cek, jumlah DOWN); rentang 24 jam / 7 hari / 30 hari; retensi 30 hari.
 
@@ -88,6 +88,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Riwayat User Terhapus & Pemulihan**: Halaman riwayat pengguna terhapus (`/users/deleted-history`) dengan fitur pencarian, halaman detail akun terhapus, pemulihan akun (*restore*), dan penghapusan permanen (*hard delete*) khusus Admin dengan konfirmasi ganda (ketik username + kata sandi admin).
 - **Manajemen Departemen**: Tambah dan hapus departemen organisasi (penghapusan ditolak jika masih terdapat pengguna di departemen tersebut).
 - **Ganti Kata Sandi Mandiri**: Fasilitas pembaruan kata sandi oleh masing-masing pengguna dengan validasi kata sandi lama.
+- **Jejak Audit Aktivitas User**: Linimasa pencatatan seluruh mutasi akun user dan departemen ke dalam tabel `user_activities` (11 tipe event: `user_created`, `user_soft_deleted`, `user_restored`, `user_hard_deleted`, `department_created`, `department_deleted`, `role_changed`, `password_reset`, `email_changed`, `department_changed`, `password_changed`), tersimpan langsung di basis data (DB-only, tanpa antarmuka pengguna).
 
 ### I. Modul REST API v1 (`routes/api.py`, prefix `/api/v1`)
 - **API Read-Only**: Endpoint `GET` terpusat untuk integrasi data tiket bantuan, aset TI, dan monitor layanan tanpa izin operasi tulis (`POST`/`PUT`/`DELETE`).

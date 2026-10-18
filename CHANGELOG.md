@@ -6,6 +6,36 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [2026-10-18] - Pre-UI Refinements
+- Batch 1 Pengamanan Tiket Guest & Log Aktivitas (main `f475c3d`):
+  - Memperbaiki celah IDOR tiket guest dengan menambahkan peran `'guest'` pada pemeriksaan kepemilikan tiket (`user_role in ('user', 'guest')`) di rute daftar tiket, detail tiket, dan unduh lampiran berkas.
+  - Menambahkan pencatatan entri linimasa `ticket_activities` untuk unggah lampiran berkas (`attachment`), pengiriman rating kepuasan CSAT (`rating`), dan pembaruan catatan penyelesaian tiket saja (`note`).
+  - Verifikasi: `python3 -m py_compile` dan `git grep`.
+- Batch 1b Otoritas Penuh Skema Alembic (main `18793be`, migrasi 020):
+  - Menjadikan Alembic sebagai otoritas tunggal skema basis data dengan memindahkan DDL tabel dasar ke migrasi `001_add_missing_schema_objects.py` (`CREATE TABLE IF NOT EXISTS`) dan menambahkan migrasi `020_default_categories.py` untuk seed kategori tiket awal.
+  - Menghapus fungsi `init_db()` beserta pembuatan akun bawaan hardcoded (`admin` dan `guest`) dari `database/db.py` dan `app.py`; akun admin pertama dibuat langsung via psql.
+  - Verifikasi: `python3 -m py_compile`, `python3 -m alembic heads` (head 020), dan `git grep`.
+- Batch 2 Webhook Asinkron & Log Pengiriman (main `5e71114`, migrasi 021):
+  - Migrasi `021_webhook_deliveries.py` membuat tabel `webhook_deliveries` untuk mencatat riwayat pengiriman webhook.
+  - Mengganti pengiriman sinkron dengan pengiriman asinkron non-blocking (`enqueue_webhook`) menggunakan thread daemon mandiri dengan mekanisme coba ulang (*retry*) hingga 3 kali (backoff 2s, 4s); kegagalan webhook tidak menggagalkan operasi tiket.
+  - Membersihkan dokumentasi akun bawaan lama pada `docs/setup.md`.
+  - Verifikasi: `python3 -m py_compile`, `python3 -m alembic heads` (head 021), dan `git grep`.
+- Batch 3 Deduplikasi Alert Uptime & Interval Konfigurasi (main `df279a7`, migrasi 022):
+  - Migrasi `022_add_monitor_is_alerted.py` menambahkan kolom boolean `is_alerted` pada tabel `monitors`.
+  - Pelacakan status alert menggunakan flag `is_alerted`: alert DOWN hanya dikirim pada kegagalan kedua berturut-turut jika belum ada alert aktif; alert PULIH hanya dikirim jika ada alert yang sedang aktif; aksi toggle dan manual check tidak mengubah flag.
+  - Interval scheduler uptime dapat dikonfigurasi melalui variabel lingkungan `UPTIME_CHECK_INTERVAL` (default: 300 detik).
+  - Grafik latensi SVG menambahkan garis kisi atas (*top gridline*) pada y=20 dan rata-rata latensi per *bucket* dibulatkan seragam ke 1 desimal.
+  - Verifikasi: `python3 -m py_compile`, `python3 -m alembic heads` (head 022), dan `git grep`.
+- Batch 4 Paginasi Daftar Tiket & Aset (main `6a335de`):
+  - Menambahkan paginasi 20 item per halaman (`PER_PAGE = 20`) pada daftar tiket dan daftar aset menggunakan query `COUNT` dan `LIMIT`/`OFFSET` dengan pembatasan halaman (*page clamp*).
+  - Menurunkan `latest_ticket_id` dari nilai agregat `MAX(id)` kueri hitung agar polling tiket baru berfungsi akurat di seluruh halaman paginasi.
+  - Menghapus variabel tidak terpakai `old_status` pada `routes/uptime.py`.
+  - Verifikasi: `python3 -m py_compile` dan `git grep`.
+- Batch 5 Jejak Audit User & Departemen (main `074cbc1`, migrasi 023):
+  - Migrasi `023_user_activities.py` membuat tabel `user_activities` (`user_id` nullable tanpa foreign key, `actor`, `type` VARCHAR(30), `content`, `created_at`).
+  - Menambahkan helper `log_user_activity` pada `routes/users.py` untuk mencatat seluruh 11 mutasi user dan departemen secara atomik dalam satu transaksi (`user_created`, `user_soft_deleted`, `user_restored`, `user_hard_deleted`, `department_created`, `department_deleted`, `role_changed`, `password_reset`, `email_changed`, `department_changed`, `password_changed`). Log tersimpan di basis data tanpa antarmuka UI.
+  - Verifikasi: `python3 -m py_compile`, `python3 -m alembic heads` (head 023), dan `git grep`.
+
 ## [2026-10-18] - Fase 6: Dashboard, Integrasi & REST API
 - Fase 6.1 Grafik & Tren Dasbor (main `69b6c71`, `bd49bdc`):
   - 4 grafik SVG server-rendered tanpa dependensi/CDN (grafik harian "Tiket Baru — 30 Hari Terakhir" / `daily_chart_svg`, tiket per kategori, tiket per status, aset per status) yang menggunakan kembali palet grafik Fase 5.3, serta tabel kondisional "Garansi Akan Habis" (tabel HTML ketika ada aset bergaransi mendekati batas).

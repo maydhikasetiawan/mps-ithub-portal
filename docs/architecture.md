@@ -76,10 +76,10 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 ### d. `tickets` (`routes/tickets.py`, URL prefix: `/tickets`)
 - **Tujuan**: Layanan helpdesk/service desk internal. Pembuatan kode tiket otomatis (`TCK-YYYYMMDD-XXX`), filter status, penyelesaian masalah (*resolution note*), penugasan staf, penambahan komentar, kalkulasi Service Level Agreement (SLA) otomatis, serta pencatatan linimasa aktivitas terpadu dan manajemen kategori dinamis. Seluruh fitur tiket Fase 2 (penilaian kepuasan CSAT, buka ulang tiket/reopen, template respon/canned responses, dan relasi tiket/relationships) beroperasi di dalam blueprint ini melalui aksi dispatch pada `detail()` serta rute `/tickets/canned-responses*`.
 - **Rute Utama**:
-  - `GET /tickets/` — Daftar tiket (pengguna biasa hanya melihat tiket miliknya; mendukung filter status dan parameter `assignee`: `all`, `unassigned`, `me`; dilengkapi badge SLA).
+  - `GET /tickets/` — Daftar tiket dengan paginasi (20 per halaman via `COUNT` + `LIMIT`/`OFFSET`). Pengguna reguler (`user` dan `guest`) hanya melihat tiket miliknya sendiri; mendukung filter status dan parameter `assignee`: `all`, `unassigned`, `me`; dilengkapi badge SLA).
   - `GET /tickets/api/new-count` — Endpoint polling berkala untuk menghitung jumlah tiket baru sejak baseline `since_id` pengguna (Admin/IT, mengembalikan JSON `{"new_count": N, "latest_id": M}`).
   - `GET, POST /tickets/add` — Pembuatan laporan masalah baru beserta pencatatan otomatis aktivitas `created`.
-  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket beserta blok target/status SLA dan linimasa aktivitas; penanganan POST terbagi: penambahan komentar (`action=comment`, admin/it/user pada tiketnya), pembaruan status/assignee (`action=update_status`, admin/it), penilaian CSAT (`action=submit_rating`, reporter tiket), buka ulang tiket (`action=reopen`, reporter/admin/it), penautan relasi tiket (`action=link`, admin/it), dan pemutusan relasi (`action=unlink`, admin/it).
+  - `GET, POST /tickets/<int:ticket_id>` — Detail tiket beserta blok target/status SLA dan linimasa aktivitas (mencakup pencatatan `created`, `status`, `assignment`, `comment`, unggah lampiran `attachment`, penilaian CSAT `rating`, dan pembaruan catatan resolusi saja `note`); penanganan POST terbagi: penambahan komentar (`action=comment`, admin/it/user pada tiketnya), pembaruan status/assignee (`action=update_status`, admin/it), penilaian CSAT (`action=submit_rating`, reporter tiket), buka ulang tiket (`action=reopen`, reporter/admin/it), penautan relasi tiket (`action=link`, admin/it), dan pemutusan relasi (`action=unlink`, admin/it).
   - `GET, POST /tickets/categories` — Manajemen kategori tiket (Admin).
   - `GET /tickets/categories/delete/<int:category_id>` — Hapus kategori tiket (Admin).
   - `GET, POST /tickets/canned-responses` — Kelola pustaka template balasan tiket (Admin/IT).
@@ -103,7 +103,8 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
     - `ticket.assigned` — Dipicu setelah penugasan tiket diperbarui atau dikosongkan (*Unassigned*) dan di-commit.
     *(Catatan: Penambahan komentar tidak memicu webhook. Notifikasi email secara eksplisit ditunda / deferred).*
   - **Struktur Payload (JSON)**: Berisi kunci `event`, `ticket_code`, `ticket_id`, `title`, `status`, `priority`, `assigned_to` (username atau `null`), `actor` (username yang memicu aksi), `timestamp` (format ISO 8601 UTC), dan `url` (tautan tiket relatif, misal `/tickets/14`).
-  - **Mekanisme Pengiriman**: HTTP POST sinkron berbasis pustaka standar Python `urllib` (tanpa dependensi eksternal). Bersifat *fail-open* dengan batas waktu (*timeout*) maksimal 5 detik di dalam penanganan `try/except: pass`; kegagalan pengiriman webhook tidak akan pernah menggagalkan operasi tiket.
+  - **Mekanisme Pengiriman**: Pengiriman asinkron non-blocking (`enqueue_webhook`) yang melakukan `INSERT` ke tabel `webhook_deliveries` menggunakan koneksi basis data mandiri dan langsung di-commit. Setiap pengiriman diproses oleh satu background daemon thread terpisah dengan mekanisme coba ulang (*retry*) hingga 3 kali percobaan (jeda *backoff* 2 detik dan 4 detik). Pengiriman dianggap sukses bila respons HTTP 2xx, dan berstatus `failed` setelah kegagalan pada percobaan ke-3. Struktur payload byte-identical dengan desain awal, dan kegagalan pengiriman webhook tidak akan pernah menggagalkan operasi tiket.
+  - **Log Pengiriman**: Seluruh riwayat pengiriman dicatat dalam tabel `webhook_deliveries` dengan kolom `event`, `ticket_id`, `ticket_code`, `payload` (JSONB), `webhook_url`, `status` (`pending`/`delivered`/`failed`), `attempts`, `last_error`, `response_status`, `created_at`, dan `delivered_at`.
 - **Lampiran Berkas (File Attachments)**:
   - **Penyimpanan Berkas**: Disimpan di sistem berkas (*filesystem*) pada folder `uploads/` (dapat dikonfigurasi melalui variabel lingkungan `UPLOAD_FOLDER`, *default*: `uploads`). *Catatan Volume*: Perubahan kode ini tidak mempertahankan berkas saat container dibuat ulang; persistensi memerlukan volume mount permanen pada konfigurasi deployment server.
   - **Batas Unggahan**: Maksimal 2 berkas per tiket (total eksisting + baru), maksimal 5 MB per berkas. Ekstensi yang diizinkan (*allowlist*): `png`, `jpg`, `jpeg`, `gif`, `webp`, `pdf`, `txt`, `log`, `doc`, `docx`, `xls`, `xlsx`, `csv`. Ekstensi di luar daftar ditolak otomatis dengan pesan error.
@@ -111,7 +112,7 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - **Keamanan Nama Berkas**: Nama berkas di filesystem menggunakan `uuid4().hex` acak untuk mencegah *path traversal*. Nama asli diamankan via `secure_filename` dan disimpan di basis data untuk tampilan/unduhan. Akses unduh divalidasi via rute `send_file` (bukan static path).
 
 ### e. `uptime` (`routes/uptime.py`, URL prefix: `/uptime`)
-- **Tujuan**: Pemantauan ketersediaan target server/layanan melalui pengecekan TCP port atau HTTP request beserta pencatatan latensi (ms). Pengecekan otomatis terjadwal tiap 300 detik (scheduler in-app, daemon thread), alert DOWN/PULIH berbasis transisi (in-app + Telegram), dan riwayat cek per monitor dengan grafik latensi.
+- **Tujuan**: Pemantauan ketersediaan target server/layanan melalui pengecekan TCP port atau HTTP request beserta pencatatan latensi (ms). Pengecekan otomatis terjadwal dengan interval dari variabel lingkungan `UPTIME_CHECK_INTERVAL` (default: 300 detik; scheduler in-app, daemon thread), alert DOWN/PULIH berbasis transisi (in-app + Telegram), dan riwayat cek per monitor dengan grafik latensi.
 - **Rute Utama**:
   - `GET /uptime/` — Dasbor status monitor dan ringkasan target aktif/mati (admin, it, guest).
   - `GET, POST /uptime/add` — Menambahkan target baru dengan uji kesehatan instan (admin, it).
@@ -123,9 +124,9 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET /uptime/<int:monitor_id>/history` — Riwayat cek per monitor: grafik latensi SVG + statistik (uptime %, rata-rata/min/maks latensi, total cek, jumlah DOWN), rentang 24 jam / 7 hari / 30 hari (admin, it, guest).
   - `GET, POST /uptime/telegram-settings` — Pengaturan Telegram (bot token + chat ID, disimpan di database, token tidak pernah dirender) — ADMIN ONLY.
   - `POST /uptime/telegram-test` — Kirim pesan tes ke Chat ID tersimpan — ADMIN ONLY.
-- **Pengecekan Terjadwal (Scheduler)**: Daemon thread yang dijalankan saat startup aplikasi (`start_uptime_scheduler()`) dengan interval tetap 300 detik (keputusan *product owner* — tanpa variabel *environment* dan tanpa halaman pengaturan). Hanya memeriksa monitor dengan `enabled = TRUE`, menggunakan fungsi *helper* `run_all_checks()` yang sama dengan rute manual *Check All*.
-- **Mekanisme Alert (Transisi Status & Telegram)**: Alert hanya dikirim saat terjadi transisi status (`UP → DOWN` menghasilkan alert DOWN, `DOWN → UP` menghasilkan alert PULIH). Alert DOWN hanya terpicu setelah tepat 2 kali pengecekan DOWN otomatis berturut-turut (≈10 menit); kondisi layanan yang tetap DOWN tidak akan mengirim alert berulang. Baris alert disimpan dan di-*commit* ke basis data terlebih dahulu sebelum pengiriman pesan Telegram dicoba (*fail-safe*, kegagalan Telegram tidak membatalkan riwayat in-app maupun siklus scheduler). Pengiriman Telegram menggunakan pustaka standar Python `urllib` tanpa dependensi eksternal.
-- **Riwayat Pengecekan & Grafik**: Setiap pengecekan (scheduler, *Check All*, *Cek Now*, *re-check* saat edit, dan cek awal saat penambahan target) mencatat tepat satu baris riwayat ke tabel `uptime_checks`. Pembersihan otomatis (*retention cleanup*) menghapus data riwayat yang lebih lama dari 30 hari di dalam `run_all_checks()`. Tampilan rentang 24 jam menggunakan titik data mentah, sedangkan rentang 7 hari dan 30 hari menggunakan agregasi per jam (*hourly buckets*) dengan kalkulasi agregat mentah `MIN`/`MAX`/`SUM` untuk menjaga keakuratan nilai statistik latensi (fix f0c0368).
+- **Pengecekan Terjadwal (Scheduler)**: Daemon thread yang dijalankan saat startup aplikasi (`start_uptime_scheduler()`) dengan interval dari variabel lingkungan `UPTIME_CHECK_INTERVAL` (default 300 detik). Hanya memeriksa monitor dengan `enabled = TRUE`, menggunakan fungsi *helper* `run_all_checks()` yang sama dengan rute manual *Check All*.
+- **Mekanisme Alert (Transisi Status & Telegram)**: Alert hanya dikirim saat terjadi transisi status (`UP → DOWN` menghasilkan alert DOWN, `DOWN → UP` menghasilkan alert PULIH). Alert DOWN hanya terpicu pada pengecekan DOWN berturut-turut kedua jika belum ada alert aktif (flag `is_alerted` pada `monitors`); alert PULIH terpicu saat status kembali UP jika dan hanya jika terdapat alert yang sedang aktif. Flag `is_alerted` (bukan counter) berfungsi sebagai status alert, sehingga reset counter saat toggle tidak lagi menimbulkan duplikasi alert DOWN atau hilangnya alert PULIH. Baris alert disimpan dan di-*commit* ke basis data terlebih dahulu sebelum pengiriman pesan Telegram dicoba (*fail-safe*, kegagalan Telegram tidak membatalkan riwayat in-app maupun siklus scheduler). Pengiriman Telegram menggunakan pustaka standar Python `urllib` tanpa dependensi eksternal.
+- **Riwayat Pengecekan & Grafik**: Setiap pengecekan (scheduler, *Check All*, *Cek Now*, *re-check* saat edit, dan cek awal saat penambahan target) mencatat tepat satu baris riwayat ke tabel `uptime_checks`. Pembersihan otomatis (*retention cleanup*) menghapus data riwayat yang lebih lama dari 30 hari di dalam `run_all_checks()`. Tampilan rentang 24 jam menggunakan titik data mentah, sedangkan rentang 7 hari dan 30 hari menggunakan agregasi per jam (*hourly buckets*) dengan kalkulasi agregat mentah `MIN`/`MAX`/`SUM` untuk menjaga keakuratan nilai statistik latensi (fix f0c0368). Grafik latensi SVG dilengkapi garis kisi atas (*top gridline*) pada y=20 dan rata-rata latensi per *bucket* dibulatkan seragam ke 1 desimal.
 
 ### f. `users` (`routes/users.py`, URL prefix: `/users`)
 - **Tujuan**: Administrasi pengguna dan struktur departemen organisasi, reset password administratif dengan flag wajib ganti, antarmuka penggantian kata sandi mandiri, soft-delete akun dengan formulir pencatatan alasan, halaman riwayat user terhapus, pemulihan (*restore*), serta penghapusan permanen (*hard delete*) khusus admin dengan verifikasi ganda (ketik username + kata sandi admin). Seluruh kueri operasional memfilter `is_deleted = FALSE` (termasuk autentikasi login), dan konstrain UNIQUE username/email tetap mencegah duplikasi identitas.
@@ -141,6 +142,7 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET, POST /users/departments` — Pengelolaan daftar departemen.
   - `GET /users/departments/delete/<int:dept_id>` — Hapus departemen (proteksi bila masih ada user terkait).
   - `GET, POST /users/change-password` — Penggantian kata sandi mandiri bagi pengguna aktif.
+- **Jejak Audit Aktivitas (Audit Trail)**: Setiap mutasi pengguna dan departemen mencatat satu baris riwayat ke tabel `user_activities` (mencakup `actor`, `type`, `content`, di dalam transaksi yang sama). Mendukung 11 tipe peristiwa: `user_created`, `user_soft_deleted`, `user_restored`, `user_hard_deleted`, `department_created`, `department_deleted`, `role_changed`, `password_reset`, `email_changed`, `department_changed`, dan `password_changed`. Tidak ada antarmuka UI untuk log ini (DB-only).
 
 ### g. `reports` (`routes/reports.py`, URL prefix: `/reports`)
 - **Tujuan**: Penyediaan laporan analitis dan ekspor data tabular ke berkas CSV dengan format UTF-8-SIG untuk kompatibilitas Microsoft Excel. Mengikuti struktur 4 bagian standar Fase 4:
@@ -178,11 +180,10 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 
 ## 4. Skema Basis Data (Database Schema)
 
-Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan oleh migrasi Alembic (`001–019`, dengan 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
+Skema dibentuk sepenuhnya melalui migrasi Alembic (`001–023`, dengan tabel dasar didefinisikan pada migrasi `001` dan data bawaan kategori pada `020`, serta 009 sebagai pembersihan data yatim satu kali tanpa perubahan skema):
 
 1. **`users`**
    - Kolom: `id` (PK, Serial), `username` (VARCHAR 50, Unique), `email` (VARCHAR 100, Unique), `password_hash` (TEXT), `role` (VARCHAR 20, default 'staff'), `department` (VARCHAR 50, default 'IT'), `must_change_password` (BOOLEAN, default FALSE), `is_deleted` (BOOLEAN, default FALSE, Migrasi 019), `deleted_at` (TIMESTAMP, Migrasi 019), `deleted_by` (VARCHAR 50, Migrasi 019), `delete_reason` (TEXT, Migrasi 019), `created_at` (TIMESTAMP). Indeks: `idx_users_is_deleted`.
-   - Data bawaan: akun `admin` (role admin) dan `guest` (role guest).
 2. **`assets`**
    - Kolom: `id` (PK, Serial), `asset_tag` (VARCHAR 50, Unique), `serial_number` (VARCHAR 100, Migrasi 014), `name` (VARCHAR 100), `category` (VARCHAR 50), `ip_address` (VARCHAR 45), `mac_address` (VARCHAR 45), `status` (VARCHAR 20, default 'Active'), `location` (VARCHAR 100), `notes` (TEXT), `assigned_to` (VARCHAR 50, Migrasi 010), `purchase_date` (DATE, Migrasi 011), `warranty_expiry` (DATE, Migrasi 011), `no_warranty` (BOOLEAN, default FALSE, Migrasi 012), `is_deleted` (BOOLEAN, default FALSE), `deleted_at` (TIMESTAMP), `deleted_by` (VARCHAR 50), `delete_reason` (TEXT), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP), `updated_by` (VARCHAR 50).
 3. **`tickets`**
@@ -193,35 +194,38 @@ Skema dibentuk melalui inisialisasi awal pada `database/db.py` dan disempurnakan
 5. **`departments`**
    - Kolom: `id` (PK, Serial), `name` (VARCHAR 50, Unique).
 6. **`monitors`**
-   - Kolom: `id` (PK, Serial), `name` (VARCHAR 100), `target` (VARCHAR 255), `type` (VARCHAR 20, default 'PING'), `port` (INT), `status` (VARCHAR 20, default 'UNKNOWN'), `latency` (INT, default 0), `last_check` (TIMESTAMP), `enabled` (BOOLEAN, default TRUE, migrasi 015), `consecutive_failures` (INT, default 0, migrasi 016), `created_at` (TIMESTAMP).
-7. **`service_monitors`** *(Definisi drift di db.py / init_db)*
-   - Kolom: `id` (PK, Serial), `service_name` (VARCHAR 100), `target_url` (VARCHAR 255), `last_status` (VARCHAR 20), `response_time_ms` (INT), `last_checked` (TIMESTAMP). Catatan: Definisi drift di `init_db`, **TIDAK DIGUNAKAN**, dan tidak ada kode yang membaca tabel ini. Tabel riil yang digunakan adalah `monitors`.
-8. **`ticket_activities`**
+   - Kolom: `id` (PK, Serial), `name` (VARCHAR 100), `target` (VARCHAR 255), `type` (VARCHAR 20, default 'PING'), `port` (INT), `status` (VARCHAR 20, default 'UNKNOWN'), `latency` (INT, default 0), `last_check` (TIMESTAMP), `enabled` (BOOLEAN, default TRUE, migrasi 015), `consecutive_failures` (INT, default 0, migrasi 016), `is_alerted` (BOOLEAN, default FALSE, migrasi 022), `created_at` (TIMESTAMP).
+7. **`ticket_activities`**
    - Kolom: `id` (PK, Serial), `ticket_id` (INT, Not Null), `actor` (VARCHAR 50), `type` (VARCHAR 20), `content` (TEXT), `created_at` (TIMESTAMP).
-   - Menyimpan seluruh linimasa peristiwa tiket: `'created'`, `'status'`, `'assignment'`, dan `'comment'`.
-9. **`ticket_attachments`**
+   - Menyimpan seluruh linimasa peristiwa tiket: `'created'`, `'status'`, `'assignment'`, `'comment'`, `'attachment'`, `'rating'`, dan `'note'`.
+8. **`ticket_attachments`**
    - Kolom: `id` (PK, Serial), `ticket_id` (INT, Not Null), `stored_filename` (VARCHAR 255, Not Null), `original_filename` (VARCHAR 255, Not Null), `size_bytes` (INT, Not Null), `mime_type` (VARCHAR 100), `uploader` (VARCHAR 50), `created_at` (TIMESTAMP).
    - Menyimpan seluruh metadata berkas lampiran tiket.
-10. **`kb_articles`** *(Migrasi 005)*
+9. **`kb_articles`** *(Migrasi 005)*
     - Kolom: `id` (PK, Serial), `title` (VARCHAR 255, Not Null), `category` (VARCHAR 100, Not Null), `content` (TEXT, Not Null), `tags` (VARCHAR 255), `status` (VARCHAR 20, default 'draft', check draft/published), `author` (VARCHAR 50), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP).
     - Tujuan: Menyimpan artikel panduan teknis dan solusi masalah Knowledge Base.
-11. **`ticket_ratings`** *(Migrasi 006)*
+10. **`ticket_ratings`** *(Migrasi 006)*
     - Kolom: `id` (PK, Serial), `ticket_id` (INT, Not Null, Unique), `rating` (INT, Not Null, check 1-5), `comment` (TEXT), `rater` (VARCHAR 50), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP).
     - Tujuan: Menyimpan penilaian kepuasan layanan (CSAT) dari pelapor tiket.
-12. **`canned_responses`** *(Migrasi 007)*
+11. **`canned_responses`** *(Migrasi 007)*
     - Kolom: `id` (PK, Serial), `title` (VARCHAR 255, Not Null), `content` (TEXT, Not Null), `category` (VARCHAR 100, default 'Umum'), `author` (VARCHAR 50), `created_at` (TIMESTAMP), `updated_at` (TIMESTAMP).
     - Tujuan: Menyimpan pustaka template balasan komentar Service Desk bagi Admin dan IT.
-13. **`ticket_relationships`** *(Migrasi 008)*
+12. **`ticket_relationships`** *(Migrasi 008)*
     - Kolom: `id` (PK, Serial), `ticket_a_id` (INT, Not Null), `ticket_b_id` (INT, Not Null), `relation_type` (VARCHAR 20, Not Null: 'duplicate' / 'related'), `created_by` (VARCHAR 50), `created_at` (TIMESTAMP).
     - Tujuan: Menyimpan hubungan keterkaitan antar-tiket. Konvensi penyimpanan: `ticket_a_id` = tiket duplikat (sumber), `ticket_b_id` = tiket kanonikal (target). Keunikan pasangan kedua arah ditegakkan di level aplikasi tanpa constraint UNIQUE DB.
-14. **`asset_activities`** *(Migrasi 013)*
+13. **`asset_activities`** *(Migrasi 013)*
     - Kolom: `id` (PK, Serial), `asset_id` (INT, Not Null), `actor` (VARCHAR 50), `action` (VARCHAR 20, Not Null), `field_name` (VARCHAR 50), `old_value` (TEXT), `new_value` (TEXT), `created_at` (TIMESTAMP).
     - Tujuan: Menyimpan linimasa jejak audit (*audit trail*) riwayat perubahan data aset untuk aksi `created`, `updated`, `soft-deleted`, dan `restored`.
-15. **`uptime_alerts`** *(Migrasi 016)*
+14. **`uptime_alerts`** *(Migrasi 016)*
     - Kolom: `id` (PK, Serial), `monitor_id` (INT, Not Null, NO foreign key — codebase convention), `alert_type` (VARCHAR 20: 'DOWN' / 'RECOVERED'), `message` (TEXT), `created_at` (TIMESTAMP). Deleted app-level with the monitor.
-16. **`telegram_settings`** *(Migrasi 017)*
+15. **`telegram_settings`** *(Migrasi 017)*
     - Kolom: singleton row (`id` = 1), `bot_token` (TEXT), `chat_id` (VARCHAR 64), `updated_at` (TIMESTAMP). Seeded by the migration.
-17. **`uptime_checks`** *(Migrasi 018)*
+16. **`uptime_checks`** *(Migrasi 018)*
+    - Kolom: `id` (PK, Serial), `monitor_id` (INT, Not Null, NO foreign key), `checked_at` (TIMESTAMP), `status` (VARCHAR 10: 'UP' / 'DOWN'), `latency` (INT, ms). Index `idx_uptime_checks_monitor_time` on (`monitor_id`, `checked_at`). Deleted app-level with the monitor.
+17. **`webhook_deliveries`** *(Migrasi 021)*
+    - Kolom: `id` (PK, Serial), `event` (VARCHAR 50, Not Null), `ticket_id` (INT), `ticket_code` (VARCHAR 20), `payload` (JSONB, Not Null), `webhook_url` (TEXT, Not Null), `status` (VARCHAR 20, default 'pending'), `attempts` (INT, default 0), `last_error` (TEXT), `response_status` (INT), `created_at` (TIMESTAMP), `delivered_at` (TIMESTAMP). Indeks: `idx_webhook_deliveries_status`, `idx_webhook_deliveries_created_at`.
+18. **`user_activities`** *(Migrasi 023)*
+    - Kolom: `id` (PK, Serial), `user_id` (INT, nullable, tanpa foreign key), `actor` (VARCHAR 50), `type` (VARCHAR 30, Not Null), `content` (TEXT, Not Null), `created_at` (TIMESTAMP). Indeks: `idx_user_activities_user`.
     - Kolom: `id` (PK, Serial), `monitor_id` (INT, Not Null, NO foreign key), `checked_at` (TIMESTAMP), `status` (VARCHAR 10: 'UP' / 'DOWN'), `latency` (INT, ms). Index `idx_uptime_checks_monitor_time` on (`monitor_id`, `checked_at`). Deleted app-level with the monitor.
 
 *Relasi Relasional*:
@@ -233,6 +237,8 @@ Hubungan antar-tabel dijaga secara logis di tingkat aplikasi:
 - `ticket_activities.actor`, `ticket_attachments.uploader`, `ticket_ratings.rater`, `canned_responses.author`, `kb_articles.author`, `ticket_relationships.created_by`, dan `asset_activities.actor` berelasi logis ke `users.username`.
 - `users.department` dan `tickets.department` berelasi logis ke `departments.name`.
 - `tickets.category`, `kb_articles.category`, dan `canned_responses.category` berelasi logis ke `ticket_categories.name`.
+- `webhook_deliveries.ticket_id` berelasi logis ke `tickets.id`.
+- `user_activities.user_id` (nullable, tanpa foreign key agar jejak audit tetap bertahan setelah hard deletion) dan `user_activities.actor` berelasi logis ke `users.id` dan `users.username`.
 - Penghapusan permanen tiket (`delete_permanent`) membersihkan seluruh baris terkait pada `ticket_activities`, `ticket_attachments`, `ticket_ratings`, dan `ticket_relationships` di level aplikasi sebelum baris tiket dihapus (tanpa ON DELETE CASCADE / foreign keys).
 - Penghapusan permanen aset (`hard_delete`) membersihkan seluruh baris linimasa terkait pada `asset_activities` sebelum baris aset dihapus.
 - Penghapusan target monitor membersihkan seluruh baris terkait pada `uptime_alerts` dan `uptime_checks` di level aplikasi sebelum baris monitor dihapus.
