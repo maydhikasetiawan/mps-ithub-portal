@@ -219,10 +219,12 @@ def handle_ticket_attachments(ticket_id, files, uploader):
     upload_folder = get_upload_folder()
 
     try:
+        original_filenames = []
         for f in valid_files:
             filename = f.filename or ''
             ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
             orig_name = secure_filename(filename) or f"file.{ext}"
+            original_filenames.append(orig_name)
 
             if ext in {'png', 'jpg', 'jpeg', 'webp'}:
                 try:
@@ -265,6 +267,11 @@ def handle_ticket_attachments(ticket_id, files, uploader):
                 VALUES (%s, %s, %s, %s, %s, %s);
             """, (ticket_id, stored_filename, orig_name, stored_size, mime_type, uploader))
 
+        cur.execute("""
+            INSERT INTO ticket_activities (ticket_id, actor, type, content)
+            VALUES (%s, %s, 'attachment', %s);
+        """, (ticket_id, uploader, f"Attachment uploaded by {uploader}: {', '.join(original_filenames)}"))
+
         conn.commit()
         cur.close()
         conn.close()
@@ -303,8 +310,8 @@ def index():
     query = "SELECT * FROM tickets WHERE is_deleted = FALSE"
     params = []
 
-    # Regular User hanya melihat tiket miliknya sendiri
-    if user_role == 'user':
+    # Regular User dan Guest hanya melihat tiket miliknya sendiri
+    if user_role in ('user', 'guest'):
         query += " AND created_by = %s"
         params.append(username)
 
@@ -477,8 +484,8 @@ def detail(ticket_id):
     user_role = session.get('role')
     username = session.get('username')
 
-    # Proteksi: Regular User hanya bisa melihat tiket miliknya sendiri
-    if user_role == 'user' and ticket['created_by'] != username:
+    # Proteksi: Regular User dan Guest hanya bisa melihat tiket miliknya sendiri
+    if user_role in ('user', 'guest') and ticket['created_by'] != username:
         cur.close()
         conn.close()
         flash("Akses ditolak! Anda tidak berhak melihat tiket pengguna lain.", "danger")
@@ -578,6 +585,12 @@ def detail(ticket_id):
                     rater = EXCLUDED.rater,
                     updated_at = CURRENT_TIMESTAMP;
             """, (ticket_id, rating_val, comment_val if comment_val else None, username))
+
+            cur.execute("""
+                INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                VALUES (%s, %s, 'rating', %s);
+            """, (ticket_id, username, f"Rating {rating_val}/5 by {username}" + (f": {comment_val}" if comment_val else "")))
+
             conn.commit()
             cur.close()
             conn.close()
@@ -820,6 +833,12 @@ def detail(ticket_id):
                     VALUES (%s, %s, 'assignment', %s);
                 """, (ticket_id, user_now, assign_content))
 
+            if (not status_changed and not assigned_changed) and (resolution_note != (ticket['resolution_note'] or '')):
+                cur.execute("""
+                    INSERT INTO ticket_activities (ticket_id, actor, type, content)
+                    VALUES (%s, %s, 'note', %s);
+                """, (ticket_id, user_now, f"Resolution note updated by {user_now}"))
+
             if new_status in ['Resolved', 'Closed']:
                 cur.execute("""
                     UPDATE tickets
@@ -932,8 +951,8 @@ def download_attachment(ticket_id, att_id):
     user_role = session.get('role')
     username = session.get('username')
 
-    # Proteksi: Regular User hanya bisa melihat tiket miliknya sendiri
-    if user_role == 'user' and ticket['created_by'] != username:
+    # Proteksi: Regular User dan Guest hanya bisa melihat tiket miliknya sendiri
+    if user_role in ('user', 'guest') and ticket['created_by'] != username:
         cur.close()
         conn.close()
         flash("Akses ditolak! Anda tidak berhak melihat tiket pengguna lain.", "danger")
