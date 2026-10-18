@@ -1,3 +1,4 @@
+import os
 import socket
 import time
 import urllib.request
@@ -308,24 +309,29 @@ def run_all_checks():
     for m in monitors_list:
         old_status = m['status']
         old_failures = m['consecutive_failures'] or 0
+        old_alerted = m['is_alerted'] or False
         status, latency = check_target_health(m['target'], m['type'], m['port'])
         failures = old_failures + 1 if status == 'DOWN' else 0
+
+        alert_type = None
+        new_alerted = old_alerted
+        if status == 'DOWN' and failures == 2 and not old_alerted:
+            alert_type = 'DOWN'
+            new_alerted = True
+        elif status == 'UP' and old_alerted:
+            alert_type = 'RECOVERED'
+            new_alerted = False
+
         cur.execute("""
             UPDATE monitors
             SET status = %s, latency = %s, last_check = CURRENT_TIMESTAMP,
-                consecutive_failures = %s
+                consecutive_failures = %s, is_alerted = %s
             WHERE id = %s;
-        """, (status, latency, failures, m['id']))
+        """, (status, latency, failures, new_alerted, m['id']))
         cur.execute("""
             INSERT INTO uptime_checks (monitor_id, status, latency)
             VALUES (%s, %s, %s);
         """, (m['id'], status, latency))
-
-        alert_type = None
-        if status == 'DOWN' and failures == 2:
-            alert_type = 'DOWN'
-        elif status == 'UP' and old_status == 'DOWN' and old_failures >= 2:
-            alert_type = 'RECOVERED'
 
         if alert_type:
             if alert_type == 'DOWN':
@@ -469,6 +475,7 @@ def build_latency_svg(points, range_param):
     svg_parts = [
         '<svg viewBox="0 0 720 260" width="100%" style="height:auto; display:block;" xmlns="http://www.w3.org/2000/svg">',
         '<!-- Gridlines -->',
+        '<line x1="20" y1="20" x2="700" y2="20" stroke="#1e293b" stroke-width="1" />',
         '<line x1="20" y1="75" x2="700" y2="75" stroke="#1e293b" stroke-width="1" />',
         '<line x1="20" y1="130" x2="700" y2="130" stroke="#1e293b" stroke-width="1" />',
         '<line x1="20" y1="185" x2="700" y2="185" stroke="#1e293b" stroke-width="1" />',
@@ -543,7 +550,7 @@ def history(monitor_id):
         """, (monitor_id,))
         buckets = cur.fetchall()
         points = [
-            {'t': b['bucket'], 'avg_lat': float(b['avg_lat']) if b['avg_lat'] is not None else None,
+            {'t': b['bucket'], 'avg_lat': round(float(b['avg_lat']), 1) if b['avg_lat'] is not None else None,
              'down_count': b['down_count']}
             for b in buckets
         ]
@@ -577,7 +584,7 @@ def history(monitor_id):
     )
 
 
-CHECK_INTERVAL_SECONDS = 300  # 5 minutes
+CHECK_INTERVAL_SECONDS = int(os.environ.get('UPTIME_CHECK_INTERVAL', 300))
 
 
 def _scheduler_loop():
