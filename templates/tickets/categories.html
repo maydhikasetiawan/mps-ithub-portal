@@ -2,13 +2,6 @@
 {% block title %}Kelola Kategori Tiket - MPS-ITHub{% endblock %}
 {% block header_title %}Kelola Kategori Tiket (Admin){% endblock %}
 {% block content %}
-<style>
-.manage-grid { display: grid; grid-template-columns: 1fr 2fr; }
-@media (max-width: 768px) {
-    .manage-grid { grid-template-columns: 1fr; }
-}
-</style>
-
 <div style="margin-bottom: 20px;">
 
     <a href="{{ url_for('tickets.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Service Desk</a>
