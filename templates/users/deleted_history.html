@@ -4,9 +4,9 @@
 {% block header_title %}Riwayat User Terhapus{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-    <a href="{{ url_for('users.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Kelola User</a>
-    <form method="GET" style="display:flex; gap:8px;">
+<div class="list-header">
+    <a href="{{ url_for('users.index') }}" class="text-muted">← Kembali ke Kelola User</a>
+    <form method="GET" class="filter-bar">
         <input type="text" name="q" class="filter-input" placeholder="Cari user terhapus..." value="{{ search_query }}">
         <button type="submit" class="btn-primary">Cari</button>
     </form>
@@ -29,33 +29,33 @@
     <tbody>
         {% for u in users %}
         <tr>
-            <td>
-                <a href="{{ url_for('users.deleted_detail', user_id=u.id) }}" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
+            <td data-label="USERNAME">
+                <a href="{{ url_for('users.deleted_detail', user_id=u.id) }}" class="table-link">
                     {{ u.username }}
                 </a>
             </td>
-            <td>{{ u.email }}</td>
-            <td>
+            <td data-label="EMAIL">{{ u.email }}</td>
+            <td data-label="ROLE">
                 <span class="badge {% if u.role == 'admin' %}badge-red{% elif u.role == 'it' %}badge-orange{% elif u.role == 'user' %}badge-green{% else %}badge-yellow{% endif %}">
                     {{ u.role.upper() }}
                 </span>
             </td>
-            <td><strong style="color: #38bdf8;">{{ u.department or '-' }}</strong></td>
-            <td style="color: #fca5a5;"><em>{{ u.delete_reason or 'Tidak ada alasan' }}</em></td>
-            <td><small style="color:#94a3b8;">{{ u.deleted_at.strftime('%Y-%m-%d %H:%M') if u.deleted_at else '-' }}</small></td>
-            <td><strong>{{ u.deleted_by or '-' }}</strong></td>
-            <td>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                    <form method="POST" action="{{ url_for('users.restore', user_id=u.id) }}" style="display:inline; margin:0;">
-                        <button type="submit" class="btn-primary" style="padding: 4px 10px; font-size: 12px; font-weight: bold; cursor: pointer; border: none;">Restore</button>
+            <td data-label="DEPARTEMEN"><strong class="text-accent">{{ u.department or '-' }}</strong></td>
+            <td data-label="ALASAN PENGHAPUSAN"><em class="text-danger">{{ u.delete_reason or 'Tidak ada alasan' }}</em></td>
+            <td data-label="WAKTU DIHAPUS"><small class="text-muted">{{ u.deleted_at.strftime('%Y-%m-%d %H:%M') if u.deleted_at else '-' }}</small></td>
+            <td data-label="DIHAPUS OLEH"><strong>{{ u.deleted_by or '-' }}</strong></td>
+            <td data-label="AKSI">
+                <div class="flex gap-6 items-center">
+                    <form method="POST" action="{{ url_for('users.restore', user_id=u.id) }}" class="inline-form">
+                        <button type="submit" class="btn-primary">Restore</button>
                     </form>
-                    <a href="{{ url_for('users.hard_delete', user_id=u.id) }}" class="btn-danger" style="padding: 4px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold;">Hapus Permanen</a>
+                    <a href="{{ url_for('users.hard_delete', user_id=u.id) }}" class="btn-danger">Hapus Permanen</a>
                 </div>
             </td>
         </tr>
         {% else %}
         <tr>
-            <td colspan="8" style="text-align:center; color:#64748b;">Belum ada riwayat user yang dihapus.</td>
+            <td colspan="8" class="empty-state">Belum ada riwayat user yang dihapus.</td>
         </tr>
         {% endfor %}
     </tbody>

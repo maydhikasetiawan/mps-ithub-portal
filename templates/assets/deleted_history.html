@@ -4,9 +4,9 @@
 {% block header_title %}Riwayat Aset Terhapus{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-    <a href="{{ url_for('assets.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Inventaris Utama</a>
-    <form method="GET" style="display:flex; gap:8px;">
+<div class="list-header">
+    <a href="{{ url_for('assets.index') }}" class="text-muted">← Kembali ke Inventaris Utama</a>
+    <form method="GET" class="filter-bar">
         <input type="text" name="q" class="filter-input" placeholder="Cari aset terhapus..." value="{{ search_query }}">
         <button type="submit" class="btn-primary">Cari</button>
     </form>
@@ -28,26 +28,28 @@
     <tbody>
         {% for a in assets %}
         <tr>
-            <td>
-                <a href="{{ url_for('assets.deleted_detail', asset_id=a.id) }}" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
+            <td data-label="ASSET TAG">
+                <a href="{{ url_for('assets.deleted_detail', asset_id=a.id) }}" class="table-link">
                     {{ a.asset_tag }}
                 </a>
             </td>
-            <td>
-                <a href="{{ url_for('assets.deleted_detail', asset_id=a.id) }}" style="color:#f8fafc; font-weight:600; text-decoration:none;">
+            <td data-label="NAMA PERANGKAT">
+                <a href="{{ url_for('assets.deleted_detail', asset_id=a.id) }}" class="table-title">
                     {{ a.name }}
                 </a>
             </td>
-            <td>{{ a.category }}</td>
-            <td style="color: #fca5a5;"><em>{{ a.delete_reason or 'Tidak ada alasan' }}</em></td>
-            <td><small style="color:#94a3b8;">{{ a.deleted_at.strftime('%Y-%m-%d %H:%M') if a.deleted_at else '-' }}</small></td>
-            <td><strong>{{ a.deleted_by or '-' }}</strong></td>
-            <td>
+            <td data-label="KATEGORI">{{ a.category }}</td>
+            <td data-label="ALASAN PENGHAPUSAN"><em class="text-danger">{{ a.delete_reason or 'Tidak ada alasan' }}</em></td>
+            <td data-label="WAKTU DIHAPUS"><small class="text-muted">{{ a.deleted_at.strftime('%Y-%m-%d %H:%M') if a.deleted_at else '-' }}</small></td>
+            <td data-label="DIHAPUS OLEH"><strong>{{ a.deleted_by or '-' }}</strong></td>
+            <td data-label="AKSI">
                 {% if session['role'] != 'guest' %}
-                <form method="POST" action="{{ url_for('assets.restore', asset_id=a.id) }}" style="display:inline;">
-                    <button type="submit" class="btn-primary">Restore</button>
-                </form>
-                <a href="{{ url_for('assets.hard_delete', asset_id=a.id) }}" class="btn-danger">Hapus Permanen</a>
+                <div class="flex gap-6 items-center">
+                    <form method="POST" action="{{ url_for('assets.restore', asset_id=a.id) }}" class="inline-form">
+                        <button type="submit" class="btn-primary">Restore</button>
+                    </form>
+                    <a href="{{ url_for('assets.hard_delete', asset_id=a.id) }}" class="btn-danger">Hapus Permanen</a>
+                </div>
                 {% else %}
                 -
                 {% endif %}
@@ -55,7 +57,7 @@
         </tr>
         {% else %}
         <tr>
-            <td colspan="7" style="text-align:center; color:#64748b;">Belum ada riwayat aset yang dihapus.</td>
+            <td colspan="7" class="empty-state">Belum ada riwayat aset yang dihapus.</td>
         </tr>
         {% endfor %}
     </tbody>

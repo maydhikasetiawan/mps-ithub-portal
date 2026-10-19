@@ -54,7 +54,7 @@
         <div class="header">
             <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle navigation menu">☰</button>
             <h2>{% block header_title %}Operational Dashboard{% endblock %}</h2>
-            <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap; justify-content: flex-end;">
+            <div class="header-actions">
                 <button type="button" id="themeBtn" class="theme-toggle" aria-label="Ganti tema">🌙</button>
                 <div class="profile-dropdown-wrapper">
                     <button type="button" id="profile-button" class="profile-btn" aria-haspopup="true" aria-expanded="false">
@@ -71,7 +71,7 @@
                             </span>
                         </div>
                         <a href="{{ url_for('users.change_password') }}" class="profile-dropdown-item item-link" role="menuitem">🔑 Ganti Password</a>
-                        <form method="POST" action="{{ url_for('auth.logout') }}" data-confirm="Keluar dari aplikasi?" data-confirm-label="Ya, Keluar" style="margin: 0;">
+                        <form method="POST" action="{{ url_for('auth.logout') }}" data-confirm="Keluar dari aplikasi?" data-confirm-label="Ya, Keluar" class="m-0">
                             <button type="submit" class="profile-dropdown-item item-danger" role="menuitem">🚪 Logout</button>
                         </form>
                     </div>

@@ -463,7 +463,7 @@ def build_latency_svg(points, range_param):
             pts_str = f"{seg[0]} {seg[0]}"
         else:
             pts_str = " ".join(seg)
-        polylines.append(f'<polyline points="{pts_str}" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />')
+        polylines.append(f'<polyline points="{pts_str}" fill="none" style="stroke: var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />')
 
     first_t = points[0]['t'].strftime('%d %b %H:%M') if hasattr(points[0]['t'], 'strftime') else str(points[0]['t'])
     last_t = points[-1]['t'].strftime('%d %b %H:%M') if hasattr(points[-1]['t'], 'strftime') else str(points[-1]['t'])
@@ -474,21 +474,21 @@ def build_latency_svg(points, range_param):
     svg_parts = [
         '<svg viewBox="0 0 720 260" width="100%" style="height:auto; display:block;" xmlns="http://www.w3.org/2000/svg">',
         '<!-- Gridlines -->',
-        '<line x1="20" y1="20" x2="700" y2="20" stroke="#1e293b" stroke-width="1" />',
-        '<line x1="20" y1="75" x2="700" y2="75" stroke="#1e293b" stroke-width="1" />',
-        '<line x1="20" y1="130" x2="700" y2="130" stroke="#1e293b" stroke-width="1" />',
-        '<line x1="20" y1="185" x2="700" y2="185" stroke="#1e293b" stroke-width="1" />',
-        '<line x1="20" y1="240" x2="700" y2="240" stroke="#334155" stroke-width="1" />',
+        '<line x1="20" y1="20" x2="700" y2="20" style="stroke: var(--line)" stroke-opacity="0.6" stroke-width="1" />',
+        '<line x1="20" y1="75" x2="700" y2="75" style="stroke: var(--line)" stroke-opacity="0.6" stroke-width="1" />',
+        '<line x1="20" y1="130" x2="700" y2="130" style="stroke: var(--line)" stroke-opacity="0.6" stroke-width="1" />',
+        '<line x1="20" y1="185" x2="700" y2="185" style="stroke: var(--line)" stroke-opacity="0.6" stroke-width="1" />',
+        '<line x1="20" y1="240" x2="700" y2="240" style="stroke: var(--line)" stroke-width="1" />',
         '<!-- Y Labels -->',
-        f'<text x="25" y="25" fill="#64748b" font-size="10" font-family="sans-serif">{full_max} ms</text>',
-        f'<text x="25" y="125" fill="#64748b" font-size="10" font-family="sans-serif">{half_max} ms</text>',
-        '<text x="25" y="235" fill="#64748b" font-size="10" font-family="sans-serif">0 ms</text>',
+        f'<text x="25" y="25" style="fill: var(--faint)" font-size="10" font-family="Public Sans, sans-serif">{full_max} ms</text>',
+        f'<text x="25" y="125" style="fill: var(--faint)" font-size="10" font-family="Public Sans, sans-serif">{half_max} ms</text>',
+        '<text x="25" y="235" style="fill: var(--faint)" font-size="10" font-family="Public Sans, sans-serif">0 ms</text>',
         '<!-- Data -->',
         "".join(polylines),
         "".join(down_dots),
         '<!-- X Labels -->',
-        f'<text x="20" y="255" fill="#94a3b8" font-size="11" font-family="sans-serif" text-anchor="start">{first_t}</text>',
-        f'<text x="700" y="255" fill="#94a3b8" font-size="11" font-family="sans-serif" text-anchor="end">{last_t}</text>',
+        f'<text x="20" y="255" style="fill: var(--muted)" font-size="11" font-family="Public Sans, sans-serif" text-anchor="start">{first_t}</text>',
+        f'<text x="700" y="255" style="fill: var(--muted)" font-size="11" font-family="Public Sans, sans-serif" text-anchor="end">{last_t}</text>',
         '</svg>'
     ]
 

@@ -2,21 +2,21 @@
 {% block title %}Kelola Template Respon - MPS-ITHub{% endblock %}
 {% block header_title %}Kelola Template Respon (Admin & IT){% endblock %}
 {% block content %}
-<div style="margin-bottom: 20px;">
-    <a href="{{ url_for('tickets.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Service Desk</a>
+<div class="mb-20">
+    <a href="{{ url_for('tickets.index') }}" class="text-muted">← Kembali ke Service Desk</a>
 </div>
 
-<div class="manage-grid" style="gap: 20px; align-items: start;">
+<div class="manage-grid">
     <!-- Form Tambah Template -->
     <div class="form-card">
-        <h4 style="color: #38bdf8; margin-bottom: 15px;">Tambah Template Baru</h4>
+        <h4 class="section-title">Tambah Template Baru</h4>
         <form method="POST">
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="color: #cbd5e1; font-size: 12px;">Judul Template *</label>
+            <div class="form-group">
+                <label class="text-muted">Judul Template *</label>
                 <input type="text" name="title" class="form-control" required maxlength="255" placeholder="Contoh: Permintaan Informasi Tambahan" value="{{ form_data.title if form_data else '' }}">
             </div>
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="color: #cbd5e1; font-size: 12px;">Kategori</label>
+            <div class="form-group">
+                <label class="text-muted">Kategori</label>
                 <select name="category" class="form-control">
                     <option value="">Umum (Default)</option>
                     {% for c in categories %}
@@ -24,18 +24,18 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="color: #cbd5e1; font-size: 12px;">Konten Template *</label>
+            <div class="form-group">
+                <label class="text-muted">Konten Template *</label>
                 <textarea name="content" class="form-control" rows="5" required placeholder="Tuliskan isi template respon di sini...">{{ form_data.content if form_data else '' }}</textarea>
             </div>
-            <button type="submit" class="btn-primary" style="width: 100%; min-height: 44px;">+ Tambah Template</button>
+            <button type="submit" class="btn-primary w-full">+ Tambah Template</button>
         </form>
     </div>
 
     <!-- Daftar Template -->
     <div>
         <div class="table-responsive">
-            <table class="data-table" style="margin-top: 0;">
+            <table class="data-table mt-0">
                 <thead>
                     <tr>
                         <th>JUDUL</th>
@@ -48,22 +48,22 @@
                 <tbody>
                     {% for t in templates %}
                     <tr>
-                        <td><strong>{{ t.title }}</strong></td>
-                        <td><span class="badge" style="background: #334155; color: #38bdf8;">{{ t.category }}</span></td>
-                        <td>{{ t.author or '-' }}</td>
-                        <td><small style="color: #94a3b8;">{{ t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else '-' }}</small></td>
-                        <td>
-                            <div style="display: flex; gap: 6px; align-items: center;">
-                                <a href="{{ url_for('tickets.edit_canned_response', template_id=t.id) }}" class="btn-primary" style="font-size: 12px; padding: 6px 12px; min-height: 44px; display: inline-flex; align-items: center;">Edit</a>
-                                <form method="POST" action="{{ url_for('tickets.delete_canned_response', template_id=t.id) }}" style="display: inline-block; margin: 0;" data-confirm="Hapus template respon ini?">
-                                    <button type="submit" class="btn-danger" style="font-size: 12px; padding: 6px 12px; min-height: 44px; cursor: pointer; border: none;">Hapus</button>
+                        <td data-label="JUDUL"><strong>{{ t.title }}</strong></td>
+                        <td data-label="KATEGORI"><span class="badge badge-accent">{{ t.category }}</span></td>
+                        <td data-label="PEMBUAT">{{ t.author or '-' }}</td>
+                        <td data-label="TANGGAL"><small class="text-muted">{{ t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else '-' }}</small></td>
+                        <td data-label="AKSI">
+                            <div class="flex gap-6 items-center">
+                                <a href="{{ url_for('tickets.edit_canned_response', template_id=t.id) }}" class="btn-primary">Edit</a>
+                                <form method="POST" action="{{ url_for('tickets.delete_canned_response', template_id=t.id) }}" class="inline-form" data-confirm="Hapus template respon ini?">
+                                    <button type="submit" class="btn-danger">Hapus</button>
                                 </form>
                             </div>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" style="text-align: center; color: #64748b;">Belum ada template respon terdaftar.</td>
+                        <td colspan="5" class="empty-state">Belum ada template respon terdaftar.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

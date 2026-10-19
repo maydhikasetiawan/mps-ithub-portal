@@ -4,25 +4,19 @@
 {% block header_title %}IT Service Desk & Ticketing{% endblock %}
 
 {% block content %}
-<style>
-.new-ticket-banner { display: none; }
-.new-ticket-banner.is-visible { display: flex; justify-content: space-between; align-items: center; background: #0284c7; color: #f0f9ff; padding: 12px 16px; border-radius: 6px; margin-bottom: 15px; font-weight: 500; gap: 10px; flex-wrap: wrap; }
-.new-ticket-banner .banner-btn { background: #f8fafc; color: #0369a1; border: none; padding: 6px 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; min-height: 44px; }
-.new-ticket-banner .banner-btn:hover { background: #e2e8f0; }
-</style>
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+<div class="list-header">
     <!-- Kelompok Tombol Filter Status (Kiri) -->
-    <div style="display:flex; gap:8px; flex-wrap: wrap; align-items: center;">
-        <a href="{{ url_for('tickets.index', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if not status_filter %}#38bdf8{% else %}#334155{% endif %}; color:{% if not status_filter %}#0f172a{% else %}#cbd5e1{% endif %};">Semua</a>
-        <a href="{{ url_for('tickets.index', status='Open', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if status_filter == 'Open' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'Open' %}#0f172a{% else %}#cbd5e1{% endif %};">Open</a>
-        <a href="{{ url_for('tickets.index', status='In Progress', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if status_filter == 'In Progress' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'In Progress' %}#0f172a{% else %}#cbd5e1{% endif %};">In Progress</a>
-        <a href="{{ url_for('tickets.index', status='Resolved', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if status_filter == 'Resolved' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'Resolved' %}#0f172a{% else %}#cbd5e1{% endif %};">Resolved</a>
-        <a href="{{ url_for('tickets.index', status='Closed', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="btn-primary" style="background:{% if status_filter == 'Closed' %}#38bdf8{% else %}#334155{% endif %}; color:{% if status_filter == 'Closed' %}#0f172a{% else %}#cbd5e1{% endif %};">Closed</a>
+    <div class="flex gap-8 flex-wrap items-center">
+        <a href="{{ url_for('tickets.index', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="filter-pill {% if not status_filter %}filter-pill-active{% endif %}">Semua</a>
+        <a href="{{ url_for('tickets.index', status='Open', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="filter-pill {% if status_filter == 'Open' %}filter-pill-active{% endif %}">Open</a>
+        <a href="{{ url_for('tickets.index', status='In Progress', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="filter-pill {% if status_filter == 'In Progress' %}filter-pill-active{% endif %}">In Progress</a>
+        <a href="{{ url_for('tickets.index', status='Resolved', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="filter-pill {% if status_filter == 'Resolved' %}filter-pill-active{% endif %}">Resolved</a>
+        <a href="{{ url_for('tickets.index', status='Closed', assignee=assignee_filter if assignee_filter != 'all' else None) }}" class="filter-pill {% if status_filter == 'Closed' %}filter-pill-active{% endif %}">Closed</a>
 
-        <form method="GET" action="{{ url_for('tickets.index') }}" style="display:inline-flex; align-items:center; gap:6px;">
+        <form method="GET" action="{{ url_for('tickets.index') }}" class="inline-flex gap-6 items-center">
             {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
             {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
-            <select name="assignee" class="filter-input" onchange="this.form.submit()" style="padding: 10px 14px; font-size: 14px; min-height: 44px;">
+            <select name="assignee" class="filter-input" onchange="this.form.submit()">
                 <option value="all" {% if not assignee_filter or assignee_filter == 'all' %}selected{% endif %}>All tickets</option>
                 <option value="unassigned" {% if assignee_filter == 'unassigned' %}selected{% endif %}>Unassigned</option>
                 <option value="me" {% if assignee_filter == 'me' %}selected{% endif %}>Assigned to me</option>
@@ -31,7 +25,7 @@
     </div>
 
     <!-- Kelompok Tombol Aksi Admin & Tiket (Kanan) -->
-    <div style="display:flex; gap:10px; align-items:center;">
+    <div class="flex gap-10 items-center">
         {% if session['role'] == 'admin' %}
         <a href="{{ url_for('tickets.manage_categories') }}" class="btn-secondary">⚙️ Kelola Kategori</a>
         {% endif %}
@@ -53,7 +47,8 @@
             <th>JUDUL MASALAH</th>
             <th>KATEGORI</th>
             <th>PRIORITAS</th>
-            <th style="text-align: center;">STATUS</th>
+            <th class="text-center">STATUS</th>
+            <th class="text-center">SLA</th>
             <th>PELAPOR / DEPARTEMEN</th>
             <th>ASSIGNEE</th>
             <th>AKSI</th>
@@ -62,40 +57,42 @@
     <tbody>
         {% for t in tickets %}
         <tr>
-            <td>
-                <a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" style="color:#38bdf8; font-weight:bold; text-decoration:none;">
+            <td data-label="KODE TIKET">
+                <a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="table-link">
                     {{ t.ticket_code }}
                 </a>
             </td>
-            <td>
-                <a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" style="color:#f8fafc; font-weight:600; text-decoration:none;">
+            <td data-label="JUDUL MASALAH">
+                <a href="{{ url_for('tickets.detail', ticket_id=t.id) }}" class="table-title">
                     {{ t.title }}
                 </a>
             </td>
-            <td>{{ t.category }}</td>
-            <td>
+            <td data-label="KATEGORI">{{ t.category }}</td>
+            <td data-label="PRIORITAS">
                 <span class="badge {% if t.priority in ['Critical', 'High'] %}badge-red{% elif t.priority == 'Medium' %}badge-yellow{% else %}badge-green{% endif %}">
                     {{ t.priority }}
                 </span>
             </td>
-            <td style="text-align: center;">
-                <span style="display: inline-flex; flex-direction: column; align-items: center; gap: 4px;">
-                    <span class="badge {% if t.status == 'Open' %}badge-orange{% elif t.status == 'In Progress' %}badge-yellow{% elif t.status == 'Resolved' %}badge-green{% else %}badge-red{% endif %}">
-                        {{ t.status }}
-                    </span>
-                    {% if t.sla and t.sla.badge_text %}
-                    <span class="badge {% if t.sla.state == 'approaching' %}badge-yellow{% elif t.sla.state == 'breached' %}badge-red{% elif t.sla.state == 'met' %}badge-green{% endif %}">
-                        {{ t.sla.badge_text }}
-                    </span>
-                    {% endif %}
+            <td class="text-center" data-label="STATUS">
+                <span class="badge {% if t.status == 'Open' %}badge-orange{% elif t.status == 'In Progress' %}badge-yellow{% elif t.status == 'Resolved' %}badge-green{% else %}badge-red{% endif %}">
+                    {{ t.status }}
                 </span>
             </td>
-            <td>
-                <strong>{{ t.created_by }}</strong>
-                <small style="color:#94a3b8;">({{ t.department or 'IT' }})</small>
+            <td class="text-center" data-label="SLA">
+                {% if t.sla and (t.sla.state == 'approaching' or t.sla.state == 'breached') %}
+                <span class="badge {% if t.sla.state == 'approaching' %}badge-yellow{% else %}badge-red{% endif %}">
+                    {{ t.sla.badge_text }}
+                </span>
+                {% else %}
+                —
+                {% endif %}
             </td>
-            <td>{{ t.assigned_to or '—' }}</td>
-            <td>
+            <td data-label="PELAPOR / DEPARTEMEN">
+                <strong>{{ t.created_by }}</strong>
+                <small class="text-muted">({{ t.department or 'IT' }})</small>
+            </td>
+            <td data-label="ASSIGNEE">{{ t.assigned_to or '—' }}</td>
+            <td data-label="AKSI">
                 {% if session['role'] == 'admin' %}
                 <a href="{{ url_for('tickets.delete_permanent', ticket_id=t.id) }}" class="btn-danger">Hapus</a>
                 {% else %}
@@ -105,7 +102,7 @@
         </tr>
         {% else %}
         <tr>
-            <td colspan="8" style="text-align:center; color:#64748b;">Belum ada tiket terdaftar.</td>
+            <td colspan="9" class="empty-state">Belum ada tiket terdaftar.</td>
         </tr>
         {% endfor %}
     </tbody>
@@ -113,21 +110,21 @@
 </div>
 
 {% if pagination and pagination.total_pages > 1 %}
-<div style="display: flex; gap: 8px; align-items: center; justify-content: center; margin: 20px 0; flex-wrap: wrap;">
+<div class="pagination">
     {% if pagination.prev_url %}
-    <a href="{{ pagination.prev_url }}" style="background: #1e293b; color: #cbd5e1; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; border: 1px solid #334155;">« Sebelumnya</a>
+    <a href="{{ pagination.prev_url }}" class="page-link">« Sebelumnya</a>
     {% endif %}
     {% for p, u in pagination.page_urls %}
     {% if p == pagination.page %}
-    <span style="background: #0284c7; color: #ffffff; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: bold;">{{ p }}</span>
+    <span class="page-current">{{ p }}</span>
     {% else %}
-    <a href="{{ u }}" style="background: #1e293b; color: #cbd5e1; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; border: 1px solid #334155;">{{ p }}</a>
+    <a href="{{ u }}" class="page-link">{{ p }}</a>
     {% endif %}
     {% endfor %}
     {% if pagination.next_url %}
-    <a href="{{ pagination.next_url }}" style="background: #1e293b; color: #cbd5e1; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; border: 1px solid #334155;">Berikutnya »</a>
+    <a href="{{ pagination.next_url }}" class="page-link">Berikutnya »</a>
     {% endif %}
-    <span style="color: #94a3b8; font-size: 13px;">Halaman {{ pagination.page }} dari {{ pagination.total_pages }} ({{ pagination.total }} data)</span>
+    <span class="pagination-info">Halaman {{ pagination.page }} dari {{ pagination.total_pages }} ({{ pagination.total }} data)</span>
 </div>
 {% endif %}
 

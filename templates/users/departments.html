@@ -2,95 +2,50 @@
 {% block title %}Kelola Departemen - MPS-ITHub{% endblock %}
 {% block header_title %}Kelola Departemen (Modular){% endblock %}
 {% block content %}
-<div style="margin-bottom: 20px;">
-
-    <a href="{{ url_for('users.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke User Management</a>
-
+<div class="mb-20">
+    <a href="{{ url_for('users.index') }}" class="text-muted">← Kembali ke User Management</a>
 </div>
 
-
-
-<div class="manage-grid" style="gap: 20px; align-items: start;">
-
+<div class="manage-grid">
     <div class="form-card">
-
-        <h4 style="color: #38bdf8; margin-bottom: 15px;">Tambah Departemen</h4>
-
+        <h4 class="section-title">Tambah Departemen</h4>
         <form method="POST">
-
             <div class="form-group">
-
                 <label>Nama Departemen *</label>
-
                 <input type="text" name="department_name" class="form-control" required placeholder="Contoh: Logistics / Marketing">
-
             </div>
-
-            <button type="submit" class="btn-primary" style="width: 100%;">+ Tambah Departemen</button>
-
+            <button type="submit" class="btn-primary w-full">+ Tambah Departemen</button>
         </form>
-
     </div>
-
-
-
-
     <div>
-
         <div class="table-responsive">
-        <table class="data-table" style="margin-top: 0;">
-
+        <table class="data-table mt-0">
             <thead>
-
                 <tr>
-
                     <th>ID</th>
-
                     <th>NAMA DEPARTEMEN</th>
-
                     <th>AKSI</th>
-
                 </tr>
-
             </thead>
-
             <tbody>
-
                 {% for d in departments %}
-
                 <tr>
-
-                    <td><code>#{{ d.id }}</code></td>
-
-                    <td><strong>{{ d.name }}</strong></td>
-
-                    <td>
-
-                        <form method="POST" action="{{ url_for('users.delete_department', dept_id=d.id) }}" style="display: inline; margin: 0;" data-confirm="Hapus departemen ini?">
-                            <button type="submit" class="btn-danger" style="cursor: pointer; border: none;">Hapus</button>
+                    <td data-label="ID"><code>#{{ d.id }}</code></td>
+                    <td data-label="NAMA DEPARTEMEN"><strong>{{ d.name }}</strong></td>
+                    <td data-label="AKSI">
+                        <form method="POST" action="{{ url_for('users.delete_department', dept_id=d.id) }}" class="inline-form" data-confirm="Hapus departemen ini?">
+                            <button type="submit" class="btn-danger">Hapus</button>
                         </form>
-
                     </td>
-
                 </tr>
-
                 {% else %}
-
                 <tr>
-
-                    <td colspan="3" style="text-align: center; color: #64748b;">Belum ada departemen.</td>
-
+                    <td colspan="3" class="empty-state">Belum ada departemen.</td>
                 </tr>
-
                 {% endfor %}
-
             </tbody>
-
         </table>
         </div>
-
     </div>
-
 </div>
-
 {% endblock %}

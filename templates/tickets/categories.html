@@ -2,99 +2,52 @@
 {% block title %}Kelola Kategori Tiket - MPS-ITHub{% endblock %}
 {% block header_title %}Kelola Kategori Tiket (Admin){% endblock %}
 {% block content %}
-<div style="margin-bottom: 20px;">
-
-    <a href="{{ url_for('tickets.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Service Desk</a>
-
+<div class="mb-20">
+    <a href="{{ url_for('tickets.index') }}" class="text-muted">← Kembali ke Service Desk</a>
 </div>
 
-
-
-<div class="manage-grid" style="gap: 20px; align-items: start;">
-
+<div class="manage-grid">
     <!-- Form Tambah Kategori -->
-
     <div class="form-card">
-
-        <h4 style="color: #38bdf8; margin-bottom: 15px;">Tambah Kategori Baru</h4>
-
+        <h4 class="section-title">Tambah Kategori Baru</h4>
         <form method="POST">
-
             <div class="form-group">
-
                 <label>Nama Kategori *</label>
-
                 <input type="text" name="category_name" class="form-control" required placeholder="Contoh: Cloud / Security / ERP">
-
             </div>
-
-            <button type="submit" class="btn-primary" style="width: 100%;">+ Tambah Kategori</button>
-
+            <button type="submit" class="btn-primary w-full">+ Tambah Kategori</button>
         </form>
-
     </div>
-
-
-
-
     <!-- Daftar Kategori -->
-
     <div>
-
         <div class="table-responsive">
-        <table class="data-table" style="margin-top: 0;">
-
+        <table class="data-table mt-0">
             <thead>
-
                 <tr>
-
                     <th>ID</th>
-
                     <th>NAMA KATEGORI</th>
-
                     <th>AKSI</th>
-
                 </tr>
-
             </thead>
-
             <tbody>
-
                 {% for c in categories %}
-
                 <tr>
-
-                    <td><code>#{{ c.id }}</code></td>
-
-                    <td><strong>{{ c.name }}</strong></td>
-
-                    <td>
-
-                        <form method="POST" action="{{ url_for('tickets.delete_category', category_id=c.id) }}" style="display: inline; margin: 0;" data-confirm="Hapus kategori ini?">
-                            <button type="submit" class="btn-danger" style="cursor: pointer; border: none;">Hapus</button>
+                    <td data-label="ID"><code>#{{ c.id }}</code></td>
+                    <td data-label="NAMA KATEGORI"><strong>{{ c.name }}</strong></td>
+                    <td data-label="AKSI">
+                        <form method="POST" action="{{ url_for('tickets.delete_category', category_id=c.id) }}" class="inline-form" data-confirm="Hapus kategori ini?">
+                            <button type="submit" class="btn-danger">Hapus</button>
                         </form>
-
                     </td>
-
                 </tr>
-
                 {% else %}
-
                 <tr>
-
-                    <td colspan="3" style="text-align:center; color:#64748b;">Belum ada kategori terdaftar.</td>
-
+                    <td colspan="3" class="empty-state">Belum ada kategori terdaftar.</td>
                 </tr>
-
                 {% endfor %}
-
             </tbody>
-
         </table>
         </div>
-
     </div>
-
 </div>
-
 {% endblock %}
