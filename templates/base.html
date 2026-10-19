@@ -7,12 +7,16 @@
     <script>
         try {
             var theme = localStorage.getItem('mpshub-theme');
-            document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'dark');
+            document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
         } catch (e) {
             document.documentElement.setAttribute('data-theme', 'dark');
         }
     </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <meta name="color-scheme" content="light dark">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
@@ -51,6 +55,7 @@
             <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle navigation menu">☰</button>
             <h2>{% block header_title %}Operational Dashboard{% endblock %}</h2>
             <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap; justify-content: flex-end;">
+                <button type="button" id="themeBtn" class="theme-toggle" aria-label="Ganti tema">🌙</button>
                 <div class="profile-dropdown-wrapper">
                     <button type="button" id="profile-button" class="profile-btn" aria-haspopup="true" aria-expanded="false">
                         <span>👤 <strong>{{ session['username'] }}</strong></span>
@@ -75,7 +80,7 @@
         </div>
 
         {% if session['role'] == 'guest' %}
-        <div style="background: #f59e0b22; border: 1px solid #f59e0b; color: #fbbf24; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px;">
+        <div class="flash flash-guest">
             ℹ️ Anda login sebagai <strong>Guest (Read-Only)</strong>. Anda dapat melihat data tetapi tidak memiliki izin untuk menambah/mengubah data.
         </div>
         {% endif %}
@@ -83,7 +88,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div style="background: {{ '#10b98122' if category == 'success' else '#ef444422' }}; border: 1px solid {{ '#10b981' if category == 'success' else '#ef4444' }}; color: {{ '#34d399' if category == 'success' else '#fca5a5' }}; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px;">
+                    <div class="flash {{ 'flash-success' if category == 'success' else 'flash-danger' }}">
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -164,6 +169,22 @@
                     toggleDropdown(false);
                 });
             }
+        })();
+    </script>
+    <script>
+        (function() {
+            try {
+                var btn = document.getElementById('themeBtn');
+                if (!btn) return;
+                var current = document.documentElement.getAttribute('data-theme');
+                btn.textContent = current === 'light' ? '☀️' : '🌙';
+                btn.addEventListener('click', function() {
+                    var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                    document.documentElement.setAttribute('data-theme', next);
+                    try { localStorage.setItem('mpshub-theme', next); } catch (e) {}
+                    btn.textContent = next === 'light' ? '☀️' : '🌙';
+                });
+            } catch (e) {}
         })();
     </script>
     {% include '_confirm_modal.html' %}

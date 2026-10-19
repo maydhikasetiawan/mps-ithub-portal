@@ -1,27 +1,24 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - MPS Operational IT Hub</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .login-card { background: #1e293b; padding: 40px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; text-align: center; }
-        .logo-placeholder { width: 70px; height: 70px; margin: 0 auto 15px; background: linear-gradient(135deg, #38bdf8, #10b981); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; }
-        h2 { font-size: 22px; color: #38bdf8; margin-bottom: 5px; }
-        p.subtitle { font-size: 13px; color: #94a3b8; margin-bottom: 25px; }
-        .form-group { text-align: left; margin-bottom: 18px; }
-        label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 6px; }
-        input { width: 100%; padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #fff; font-size: 14px; }
-        input:focus { border-color: #38bdf8; outline: none; }
-        button { width: 100%; padding: 12px; background: #38bdf8; border: none; border-radius: 6px; color: #0f172a; font-weight: bold; font-size: 15px; cursor: pointer; }
-        button:hover { background: #0284c7; color: #fff; }
-        .alert { background: #ef444422; border: 1px solid #ef4444; color: #fca5a5; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 15px; }
-        .demo-info { margin-top: 20px; font-size: 11px; color: #64748b; border-top: 1px solid #334155; padding-top: 15px; text-align: left; }
-    </style>
+    <script>
+        try {
+            var theme = localStorage.getItem('mpshub-theme');
+            document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+        } catch (e) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <meta name="color-scheme" content="light dark">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="login-body">
     <div class="login-card">
         <div class="logo-placeholder">🛡️</div>
         <h2>MPS-ITHub</h2>
@@ -51,10 +48,10 @@
             <button type="submit">Sign In</button>
         </form>
 
-        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #334155; text-align: center; font-size: 12px; color: #94a3b8;">
-                    <p style="margin-bottom: 4px; font-weight: 600; color: #cbd5e1;">Akses Tamu (Read-Only Demo):</p>
-                    <p>Username: <code style="color: #38bdf8;">guest</code> | Password: <code style="color: #38bdf8;">guest</code></p>
-                </div>
+        <div class="login-demo">
+            <p>Akses Tamu (Read-Only Demo):</p>
+            <p>Username: <code>guest</code> | Password: <code>guest</code></p>
+        </div>
     </div>
 </body>
 </html>
