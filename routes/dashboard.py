@@ -15,8 +15,8 @@ def build_daily_vertical_svg(series):
     slot_w, bar_w = 680.0 / len(series), 14.0
     elements = [
         '<svg viewBox="0 0 720 220" width="100%" style="height:auto; display:block;" xmlns="http://www.w3.org/2000/svg">',
-        '<line x1="20" y1="175" x2="700" y2="175" stroke="#334155" stroke-width="1" />',
-        '<line x1="20" y1="40" x2="700" y2="40" stroke="#1e293b" stroke-width="1" stroke-dasharray="4" />',
+        '<line x1="20" y1="175" x2="700" y2="175" style="stroke: var(--line)" stroke-width="1" />',
+        '<line x1="20" y1="40" x2="700" y2="40" style="stroke: var(--line)" stroke-opacity="0.6" stroke-width="1" stroke-dasharray="4" />',
     ]
     for i, p in enumerate(series):
         xc = round(20.0 + i * slot_w + (slot_w / 2.0), 1)
@@ -25,12 +25,12 @@ def build_daily_vertical_svg(series):
         bh = round((val / max_count) * 125.0, 1) if val > 0 else 0
         by = round(175.0 - bh, 1)
         if val > 0:
-            elements.append(f'<rect x="{bx}" y="{by}" width="{bar_w}" height="{bh}" fill="#38bdf8" rx="2" />')
-            elements.append(f'<text x="{xc}" y="{by - 4}" fill="#f8fafc" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle">{val}</text>')
+            elements.append(f'<rect x="{bx}" y="{by}" width="{bar_w}" height="{bh}" style="fill: var(--accent)" rx="2" />')
+            elements.append(f'<text x="{xc}" y="{by - 4}" style="fill: var(--text)" font-size="9" font-family="Public Sans, sans-serif" font-weight="bold" text-anchor="middle">{val}</text>')
         else:
-            elements.append(f'<text x="{xc}" y="169" fill="#64748b" font-size="8" font-family="sans-serif" text-anchor="middle">0</text>')
+            elements.append(f'<text x="{xc}" y="169" style="fill: var(--faint)" font-size="8" font-family="Public Sans, sans-serif" text-anchor="middle">0</text>')
         lbl = html.escape(str(p['label']))
-        elements.append(f'<text x="{xc}" y="188" fill="#94a3b8" font-size="8" font-family="sans-serif" text-anchor="end" transform="rotate(-45 {xc} 188)">{lbl}</text>')
+        elements.append(f'<text x="{xc}" y="188" style="fill: var(--muted)" font-size="8" font-family="Public Sans, sans-serif" text-anchor="end" transform="rotate(-45 {xc} 188)">{lbl}</text>')
     elements.append('</svg>')
     return ''.join(elements)
 
@@ -44,7 +44,7 @@ def build_horizontal_bar_svg(items):
     h = pad * 2 + len(items) * row_h
     elements = [
         f'<svg viewBox="0 0 720 {h}" width="100%" style="height:auto; display:block;" xmlns="http://www.w3.org/2000/svg">',
-        f'<line x1="180" y1="{pad}" x2="180" y2="{h - pad}" stroke="#334155" stroke-width="1" />',
+        f'<line x1="180" y1="{pad}" x2="180" y2="{h - pad}" style="stroke: var(--line)" stroke-width="1" />',
     ]
     for i, it in enumerate(items):
         y = pad + i * row_h
@@ -53,10 +53,10 @@ def build_horizontal_bar_svg(items):
         bw = round((val / max_count) * 450.0, 1) if val > 0 else 0
         ty = y + 23
         lbl = html.escape(str(it['label']))
-        elements.append(f'<text x="170" y="{ty}" fill="#94a3b8" font-size="12" font-family="sans-serif" text-anchor="end">{lbl}</text>')
+        elements.append(f'<text x="170" y="{ty}" style="fill: var(--muted)" font-size="12" font-family="Public Sans, sans-serif" text-anchor="end">{lbl}</text>')
         if bw > 0:
             elements.append(f'<rect x="180" y="{y + 8}" width="{bw}" height="20" fill="{color}" rx="3" />')
-        elements.append(f'<text x="{round(180 + bw + 10, 1)}" y="{ty}" fill="{color if val > 0 else "#64748b"}" font-size="12" font-weight="bold" font-family="sans-serif" text-anchor="start">{val}</text>')
+        elements.append(f'<text x="{round(180 + bw + 10, 1)}" y="{ty}" style="fill: var(--text)" font-size="12" font-weight="bold" font-family="Public Sans, sans-serif" text-anchor="start">{val}</text>')
     elements.append('</svg>')
     return ''.join(elements)
 

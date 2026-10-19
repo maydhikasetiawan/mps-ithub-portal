@@ -76,18 +76,26 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
 .card-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 25px; }
 .chart-card { margin-bottom: 25px; }
-.chart-card-title { color: var(--text); margin-bottom: 8px; font-size: 16px; font-weight: 600; }
+.chart-card-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); margin-bottom: 8px; }
 .chart-stats-sub { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
 .chart-stats-sub strong { color: var(--accent); }
 .chart-empty { text-align: center; color: var(--faint); padding: 35px 0; font-size: 14px; }
 .trend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
-.trend-stat { background: var(--bg); border: 1px solid var(--line); padding: 16px; border-radius: 6px; }
+.trend-stat { background: var(--surface-2); border: 1px solid var(--line); padding: 16px; border-radius: var(--radius-sm); }
 .trend-stat-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
 .trend-stat-val { font-size: 22px; font-weight: bold; color: var(--text); }
 .trend-stat-delta { font-size: 13px; font-weight: bold; margin-left: 6px; }
-.trend-delta-plus { color: #34d399; }
+.trend-delta-plus { color: var(--ok); }
 .trend-delta-minus { color: var(--danger); }
 .trend-stat-sub { font-size: 12px; color: var(--faint); margin-top: 6px; }
+.stat-warn { color: var(--amber); }
+.stat-ok { color: var(--ok); }
+.warranty-title { color: var(--amber); margin-bottom: 15px; font-size: 16px; }
+.warranty-card { margin-top: 25px; }
+.warranty-card .data-table { margin-top: 0; }
+.table-link { color: var(--accent); font-weight: bold; text-decoration: none; }
+.warranty-expired { color: var(--danger); }
+.warranty-soon { color: var(--amber); }
 .card { background: var(--surface); border: 1px solid var(--line); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
 .card h4 { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
 .card h2 { color: var(--accent); font-size: 26px; }
@@ -179,7 +187,7 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 .flash-guest { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
 
 /* Login */
-body.login-body { background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+body.login-body { background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; min-height: 100vh; overflow: auto; }
 .login-card { background: var(--surface); padding: 40px; border-radius: var(--radius); width: 100%; max-width: 400px; box-shadow: var(--shadow); border: 1px solid var(--line); text-align: center; }
 .logo-placeholder { width: 70px; height: 70px; margin: 0 auto 15px; background: linear-gradient(135deg, var(--accent), var(--ok)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; }
 .login-card h2 { font-size: 22px; color: var(--accent); margin-bottom: 5px; }
