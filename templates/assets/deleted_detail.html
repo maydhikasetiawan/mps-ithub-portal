@@ -4,58 +4,58 @@
 {% block header_title %}Detail Aset (Terhapus / Archived){% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 20px;">
-    <a href="{{ url_for('assets.deleted_history') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Riwayat Terhapus</a>
+<div class="mb-20">
+    <a href="{{ url_for('assets.deleted_history') }}" class="back-link">← Kembali ke Riwayat Terhapus</a>
 </div>
 
-<div class="form-card" style="max-width: 800px; border-color: #ef4444;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 15px;">
+<div class="form-card detail-card border-danger">
+    <div class="detail-header">
         <div>
-            <span class="badge badge-retired" style="font-size: 12px; padding: 4px 10px;">
+            <span class="badge badge-retired badge-lg">
                 🗑️ STATUS: DELETED / ARCHIVED
             </span>
-            <h2 style="color: #fca5a5; margin-top: 8px;">{{ asset.name }}</h2>
-            <p style="color: #94a3b8; font-size: 13px;">Tag: <strong>{{ asset.asset_tag }}</strong> | Kategori: <strong>{{ asset.category }}</strong></p>
+            <h2 class="detail-title-danger mt-8">{{ asset.name }}</h2>
+            <p class="detail-meta">Tag: <strong>{{ asset.asset_tag }}</strong> | Kategori: <strong>{{ asset.category }}</strong></p>
         </div>
         {% if session['role'] != 'guest' %}
         <div>
-            <form method="POST" action="{{ url_for('assets.restore', asset_id=asset.id) }}" style="display:inline;">
-                <button type="submit" class="btn-primary" style="padding: 8px 14px; font-weight: bold;">Restore</button>
+            <form method="POST" action="{{ url_for('assets.restore', asset_id=asset.id) }}" class="inline-form">
+                <button type="submit" class="btn-primary">Restore</button>
             </form>
-            <a href="{{ url_for('assets.hard_delete', asset_id=asset.id) }}" class="btn-danger" style="padding: 8px 14px; font-weight: bold; text-decoration: none;">Hapus Permanen</a>
+            <a href="{{ url_for('assets.hard_delete', asset_id=asset.id) }}" class="btn-danger">Hapus Permanen</a>
         </div>
         {% endif %}
     </div>
 
     <!-- Banner Alasan Penghapusan -->
-    <div style="background: #ef444415; border: 1px solid #ef4444; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <h4 style="color: #fca5a5; font-size: 12px; margin-bottom: 6px;">ALASAN PENGHAPUSAN ASET</h4>
-        <p style="font-size: 14px; color: #f8fafc; font-style: italic;">"{{ asset.delete_reason or 'Tidak ada alasan dicantumkan.' }}"</p>
-        <p style="font-size: 11px; color: #94a3b8; margin-top: 10px;">
+    <div class="notice-danger">
+        <h4 class="notice-title">ALASAN PENGHAPUSAN ASET</h4>
+        <p class="quote-text">"{{ asset.delete_reason or 'Tidak ada alasan dicantumkan.' }}"</p>
+        <p class="text-muted text-11 mt-10">
             Dihapus oleh: <strong>{{ asset.deleted_by or '-' }}</strong> pada <strong>{{ asset.deleted_at.strftime('%Y-%m-%d %H:%M') if asset.deleted_at else '-' }}</strong>
         </p>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-        <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155;">
-            <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">SPESIFIKASI JARINGAN TERAKHIR</h4>
-            <p style="font-size: 13px; margin-bottom: 6px;">IP Address: <code>{{ asset.ip_address or '-' }}</code></p>
-            <p style="font-size: 13px;">MAC Address: <code>{{ asset.mac_address or '-' }}</code></p>
+    <div class="detail-grid">
+        <div class="detail-box-sm mb-0">
+            <h4 class="meta-label">SPESIFIKASI JARINGAN TERAKHIR</h4>
+            <p class="text-13-mb6">IP Address: <code>{{ asset.ip_address or '-' }}</code></p>
+            <p class="text-13">MAC Address: <code>{{ asset.mac_address or '-' }}</code></p>
         </div>
 
-        <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155;">
-            <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">LOKASI & UMUR SEBELUM DIHAPUS</h4>
-            <p style="font-size: 13px; margin-bottom: 6px;">Lokasi Terakhir: <strong>{{ asset.location or '-' }}</strong></p>
-            <p style="font-size: 13px;">Total Umur Aset: <strong style="color: #38bdf8;">{{ asset.age }}</strong></p>
+        <div class="detail-box-sm mb-0">
+            <h4 class="meta-label">LOKASI & UMUR SEBELUM DIHAPUS</h4>
+            <p class="text-13-mb6">Lokasi Terakhir: <strong>{{ asset.location or '-' }}</strong></p>
+            <p class="text-13">Total Umur Aset: <strong class="text-accent">{{ asset.age }}</strong></p>
         </div>
     </div>
 
-    <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
-        <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">CATATAN HISTORIS PERANGKAT</h4>
-        <p style="font-size: 13px; color: #cbd5e1; white-space: pre-line;">{{ asset.notes or 'Tidak ada catatan tambahan.' }}</p>
+    <div class="detail-box-sm">
+        <h4 class="meta-label">CATATAN HISTORIS PERANGKAT</h4>
+        <p class="text-body-pre">{{ asset.notes or 'Tidak ada catatan tambahan.' }}</p>
     </div>
 
-    <div style="border-top: 1px solid #334155; padding-top: 15px; font-size: 12px; color: #64748b; display: flex; justify-content: space-between;">
+    <div class="detail-footer">
         <span>Pertama kali didaftarkan: <strong>{{ asset.created_at.strftime('%Y-%m-%d %H:%M') if asset.created_at else '-' }}</strong></span>
         <span>Terakhir diperbarui: <strong>{{ asset.updated_at.strftime('%Y-%m-%d %H:%M') if asset.updated_at else '-' }}</strong> (by {{ asset.updated_by or 'system' }})</span>
     </div>

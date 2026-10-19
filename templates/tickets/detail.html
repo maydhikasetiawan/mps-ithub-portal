@@ -4,45 +4,45 @@
 {% block header_title %}Detail Tiket Service Desk{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 20px;">
-    <a href="{{ url_for('tickets.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Daftar Tiket</a>
+<div class="mb-20">
+    <a href="{{ url_for('tickets.index') }}" class="back-link">← Kembali ke Daftar Tiket</a>
 </div>
 
-<div class="form-card" style="max-width: 800px;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 15px;">
+<div class="form-card detail-card">
+    <div class="detail-header">
         <div>
             <!-- Konsistensi Warna Status -->
-            <span class="badge {% if ticket.status == 'Open' %}badge-orange{% elif ticket.status == 'In Progress' %}badge-yellow{% elif ticket.status == 'Resolved' %}badge-green{% else %}badge-red{% endif %}" style="font-size: 12px; padding: 4px 10px;">
+            <span class="badge badge-lg {% if ticket.status == 'Open' %}badge-orange{% elif ticket.status == 'In Progress' %}badge-yellow{% elif ticket.status == 'Resolved' %}badge-green{% else %}badge-red{% endif %}">
                 {{ ticket.status | upper }}
             </span>
-            <h2 style="color: #38bdf8; margin-top: 8px;">{{ ticket.title }}</h2>
-            <p style="color: #94a3b8; font-size: 13px;">Kode Tiket: <strong>{{ ticket.ticket_code }}</strong> | Kategori: <strong>{{ ticket.category }}</strong> | Prioritas: <strong>{{ ticket.priority }}</strong> | Assignee: <strong>{{ ticket.assigned_to or 'Unassigned' }}</strong></p>
-            <p style="color: #94a3b8; font-size: 13px;">Dibuat: <strong>{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') if ticket.created_at else '-' }}</strong> | Terakhir diperbarui: <strong>{{ last_updated.strftime('%Y-%m-%d %H:%M') if last_updated else '-' }}</strong></p>
+            <h2 class="detail-title mt-8">{{ ticket.title }}</h2>
+            <p class="detail-meta">Kode Tiket: <strong>{{ ticket.ticket_code }}</strong> | Kategori: <strong>{{ ticket.category }}</strong> | Prioritas: <strong>{{ ticket.priority }}</strong> | Assignee: <strong>{{ ticket.assigned_to or 'Unassigned' }}</strong></p>
+            <p class="detail-meta">Dibuat: <strong>{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') if ticket.created_at else '-' }}</strong> | Terakhir diperbarui: <strong>{{ last_updated.strftime('%Y-%m-%d %H:%M') if last_updated else '-' }}</strong></p>
         </div>
     </div>
 
     <!-- Blok Artikel Knowledge Base Terkait -->
     {% if related_articles %}
-    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h4 style="color: #38bdf8; font-size: 13px; margin-bottom: 12px;">📚 Artikel Knowledge Base Terkait</h4>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div class="info-block">
+        <h4 class="block-title">📚 Artikel Knowledge Base Terkait</h4>
+        <div class="flex-col gap-8">
             {% for a in related_articles %}
-            <a href="{{ url_for('knowledge_base.detail', article_id=a.id) }}" style="color: #38bdf8; text-decoration: none;">{{ a.title }}</a>
+            <a href="{{ url_for('knowledge_base.detail', article_id=a.id) }}" class="link-plain">{{ a.title }}</a>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
     <!-- Blok Tiket Terkait -->
-    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h4 style="color: #38bdf8; font-size: 13px; margin-bottom: 12px;">🔗 Tiket Terkait</h4>
+    <div class="info-block">
+        <h4 class="block-title">🔗 Tiket Terkait</h4>
 
         {% if relations %}
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+        <div class="flex-col gap-10 mb-15">
             {% for r in relations %}
-            <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 10px 14px; border-radius: 6px; border: 1px solid #334155; flex-wrap: wrap; gap: 8px;">
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <span class="badge" style="{% if r.relation_type == 'duplicate' %}background: #ef444422; color: #fca5a5; border: 1px solid #ef4444;{% else %}background: #38bdf822; color: #38bdf8; border: 1px solid #0284c7;{% endif %}">
+            <div class="relation-row">
+                <div class="flex items-center gap-8 flex-wrap">
+                    <span class="badge {% if r.relation_type == 'duplicate' %}badge-relation-duplicate{% else %}badge-relation-related{% endif %}">
                         {% if r.relation_type == 'duplicate' and r.ticket_a_id == ticket.id %}
                         Duplikat dari {{ r.other_code }}
                         {% elif r.relation_type == 'duplicate' %}
@@ -51,99 +51,99 @@
                         Terkait: {{ r.other_code }}
                         {% endif %}
                     </span>
-                    <a href="{{ url_for('tickets.detail', ticket_id=r.other_id) }}" style="color: #38bdf8; text-decoration: none; font-size: 13px;">
+                    <a href="{{ url_for('tickets.detail', ticket_id=r.other_id) }}" class="link-plain text-13">
                         {{ r.other_code }} — {{ r.other_title }}
                     </a>
-                    <span style="color: #94a3b8; font-size: 12px;">({{ r.other_status }})</span>
+                    <span class="text-muted text-12">({{ r.other_status }})</span>
                 </div>
                 {% if session['role'] in ['admin', 'it'] %}
-                <form method="POST" style="margin: 0;" data-confirm="Hapus relasi tiket ini?">
+                <form method="POST" class="m-0" data-confirm="Hapus relasi tiket ini?">
                     <input type="hidden" name="action" value="unlink">
                     <input type="hidden" name="relation_id" value="{{ r.id }}">
-                    <button type="submit" class="btn-danger" style="font-size: 12px; padding: 6px 12px; min-height: 44px; border: none; cursor: pointer;">Hapus</button>
+                    <button type="submit" class="btn-danger">Hapus</button>
                 </form>
                 {% endif %}
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p style="color: #64748b; font-size: 13px; margin: 0 0 15px 0;">Belum ada tiket terkait.</p>
+        <p class="empty-note">Belum ada tiket terkait.</p>
         {% endif %}
 
         {% if session['role'] in ['admin', 'it'] %}
-        <form method="POST" style="border-top: 1px solid #334155; padding-top: 15px; margin-top: 15px;">
+        <form method="POST" class="form-divider-mt">
             <input type="hidden" name="action" value="link">
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                <input type="text" name="target_code" class="form-control" style="flex: 1; min-width: 180px;" placeholder="TCK-YYYYMMDD-NNN" required>
-                <select name="relation_type" class="form-control" style="width: auto; min-width: 140px;">
+            <div class="flex gap-10 flex-wrap items-center">
+                <input type="text" name="target_code" class="form-control flex-1 min-w-180" placeholder="TCK-YYYYMMDD-NNN" required>
+                <select name="relation_type" class="form-control w-auto select-narrow">
                     <option value="related">Terkait</option>
                     <option value="duplicate">Duplikat</option>
                 </select>
-                <button type="submit" class="btn-primary" style="min-height: 44px;">Tambah Relasi</button>
+                <button type="submit" class="btn-primary">Tambah Relasi</button>
             </div>
-            <p style="color: #94a3b8; font-size: 12px; margin: 8px 0 0 0;">Duplikat: tiket ini akan ditutup otomatis dan diarahkan ke tiket target. Terkait: hanya membuat tautan.</p>
+            <p class="form-help">Duplikat: tiket ini akan ditutup otomatis dan diarahkan ke tiket target. Terkait: hanya membuat tautan.</p>
         </form>
         {% endif %}
     </div>
 
     <!-- Blok Informasi SLA -->
     {% if ticket.sla %}
-    <div style="background: #0f172a; padding: 14px 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <span style="color: #94a3b8; font-size: 12px; font-weight: 600;">SLA:</span>
+    <div class="sla-bar">
+        <div class="flex items-center gap-10 flex-wrap">
+            <span class="sla-label">SLA:</span>
             {% if ticket.sla.badge_text %}
             <span class="badge {% if ticket.sla.state == 'approaching' %}badge-yellow{% elif ticket.sla.state == 'breached' %}badge-red{% elif ticket.sla.state == 'met' %}badge-green{% endif %}">
                 {{ ticket.sla.badge_text }}
             </span>
             {% endif %}
-            <span style="color: #cbd5e1; font-size: 13px;">
+            <span class="text-body">
                 {{ ticket.sla.target_label }}
             </span>
         </div>
-        <div style="color: #94a3b8; font-size: 12px;">
-            {{ ticket.sla.elapsed_label }}: <strong style="color: #f8fafc;">{{ ticket.sla.elapsed_text }}</strong>
+        <div class="sla-elapsed">
+            {{ ticket.sla.elapsed_label }}: <strong class="text-strong">{{ ticket.sla.elapsed_text }}</strong>
         </div>
     </div>
     {% endif %}
 
     <!-- Blok Penilaian Kepuasan (CSAT) -->
     {% if ticket.status in ['Resolved', 'Closed'] %}
-    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-        <h4 style="color: #38bdf8; font-size: 13px; margin-bottom: 12px;">⭐ PENILAIAN KEPUASAN (CSAT)</h4>
+    <div class="info-block">
+        <h4 class="block-title">⭐ PENILAIAN KEPUASAN (CSAT)</h4>
 
         {% if rating %}
-        <div style="margin-bottom: {% if ticket.created_by == session['username'] %}15px{% else %}0{% endif %};">
-            <div style="font-size: 18px; color: #facc15; margin-bottom: 6px;">
+        <div class="{% if ticket.created_by == session['username'] %}mb-15{% else %}mb-0{% endif %}">
+            <div class="stars">
                 {% for i in range(1, 6) %}{% if i <= rating.rating %}★{% else %}☆{% endif %}{% endfor %}
-                <span style="font-size: 14px; font-weight: bold; color: #f8fafc; margin-left: 6px;">{{ rating.rating }}/5</span>
+                <span class="rating-value">{{ rating.rating }}/5</span>
             </div>
             {% if rating.comment %}
-            <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 6px; white-space: pre-wrap;">{{ rating.comment }}</div>
+            <div class="rating-comment">{{ rating.comment }}</div>
             {% endif %}
-            <small style="color: #94a3b8; font-size: 12px; display: block;">
+            <small class="rating-meta">
                 Dinilai oleh <strong>{{ rating.rater }}</strong> pada {{ rating.updated_at.strftime('%Y-%m-%d %H:%M') if rating.updated_at else '-' }}
             </small>
         </div>
         {% endif %}
 
         {% if ticket.created_by == session['username'] %}
-        <form method="POST" style="{% if rating %}border-top: 1px solid #334155; padding-top: 15px; margin-top: 15px;{% endif %}">
+        <form method="POST" class="{% if rating %}form-divider-mt{% endif %}">
             <input type="hidden" name="action" value="submit_rating">
-            <div class="form-group" style="margin-bottom: 12px;">
-                <label style="color: #cbd5e1; font-size: 13px; display: block; margin-bottom: 8px;">
+            <div class="form-group mb-12">
+                <label class="form-label-block">
                     {% if rating %}Ubah Penilaian Anda:{% else %}Beri Penilaian Layanan:{% endif %}
                 </label>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <div class="flex gap-8 flex-wrap items-center">
                     {% for i in range(1, 6) %}
-                    <label style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; cursor: pointer; color: #facc15; font-size: 14px;">
-                        <input type="radio" name="rating" value="{{ i }}" required {% if rating and rating.rating == i %}checked{% endif %} style="margin-right: 6px;">
+                    <label class="star-option">
+                        <input type="radio" name="rating" value="{{ i }}" required {% if rating and rating.rating == i %}checked{% endif %} class="mr-6">
                         {{ i }} ★
                     </label>
                     {% endfor %}
                 </div>
             </div>
-            <div class="form-group" style="margin-bottom: 12px;">
-                <label style="color: #cbd5e1; font-size: 13px; display: block; margin-bottom: 6px;">Komentar (Opsional):</label>
+            <div class="form-group mb-12">
+                <label class="form-label-block-tight">Komentar (Opsional):</label>
                 <textarea name="comment" class="form-control" rows="3" maxlength="1000" placeholder="Tuliskan ulasan atau masukan Anda...">{{ rating.comment if rating and rating.comment else '' }}</textarea>
             </div>
             <button type="submit" class="btn-primary">
@@ -151,35 +151,35 @@
             </button>
         </form>
         {% elif not rating %}
-        <p style="color: #94a3b8; font-size: 13px; margin: 0;">Belum dinilai oleh pelapor.</p>
+        <p class="text-muted text-13 m-0">Belum dinilai oleh pelapor.</p>
         {% endif %}
     </div>
     {% endif %}
 
     <!-- Deskripsi Masalah & Pelapor (Disamakan Style-nya dengan Card Bawah) -->
-    <div style="background: #0f172a; padding: 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
+    <div class="detail-box">
         <!-- Bagian Deskripsi Masalah -->
-        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #1e293b;">
-            <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 8px;">DESKRIPSI MASALAH / LAPORAN</h4>
-            <div style="font-size: 13px; color: #f8fafc; line-height: 1.6; white-space: pre-line;">
+        <div class="section-divider">
+            <h4 class="section-label">DESKRIPSI MASALAH / LAPORAN</h4>
+            <div class="description-text">
                 {{ ticket.description }}
             </div>
         </div>
 
         <!-- Bagian Pelapor & Departemen -->
-        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+        <div class="flex justify-between flex-wrap gap-15">
             <div>
-                <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 6px;">PELAPOR & DEPARTEMEN</h4>
-                <div style="font-size: 14px; font-weight: bold; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                <h4 class="section-label-tight">PELAPOR & DEPARTEMEN</h4>
+                <div class="person-line">
                     👤 {{ ticket.created_by }}
-                    <span style="color: #38bdf8; font-size: 13px; font-weight: normal;">
+                    <span class="person-sub">
                         ({{ ticket.department or 'IT' }})
                     </span>
                 </div>
             </div>
             <div>
-                <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 6px;">PETUGAS PENANGAN (ASSIGNEE)</h4>
-                <div style="font-size: 14px; font-weight: bold; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                <h4 class="section-label-tight">PETUGAS PENANGAN (ASSIGNEE)</h4>
+                <div class="person-line">
                     🛠️ {{ ticket.assigned_to or 'Unassigned' }}
                 </div>
             </div>
@@ -187,26 +187,26 @@
     </div>
 
     <!-- Blok Lampiran File (Attachments) -->
-    <div style="background: #0f172a; padding: 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
-            <h4 style="color: #38bdf8; font-size: 13px; margin: 0;">📎 LAMPIRAN FILE (ATTACHMENTS)</h4>
-            <span style="font-size: 12px; color: #94a3b8;">{{ attachments|length }}/2 File</span>
+    <div class="detail-box">
+        <div class="flex justify-between items-center mb-15 flex-wrap gap-8">
+            <h4 class="block-title-m0">📎 LAMPIRAN FILE (ATTACHMENTS)</h4>
+            <span class="text-muted text-12">{{ attachments|length }}/2 File</span>
         </div>
 
         {% if attachments %}
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+        <div class="flex-col gap-10 mb-15">
             {% for att in attachments %}
-            <div style="background: #1e293b; padding: 12px 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border: 1px solid #334155;">
+            <div class="attachment-row">
                 <div>
-                    <div style="font-size: 13px; font-weight: 600; color: #f8fafc; word-break: break-all;">
+                    <div class="file-name">
                         📄 {{ att.original_filename }}
                     </div>
-                    <small style="color: #94a3b8; font-size: 11px;">
+                    <small class="file-meta">
                         {{ att.formatted_size }} • Diunggah oleh <strong>{{ att.uploader }}</strong> pada {{ att.created_at.strftime('%Y-%m-%d %H:%M') if att.created_at else '-' }}
                     </small>
                 </div>
                 <div>
-                    <a href="{{ url_for('tickets.download_attachment', ticket_id=ticket.id, att_id=att.id) }}" class="btn-primary" style="font-size: 12px; padding: 6px 12px; text-decoration: none;">
+                    <a href="{{ url_for('tickets.download_attachment', ticket_id=ticket.id, att_id=att.id) }}" class="btn-primary">
                         Unduh
                     </a>
                 </div>
@@ -214,39 +214,39 @@
             {% endfor %}
         </div>
         {% else %}
-        <p style="color: #64748b; font-size: 13px; margin: 0 0 15px 0;">Belum ada lampiran file pada tiket ini.</p>
+        <p class="empty-note">Belum ada lampiran file pada tiket ini.</p>
         {% endif %}
 
         {% if session['role'] in ['admin', 'it', 'user'] and ticket.status not in ['Resolved', 'Closed'] and (attachments|length < 2) %}
-        <form method="POST" enctype="multipart/form-data" style="border-top: 1px solid #1e293b; padding-top: 15px;">
+        <form method="POST" enctype="multipart/form-data" class="form-divider">
             <input type="hidden" name="action" value="upload_attachment">
-            <div class="form-group" style="margin-bottom: 12px;">
-                <label style="color: #cbd5e1; font-size: 12px;">Unggah Lampiran Baru (Maksimal 2 file total, 5 MB/file):</label>
+            <div class="form-group mb-12">
+                <label class="form-label-sm">Unggah Lampiran Baru (Maksimal 2 file total, 5 MB/file):</label>
                 <input type="file" name="attachments" class="form-control" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.log,.doc,.docx,.xls,.xlsx,.csv">
             </div>
-            <button type="submit" class="btn-primary" style="font-size: 13px; padding: 6px 14px;">Unggah Lampiran</button>
+            <button type="submit" class="btn-primary">Unggah Lampiran</button>
         </form>
         {% endif %}
     </div>
 
     <!-- Form & Laporan Penyelesaian -->
-    <div style="background: #0f172a; padding: 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
-        <h4 style="color: #10b981; font-size: 13px; margin-bottom: 15px;">✅ LAPORAN PENYELESAIAN (RESOLUTION NOTE)</h4>
+    <div class="detail-box">
+        <h4 class="block-title-ok">✅ LAPORAN PENYELESAIAN (RESOLUTION NOTE)</h4>
 
         {% if ticket.status in ['Resolved', 'Closed'] %}
         <!-- Tampilan Locked/Read-Only Setelah Tiket Selesai -->
-        <div style="background: #10b98115; border: 1px solid #10b981; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #34d399;">
+        <div class="notice-ok">
             🔒 Tiket ini telah berstatus <strong>{{ ticket.status }}</strong> dan telah dikunci. Data penyelesaian tidak dapat diubah lagi.
         </div>
-        <p style="font-size: 13px; color: #cbd5e1; white-space: pre-line;">{{ ticket.resolution_note or 'Tidak ada catatan penyelesaian.' }}</p>
+        <p class="text-body-pre">{{ ticket.resolution_note or 'Tidak ada catatan penyelesaian.' }}</p>
 
         {% if ticket.created_by == session['username'] or session['role'] in ['admin', 'it'] %}
-        <form method="POST" style="margin-top: 15px; border-top: 1px solid #1e293b; padding-top: 15px;">
+        <form method="POST" class="form-divider-mt">
             <input type="hidden" name="action" value="reopen">
-            <div class="form-group" style="margin-bottom: 12px;">
+            <div class="form-group mb-12">
                 <textarea name="reopen_reason" class="form-control" rows="2" maxlength="500" placeholder="Alasan dibuka ulang (opsional)..."></textarea>
             </div>
-            <button type="submit" class="btn-primary" style="min-height: 44px;">Buka Ulang Tiket</button>
+            <button type="submit" class="btn-primary">Buka Ulang Tiket</button>
         </form>
         {% endif %}
 
@@ -254,18 +254,18 @@
         <!-- Form Pengisian Hanya Buka Jika Status Masih Open / In Progress -->
         <form method="POST">
             <input type="hidden" name="action" value="update_status">
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="color: #cbd5e1; font-size: 12px;">Tugaskan ke (Assignee):</label>
-                <select name="assigned_to" class="form-control" style="max-width: 250px;">
+            <div class="form-group mb-15">
+                <label class="form-label-sm">Tugaskan ke (Assignee):</label>
+                <select name="assigned_to" class="form-control max-w-250">
                     <option value="" {% if not ticket.assigned_to %}selected{% endif %}>Unassigned</option>
                     {% for u in assignees %}
                     <option value="{{ u.username }}" {% if ticket.assigned_to == u.username %}selected{% endif %}>{{ u.username }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="color: #cbd5e1; font-size: 12px;">Ubah Status Tiket:</label>
-                <select name="status" class="form-control" style="max-width: 250px;">
+            <div class="form-group mb-15">
+                <label class="form-label-sm">Ubah Status Tiket:</label>
+                <select name="status" class="form-control max-w-250">
                     <option value="Open" {% if ticket.status == 'Open' %}selected{% endif %}>Open</option>
                     <option value="In Progress" {% if ticket.status == 'In Progress' %}selected{% endif %}>In Progress</option>
                     <option value="Resolved" {% if ticket.status == 'Resolved' %}selected{% endif %}>Resolved</option>
@@ -273,19 +273,19 @@
                 </select>
             </div>
 
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="color: #cbd5e1; font-size: 12px;">Catatan Penanganan / Solusi Perbaikan:</label>
+            <div class="form-group mb-15">
+                <label class="form-label-sm">Catatan Penanganan / Solusi Perbaikan:</label>
                 <textarea name="resolution_note" class="form-control" rows="4" placeholder="Tuliskan tindakan perbaikan yang telah dilakukan...">{{ ticket.resolution_note or '' }}</textarea>
             </div>
 
             <button type="submit" class="btn-primary">Simpan Laporan & Update Status</button>
         </form>
         {% else %}
-        <p style="font-size: 13px; color: #cbd5e1;">{{ ticket.resolution_note or 'Belum ada catatan penyelesaian.' }}</p>
+        <p class="text-body">{{ ticket.resolution_note or 'Belum ada catatan penyelesaian.' }}</p>
         {% endif %}
 
         {% if ticket.resolved_at %}
-        <div style="margin-top: 15px; font-size: 11px; color: #10b981; border-top: 1px solid #1e293b; padding-top: 10px;">
+        <div class="resolved-by">
             Diselesaikan oleh: <strong>{{ ticket.resolved_by or '-' }}</strong> pada <strong>{{ ticket.resolved_at.strftime('%Y-%m-%d %H:%M') if ticket.resolved_at else '-' }}</strong>
         </div>
         {% endif %}
@@ -293,25 +293,25 @@
 </div>
 
 <!-- Bagian Komentar & Linimasa Aktivitas -->
-<div class="form-card" style="max-width: 800px; margin-top: 20px;">
+<div class="form-card detail-card mt-20">
     {% if session['role'] in ['admin', 'it', 'user'] and ticket.status not in ['Resolved', 'Closed'] %}
-    <div style="background: #0f172a; padding: 20px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
-        <h4 style="color: #38bdf8; font-size: 13px; margin-bottom: 15px;">💬 TAMBAHKAN KOMENTAR</h4>
+    <div class="detail-box">
+        <h4 class="block-title">💬 TAMBAHKAN KOMENTAR</h4>
         <form method="POST">
             <input type="hidden" name="action" value="comment">
             {% if session['role'] in ['admin', 'it'] %}
-            <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <select id="canned-select" class="form-control" style="flex: 1; min-width: 200px; font-size: 13px;">
+            <div class="flex items-center gap-10 flex-wrap mb-12">
+                <select id="canned-select" class="form-control flex-1 min-w-200">
                     <option value="">— Gunakan Template Respon —</option>
                     {% for tmpl in canned_templates %}
                     <option value="{{ tmpl.id }}">{{ tmpl.title }}</option>
                     {% endfor %}
                 </select>
-                <a href="{{ url_for('tickets.manage_canned_responses') }}" style="color: #38bdf8; font-size: 12px; text-decoration: none; white-space: nowrap;">Kelola Template</a>
+                <a href="{{ url_for('tickets.manage_canned_responses') }}" class="link-plain-sm">Kelola Template</a>
             </div>
             {% endif %}
-            <div class="form-group" style="margin-bottom: 15px;">
-                <label style="color: #cbd5e1; font-size: 12px;">Komentar:</label>
+            <div class="form-group mb-15">
+                <label class="form-label-sm">Komentar:</label>
                 <textarea id="comment-textarea" name="comment" class="form-control" rows="3" placeholder="Tuliskan komentar atau catatan tambahan..." required></textarea>
             </div>
             <button type="submit" class="btn-primary">Kirim Komentar</button>
@@ -336,31 +336,31 @@
     </div>
     {% endif %}
 
-    <div style="background: #0f172a; padding: 20px; border-radius: 6px; border: 1px solid #334155;">
-        <h4 style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">📋 RIWAYAT AKTIVITAS (TIMELINE)</h4>
+    <div class="detail-box mb-0">
+        <h4 class="timeline-title">📋 RIWAYAT AKTIVITAS (TIMELINE)</h4>
         {% if activities %}
-        <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="flex-col gap-12">
             {% for act in activities %}
-            <div style="background: #1e293b; padding: 12px 16px; border-radius: 6px; border-left: 3px solid {% if act.type == 'comment' %}#38bdf8{% elif act.type == 'status' %}#eab308{% elif act.type == 'assignment' %}#a855f7{% else %}#10b981{% endif %};">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 11px; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; font-weight: 600; {% if act.type == 'comment' %}background: #0284c722; color: #38bdf8; border: 1px solid #0284c7;{% elif act.type == 'status' %}background: #eab30822; color: #facc15; border: 1px solid #eab308;{% elif act.type == 'assignment' %}background: #a855f722; color: #c084fc; border: 1px solid #a855f7;{% else %}background: #10b98122; color: #34d399; border: 1px solid #10b981;{% endif %}">
+            <div class="activity-card {% if act.type == 'comment' %}activity-comment{% elif act.type == 'status' %}activity-status{% elif act.type == 'assignment' %}activity-assignment{% else %}activity-other{% endif %}">
+                <div class="flex justify-between items-center mb-6 flex-wrap gap-6">
+                    <div class="flex items-center gap-8">
+                        <span class="type-chip {% if act.type == 'comment' %}type-comment{% elif act.type == 'status' %}type-status{% elif act.type == 'assignment' %}type-assignment{% else %}type-other{% endif %}">
                             {{ act.type }}
                         </span>
-                        <strong style="color: #f8fafc; font-size: 13px;">{{ act.actor }}</strong>
+                        <strong class="activity-actor">{{ act.actor }}</strong>
                     </div>
-                    <small style="color: #94a3b8; font-size: 12px;">
+                    <small class="text-muted text-12">
                         {{ act.created_at.strftime('%Y-%m-%d %H:%M') if act.created_at else '-' }}
                     </small>
                 </div>
-                <div style="color: #cbd5e1; font-size: 13px; white-space: pre-line; word-break: break-word;">
+                <div class="activity-content">
                     {{ act.content }}
                 </div>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p style="color: #64748b; font-size: 13px; margin: 0;">Belum ada riwayat aktivitas.</p>
+        <p class="empty-note-tight">Belum ada riwayat aktivitas.</p>
         {% endif %}
     </div>
 </div>

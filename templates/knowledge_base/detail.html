@@ -4,14 +4,14 @@
 {% block header_title %}Detail Artikel Knowledge Base{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 20px;">
+<div class="mb-20">
     <a href="{{ url_for('knowledge_base.index') }}" class="btn-secondary">← Kembali ke Knowledge Base</a>
 </div>
 
-<div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 25px; margin-bottom: 25px;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+<div class="article-box">
+    <div class="flex justify-between items-start gap-15 flex-wrap mb-15">
         <div>
-            <h1 style="color: #38bdf8; font-size: 24px; margin-bottom: 8px; line-height: 1.3;">
+            <h1 class="detail-title">
                 {{ article.title }}
             </h1>
             {% if article.status == 'draft' %}
@@ -20,16 +20,16 @@
         </div>
 
         {% if session['role'] in ['admin', 'it'] %}
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <div class="flex gap-10 items-center flex-wrap">
             <a href="{{ url_for('knowledge_base.edit', article_id=article.id) }}" class="btn-secondary">Edit Artikel</a>
-            <form method="POST" action="{{ url_for('knowledge_base.delete', article_id=article.id) }}" style="display: inline;" data-confirm="Apakah Anda yakin ingin menghapus artikel ini?">
-                <button type="submit" class="btn-danger" style="cursor: pointer; border: none;">Hapus</button>
+            <form method="POST" action="{{ url_for('knowledge_base.delete', article_id=article.id) }}" class="inline-form" data-confirm="Apakah Anda yakin ingin menghapus artikel ini?">
+                <button type="submit" class="btn-danger">Hapus</button>
             </form>
         </div>
         {% endif %}
     </div>
 
-    <div style="display: flex; gap: 16px; font-size: 13px; color: #94a3b8; flex-wrap: wrap; border-top: 1px solid #334155; border-bottom: 1px solid #334155; padding: 12px 0; margin-bottom: 20px;">
+    <div class="article-meta">
         <span>📁 <strong>Kategori:</strong> {{ article.category }}</span>
         {% if article.tags %}
         <span>🏷️ <strong>Tags:</strong> {{ article.tags }}</span>
@@ -41,8 +41,8 @@
         {% endif %}
     </div>
 
-    <div style="font-size: 15px; line-height: 1.7; color: #f8fafc;">
-        <div style="white-space: pre-wrap;">{{ article.content }}</div>
+    <div class="lead-text">
+        <div class="pre-wrap">{{ article.content }}</div>
     </div>
 </div>
 {% endblock %}

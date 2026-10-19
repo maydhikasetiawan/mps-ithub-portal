@@ -4,62 +4,62 @@
 {% block header_title %}Detail Informasi Aset{% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 20px;">
-    <a href="{{ url_for('assets.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 13px;">← Kembali ke Daftar Aset</a>
+<div class="mb-20">
+    <a href="{{ url_for('assets.index') }}" class="back-link">← Kembali ke Daftar Aset</a>
 </div>
 
-<div class="form-card" style="max-width: 800px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 15px;">
+<div class="form-card detail-card">
+    <div class="detail-header">
         <div>
             <span class="badge {% if asset.status == 'Procurement' %}badge-procurement{% elif asset.status == 'Active' %}badge-active{% elif asset.status == 'Under Repair' %}badge-repair{% else %}badge-retired{% endif %}">
                 {{ asset.status }}
             </span>
-            <h2 style="color: #38bdf8; margin-top: 5px;">{{ asset.name }}</h2>
-            <p style="color: #94a3b8; font-size: 13px;">Tag: <strong>{{ asset.asset_tag }}</strong> | Kategori: <strong>{{ asset.category }}</strong></p>
+            <h2 class="detail-title mt-5">{{ asset.name }}</h2>
+            <p class="detail-meta">Tag: <strong>{{ asset.asset_tag }}</strong> | Kategori: <strong>{{ asset.category }}</strong></p>
         </div>
-        <div style="display: flex; gap: 10px;">
-            <a href="{{ url_for('assets.asset_label', asset_id=asset.id) }}" class="btn-primary" style="text-decoration: none;">Cetak Label</a>
+        <div class="flex gap-10">
+            <a href="{{ url_for('assets.asset_label', asset_id=asset.id) }}" class="btn-primary">Cetak Label</a>
             {% if session['role'] != 'guest' %}
-            <a href="{{ url_for('assets.edit', asset_id=asset.id) }}" class="btn-primary" style="text-decoration: none;">Edit Aset</a>
+            <a href="{{ url_for('assets.edit', asset_id=asset.id) }}" class="btn-primary">Edit Aset</a>
             {% endif %}
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-        <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155;">
-            <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">SPESIFIKASI JARINGAN</h4>
-            <p style="font-size: 13px; margin-bottom: 6px;">IP Address: <code>{{ asset.ip_address or '-' }}</code></p>
-            <p style="font-size: 13px; margin-bottom: 6px;">MAC Address: <code>{{ asset.mac_address or '-' }}</code></p>
-            <p style="font-size: 13px;">Serial Number: <code>{{ asset.serial_number or '-' }}</code></p>
+    <div class="detail-grid">
+        <div class="detail-box-sm mb-0">
+            <h4 class="meta-label">SPESIFIKASI JARINGAN</h4>
+            <p class="text-13-mb6">IP Address: <code>{{ asset.ip_address or '-' }}</code></p>
+            <p class="text-13-mb6">MAC Address: <code>{{ asset.mac_address or '-' }}</code></p>
+            <p class="text-13">Serial Number: <code>{{ asset.serial_number or '-' }}</code></p>
         </div>
 
-        <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155;">
-            <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">LOKASI & UMUR</h4>
-            <p style="font-size: 13px; margin-bottom: 6px;">Assigned To: <strong>{{ asset.assigned_to or 'Unassigned' }}</strong></p>
-            <p style="font-size: 13px; margin-bottom: 6px;">Lokasi: <strong>{{ asset.location or '-' }}</strong></p>
-            <p style="font-size: 13px;">Umur di Inventori: <strong style="color: #38bdf8;">{{ asset.age }}</strong></p>
+        <div class="detail-box-sm mb-0">
+            <h4 class="meta-label">LOKASI & UMUR</h4>
+            <p class="text-13-mb6">Assigned To: <strong>{{ asset.assigned_to or 'Unassigned' }}</strong></p>
+            <p class="text-13-mb6">Lokasi: <strong>{{ asset.location or '-' }}</strong></p>
+            <p class="text-13">Umur di Inventori: <strong class="text-accent">{{ asset.age }}</strong></p>
         </div>
     </div>
 
-    <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
-        <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">GARANSI & PEMBELIAN</h4>
-        <p style="font-size: 13px; margin-bottom: 6px;">Tanggal Beli: <strong>{{ asset.purchase_date.strftime('%Y-%m-%d') if asset.purchase_date else '-' }}</strong></p>
-        <p style="font-size: 13px; margin-bottom: 6px;">Garansi Habis: <strong>{{ 'Tanpa Garansi' if asset.no_warranty else (asset.warranty_expiry.strftime('%Y-%m-%d') if asset.warranty_expiry else '-') }}</strong></p>
-        <p style="font-size: 13px;">Status Garansi: <strong>{{ warranty_status }}</strong></p>
+    <div class="detail-box-sm">
+        <h4 class="meta-label">GARANSI & PEMBELIAN</h4>
+        <p class="text-13-mb6">Tanggal Beli: <strong>{{ asset.purchase_date.strftime('%Y-%m-%d') if asset.purchase_date else '-' }}</strong></p>
+        <p class="text-13-mb6">Garansi Habis: <strong>{{ 'Tanpa Garansi' if asset.no_warranty else (asset.warranty_expiry.strftime('%Y-%m-%d') if asset.warranty_expiry else '-') }}</strong></p>
+        <p class="text-13">Status Garansi: <strong>{{ warranty_status }}</strong></p>
     </div>
 
-    <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
-        <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 10px;">CATATAN / NOTES</h4>
-        <p style="font-size: 13px; color: #cbd5e1; white-space: pre-line;">{{ asset.notes or 'Tidak ada catatan tambahan.' }}</p>
+    <div class="detail-box-sm">
+        <h4 class="meta-label">CATATAN / NOTES</h4>
+        <p class="text-body-pre">{{ asset.notes or 'Tidak ada catatan tambahan.' }}</p>
     </div>
 
-    <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
-        <h4 style="color: #94a3b8; font-size: 12px; margin-bottom: 15px;">RIWAYAT PERUBAHAN</h4>
+    <div class="detail-box-sm">
+        <h4 class="meta-label">RIWAYAT PERUBAHAN</h4>
         {% if activities %}
-        <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="flex-col gap-10">
             {% for a in activities %}
-            <div style="font-size: 13px; color: #cbd5e1; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">
-                <span style="color: #64748b; font-size: 12px;">{{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '-' }}</span>
+            <div class="text-body divider-bottom">
+                <span class="text-faint text-12">{{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '-' }}</span>
                 — <strong>{{ a.actor or 'system' }}</strong>:
                 {% if a.action == 'created' %}
                 <span>Aset dibuat.</span>
@@ -76,11 +76,11 @@
             {% endfor %}
         </div>
         {% else %}
-        <p style="font-size: 13px; color: #64748b; margin: 0;">Belum ada riwayat perubahan.</p>
+        <p class="text-faint text-13 m-0">Belum ada riwayat perubahan.</p>
         {% endif %}
     </div>
 
-    <div style="border-top: 1px solid #334155; padding-top: 15px; font-size: 12px; color: #64748b; display: flex; justify-content: space-between;">
+    <div class="detail-footer">
         <span>Didaftarkan pada: <strong>{{ asset.created_at.strftime('%Y-%m-%d %H:%M') if asset.created_at else '-' }}</strong></span>
         <span>Terakhir diperbarui: <strong>{{ asset.updated_at.strftime('%Y-%m-%d %H:%M') if asset.updated_at else '-' }}</strong> (by {{ asset.updated_by or 'system' }})</span>
     </div>
