@@ -4,24 +4,24 @@
 {% block header_title %}Pengaturan Telegram{% endblock %}
 
 {% block content %}
-<div class="form-card" style="max-width: 600px; margin: 0 auto;">
+<div class="form-card form-narrow">
     <!-- Status Box -->
-    <div style="background: #0f172a; padding: 15px; border-radius: 6px; border: 1px solid #334155; margin-bottom: 20px;">
-        <span style="color: #94a3b8; font-size: 12px; font-weight: bold; display: block; margin-bottom: 8px;">STATUS KONFIGURASI</span>
-        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 14px;">
+    <div class="info-box">
+        <span class="text-muted text-12 font-bold block mb-8">STATUS KONFIGURASI</span>
+        <div class="flex flex-col gap-6 text-14">
             <div>
-                <span style="color: #94a3b8;">Bot Token:</span>
+                <span class="text-muted">Bot Token:</span>
                 <strong>{% if settings and settings.bot_token %}Tersimpan ✅{% else %}Belum diset ❌{% endif %}</strong>
             </div>
             <div>
-                <span style="color: #94a3b8;">Chat ID:</span>
+                <span class="text-muted">Chat ID:</span>
                 <strong>{{ settings.chat_id if settings and settings.chat_id else '-' }}</strong>
             </div>
         </div>
     </div>
 
     <!-- Save Form -->
-    <h3 style="color: #38bdf8; margin-bottom: 15px;">⚙️ Konfigurasi Bot</h3>
+    <h3 class="text-accent mb-15">⚙️ Konfigurasi Bot</h3>
     <form method="POST" action="{{ url_for('uptime.telegram_settings') }}">
         <div class="form-group">
             <label>Bot Token</label>
@@ -30,22 +30,22 @@
         <div class="form-group">
             <label>Chat ID</label>
             <input type="text" name="chat_id" class="form-control" value="{{ settings.chat_id if settings else '' }}" placeholder="Contoh: -100123456789 atau 12345678">
-            <small style="color: #94a3b8; display: block; margin-top: 5px;">Kosongkan Chat ID lalu Simpan untuk menonaktifkan Telegram.</small>
+            <small class="text-muted block mt-5">Kosongkan Chat ID lalu Simpan untuk menonaktifkan Telegram.</small>
         </div>
-        <button type="submit" class="btn-primary" style="width: 100%;">💾 Simpan Pengaturan</button>
+        <button type="submit" class="btn-primary w-full">💾 Simpan Pengaturan</button>
     </form>
 
     <!-- Test Form -->
-    <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #334155;">
-        <h4 style="color: #cbd5e1; margin-bottom: 10px; font-size: 14px;">Uji Koneksi Bot</h4>
+    <div class="form-divider-mt">
+        <h4 class="text-body mb-10 text-14">Uji Koneksi Bot</h4>
         <form method="POST" action="{{ url_for('uptime.telegram_test') }}">
-            <button type="submit" class="btn-secondary" style="width: 100%; justify-content: center; cursor: pointer;">📨 Tes Koneksi</button>
+            <button type="submit" class="btn-secondary w-full">📨 Tes Koneksi</button>
         </form>
-        <small style="color: #94a3b8; display: block; margin-top: 6px; text-align: center;">Mengirim pesan tes ke Chat ID tersimpan.</small>
+        <small class="text-muted block mt-6 text-center">Mengirim pesan tes ke Chat ID tersimpan.</small>
     </div>
 
-    <div style="margin-top: 20px; text-align: center;">
-        <a href="{{ url_for('uptime.index') }}" style="color: #94a3b8; text-decoration: none; font-size: 14px;">Kembali ke Uptime Monitor</a>
+    <div class="mt-20 text-center">
+        <a href="{{ url_for('uptime.index') }}" class="back-link text-14">Kembali ke Uptime Monitor</a>
     </div>
 </div>
 {% endblock %}

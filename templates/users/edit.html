@@ -8,8 +8,8 @@
     <form method="POST">
         <div class="form-group">
             <label>Username</label>
-            <input type="text" class="form-control" value="{{ user.username }}" disabled style="opacity: 0.6; cursor: not-allowed;">
-            <small style="color:#64748b;">Username tidak dapat diubah.</small>
+            <input type="text" class="form-control opacity-60 cursor-not-allowed" value="{{ user.username }}" disabled>
+            <small class="text-faint">Username tidak dapat diubah.</small>
         </div>
         <div class="form-group">
             <label>Email *</label>
@@ -33,16 +33,16 @@
             </select>
         </div>
 
-        <hr style="border-color: #334155; margin: 20px 0;">
-        <h4 style="color: #f59e0b; margin-bottom: 10px;">🔐 Reset Password User</h4>
+        <hr class="form-divider">
+        <h4 class="text-warn mb-10">🔐 Reset Password User</h4>
         <div class="form-group">
             <label>Password Baru (Opsional)</label>
             <input type="password" name="new_password" class="form-control" placeholder="Biarkan kosong jika tidak ingin mereset password...">
-            <small style="color:#94a3b8;">Jika diisi, user akan diwajibkan mengganti password saat login berikutnya.</small>
+            <small class="text-muted">Jika diisi, user akan diwajibkan mengganti password saat login berikutnya.</small>
         </div>
 
         <button type="submit" class="btn-primary">Simpan Perubahan</button>
-        <a href="{{ url_for('users.index') }}" style="color: #94a3b8; margin-left: 15px; font-size: 13px; text-decoration: none;">Batal</a>
+        <a href="{{ url_for('users.index') }}" class="back-link ml-15">Batal</a>
     </form>
 </div>
 {% endblock %}

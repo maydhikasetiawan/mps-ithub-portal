@@ -4,7 +4,7 @@
 {% block header_title %}{% if is_edit %}Edit Artikel Knowledge Base{% else %}Tambah Artikel Knowledge Base{% endif %}{% endblock %}
 
 {% block content %}
-<div class="form-card" style="max-width: 800px;">
+<div class="form-card form-wide">
     <form method="POST">
         <div class="form-group">
             <label for="title">Judul Artikel *</label>
@@ -38,7 +38,7 @@
             <textarea id="content" name="content" class="form-control" rows="12" required placeholder="Tuliskan langkah-langkah solusi atau panduan masalah secara lengkap...">{{ article.content if article and article.content else '' }}</textarea>
         </div>
 
-        <div style="display: flex; gap: 12px; align-items: center; margin-top: 20px; flex-wrap: wrap;">
+        <div class="flex gap-12 items-center mt-20 flex-wrap">
             <button type="submit" class="btn-primary">{% if is_edit %}Simpan Perubahan{% else %}Terbitkan Artikel{% endif %}</button>
             <a href="{% if is_edit and article and article.id %}{{ url_for('knowledge_base.detail', article_id=article.id) }}{% else %}{{ url_for('knowledge_base.index') }}{% endif %}" class="btn-secondary">Batal</a>
         </div>

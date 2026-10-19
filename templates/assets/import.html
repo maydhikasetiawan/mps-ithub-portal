@@ -6,8 +6,8 @@
 {% block content %}
 <div class="form-card">
     {% if errors %}
-    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #fca5a5; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-        <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+    <div class="alert-danger mb-20">
+        <ul class="m-0 pl-20 text-13 lh-16">
             {% for err in errors %}
             <li>Baris {{ err.row }} ({{ err.asset_tag }}): {{ err.reason }}</li>
             {% endfor %}
@@ -15,16 +15,16 @@
     </div>
     {% endif %}
 
-    <div style="background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: #cbd5e1; line-height: 1.7;">
-        <div style="font-weight: bold; margin-bottom: 5px;">Cara Import:</div>
-        <ol style="margin: 0 0 15px 0; padding-left: 20px;">
+    <div class="info-box">
+        <div class="font-bold mb-5">Cara Import:</div>
+        <ol class="pl-20 mb-15 m-0">
             <li>Download Template CSV di bawah.</li>
             <li>Isi data aset pada template, lalu hapus baris contoh (CONTOH-001) sebelum upload.</li>
             <li>Pilih file CSV, lalu klik Import.</li>
         </ol>
 
-        <div style="font-weight: bold; margin-bottom: 5px;">Ketentuan:</div>
-        <ul style="margin: 0 0 15px 0; padding-left: 20px;">
+        <div class="font-bold mb-5">Ketentuan:</div>
+        <ul class="pl-20 mb-15 m-0">
             <li><code>asset_tag</code> dan <code>name</code> wajib diisi.</li>
             <li><code>category</code>: Server, PC/Laptop, Network, Docker Container, Printer/Peripherals.</li>
             <li><code>status</code> kosong → Active.</li>
@@ -34,11 +34,11 @@
             <li>Maksimal 200 baris. Kalau ada 1 baris error, SELURUH file dibatalkan.</li>
         </ul>
 
-        <div style="font-weight: bold; margin-bottom: 5px;">Header CSV:</div>
-        <div style="overflow-wrap: break-word; word-break: break-all;"><code style="overflow-wrap: break-word; word-break: break-all;">asset_tag,name,category,ip_address,mac_address,serial_number,status,assigned_to,purchase_date,warranty_expiry,no_warranty,location,notes</code></div>
+        <div class="font-bold mb-5">Header CSV:</div>
+        <div class="break-all"><code class="break-all">asset_tag,name,category,ip_address,mac_address,serial_number,status,assigned_to,purchase_date,warranty_expiry,no_warranty,location,notes</code></div>
     </div>
 
-    <div style="margin-bottom: 20px;">
+    <div class="mb-20">
         <a href="{{ url_for('assets.import_template') }}" class="btn-primary">Download Template CSV</a>
     </div>
 
@@ -48,7 +48,7 @@
             <input type="file" name="csv_file" class="form-control" accept=".csv" required>
         </div>
         <button type="submit" class="btn-primary">Import</button>
-        <a href="{{ url_for('assets.index') }}" style="color: #94a3b8; margin-left: 15px; font-size: 13px; text-decoration: none;">Batal</a>
+        <a href="{{ url_for('assets.index') }}" class="back-link ml-15">Batal</a>
     </form>
 </div>
 {% endblock %}

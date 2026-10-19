@@ -4,8 +4,8 @@
 {% block header_title %}Tambah Target Monitor Baru{% endblock %}
 
 {% block content %}
-<div class="form-card" style="max-width: 600px; margin: 0 auto;">
-    <h3 style="color: #38bdf8; margin-bottom: 15px;">🌐 Informasi Target Health Check</h3>
+<div class="form-card form-narrow">
+    <h3 class="text-accent mb-15">🌐 Informasi Target Health Check</h3>
     <form method="POST">
         <div class="form-group">
             <label>Nama Layanan / Host *</label>
@@ -26,7 +26,7 @@
             <label>Port (Opsional, khusus TCP)</label>
             <input type="number" name="port" class="form-control" placeholder="Contoh: 80, 443, 22, 8080 (Default: 80)">
         </div>
-        <button type="submit" class="btn-primary" style="width: 100%;">+ Simpan & Cek Koneksi</button>
+        <button type="submit" class="btn-primary w-full">+ Simpan & Cek Koneksi</button>
     </form>
 </div>
 {% endblock %}

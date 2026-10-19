@@ -9,18 +9,18 @@
         <!-- Field Read-Only (Tidak Dapat Diubah) -->
         <div class="form-group">
             <label>Asset Tag (Locked)</label>
-            <input type="text" class="form-control" value="{{ asset.asset_tag }}" disabled style="opacity: 0.6; cursor: not-allowed;">
+            <input type="text" class="form-control opacity-60 cursor-not-allowed" value="{{ asset.asset_tag }}" disabled>
         </div>
         <div class="form-group">
             <label>Nama Perangkat / Server (Locked)</label>
-            <input type="text" class="form-control" value="{{ asset.name }}" disabled style="opacity: 0.6; cursor: not-allowed;">
+            <input type="text" class="form-control opacity-60 cursor-not-allowed" value="{{ asset.name }}" disabled>
         </div>
         <div class="form-group">
             <label>Kategori (Locked)</label>
-            <input type="text" class="form-control" value="{{ asset.category }}" disabled style="opacity: 0.6; cursor: not-allowed;">
+            <input type="text" class="form-control opacity-60 cursor-not-allowed" value="{{ asset.category }}" disabled>
         </div>
 
-        <hr style="border-color: #334155; margin: 20px 0;">
+        <hr class="form-divider">
 
         <!-- Field yang Boleh Di-edit -->
         <div class="form-group">
@@ -74,7 +74,7 @@
         </div>
 
         <button type="submit" class="btn-primary">Update Aset</button>
-        <a href="{{ url_for('assets.index') }}" style="color: #94a3b8; margin-left: 15px; font-size: 13px; text-decoration: none;">Batal</a>
+        <a href="{{ url_for('assets.index') }}" class="back-link ml-15">Batal</a>
     </form>
 </div>
 <script>

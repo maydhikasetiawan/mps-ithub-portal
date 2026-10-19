@@ -34,10 +34,10 @@
         <div class="form-group">
             <label>Lampiran File (Opsional)</label>
             <input type="file" name="attachments" class="form-control" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.log,.doc,.docx,.xls,.xlsx,.csv">
-            <small style="color: #94a3b8; display: block; margin-top: 5px;">Maksimal 2 file, maksimal 5 MB per file (gambar, dokumen, log).</small>
+            <small class="text-muted block mt-5">Maksimal 2 file, maksimal 5 MB per file (gambar, dokumen, log).</small>
         </div>
         <button type="submit" class="btn-primary">Kirim Tiket</button>
-        <a href="{{ url_for('tickets.index') }}" style="color: #94a3b8; margin-left: 15px; font-size: 13px; text-decoration: none;">Batal</a>
+        <a href="{{ url_for('tickets.index') }}" class="back-link ml-15">Batal</a>
     </form>
 </div>
 {% endblock %}

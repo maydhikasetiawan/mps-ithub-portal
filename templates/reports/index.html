@@ -2,31 +2,21 @@
 {% block title %}Pusat Laporan - MPS-ITHub{% endblock %}
 {% block header_title %}Reports & Analytics Center{% endblock %}
 {% block content %}
-<style>
-.reports-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: stretch; }
-.date-filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-@media (max-width: 768px) {
-    .reports-grid { grid-template-columns: 1fr; }
-    .date-filter-grid { grid-template-columns: 1fr; }
-}
-</style>
-
-
 <div class="reports-grid">
 
 
     <!-- 1. Form Filter Export Aset IT -->
 
 
-    <div class="form-card" style="max-width: 100%;">
+    <div class="form-card max-w-full">
 
-        <h3 style="color: #38bdf8; margin-bottom: 5px; display: flex; align-items: center; gap: 8px;">
+        <h3 class="text-accent mb-5 flex items-center gap-8">
 
             🖥️ Laporan Inventaris Aset (IPAM)
 
         </h3>
 
-        <p style="color: #94a3b8; font-size: 13px; margin-bottom: 20px;">Unduh rekap data fisik perangkat, status, lokasi, dan IPAM ke format Excel CSV.</p>
+        <p class="text-muted text-13 mb-20">Unduh rekap data fisik perangkat, status, lokasi, dan IPAM ke format Excel CSV.</p>
 
 
 
@@ -58,16 +48,16 @@
 
             </div>
 
-            <div class="form-group" style="margin-bottom: 25px;">
+            <div class="form-group mb-25">
 
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #cbd5e1;">
-                    <input type="checkbox" name="include_deleted" value="true" style="width: auto;">
+                <label class="flex items-center gap-8 cursor-pointer text-body">
+                    <input type="checkbox" name="include_deleted" value="true" class="w-auto">
                     Sertakan data Aset Terhapus / Archived
                 </label>
 
             </div>
 
-            <button type="submit" class="btn-primary" style="width: 100%; padding: 12px;">📥 Download Laporan Aset (.CSV)</button>
+            <button type="submit" class="btn-primary w-full">📥 Download Laporan Aset (.CSV)</button>
 
         </form>
 
@@ -77,11 +67,11 @@
 
 
     <!-- 2. Form Filter Export Service Desk (Tickets) -->
-    <div class="form-card" style="max-width: 100%;">
-        <h3 style="color: #38bdf8; margin-bottom: 5px; display: flex; align-items: center; gap: 8px;">
+    <div class="form-card max-w-full">
+        <h3 class="text-accent mb-5 flex items-center gap-8">
             🎫 Laporan IT Service Desk & Helpdesk
         </h3>
-        <p style="color: #94a3b8; font-size: 13px; margin-bottom: 20px;">Rekap riwayat gangguan, performa penanganan tiket, dan laporan solusi perbaikan.</p>
+        <p class="text-muted text-13 mb-20">Rekap riwayat gangguan, performa penanganan tiket, dan laporan solusi perbaikan.</p>
 
         <form action="{{ url_for('reports.export_tickets') }}" method="GET">
             <div class="date-filter-grid form-group">
@@ -105,7 +95,7 @@
                 </select>
             </div>
 
-            <div class="form-group" style="margin-bottom: 25px;">
+            <div class="form-group mb-25">
                 <label>Filter Status Tiket</label>
                 <select name="status" class="form-control">
                     <option value="">-- Semua Status --</option>
@@ -116,7 +106,7 @@
                 </select>
             </div>
 
-            <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; background: #10b981; color: #0f172a;">📥 Download Laporan Tiket (.CSV)</button>
+            <button type="submit" class="btn-export">📥 Download Laporan Tiket (.CSV)</button>
 
         </form>
 
