@@ -13,6 +13,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Idle Session Timeout (30 Menit)**: Sesi kedaluwarsa otomatis setelah 30 menit tanpa aktivitas (*server-side rolling idle timeout* melalui `PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)` dan `SESSION_REFRESH_EACH_REQUEST = True`). Permintaan berikutnya setelah kedaluwarsa dialihkan kembali ke halaman login dengan notifikasi satu kali bahwa sesi telah berakhir; pesan tidak muncul bagi pengunjung baru pertama kali maupun setelah aksi logout yang disengaja.
 - **Profile Dropdown**: Menu dropdown pengguna pada header (#profile-button) yang menampilkan nama pengguna, chevron rotasi, header status peran ("Masuk sebagai"), tautan Ganti Password, dan aksi Logout.
 - **Enforcement Ganti Kata Sandi**: Pengalihan otomatis bagi akun dengan status `must_change_password = TRUE`.
+- **Ingat saya (remember-me)**: checkbox `remember` pada form login menyetel `session['remember_me']`; sesi bertanda berlaku idle 30 hari (interface sesi khusus di `app.py`), sesi tanpa centang tetap idle 30 menit dengan penyegaran tiap request.
 
 ### B. Modul Dasbor Operasional (`routes/dashboard.py`)
 - **Statistik Aset Aktif**: Perhitungan total aset yang tidak berstatus terhapus (`is_deleted = FALSE`).
@@ -21,6 +22,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Grafik Analitis SVG Server-Rendered**: 4 grafik server-rendered SVG (grafik harian "Tiket Baru — 30 Hari Terakhir" / `daily_chart_svg`, tiket per kategori, tiket per status, dan aset per status) yang menggunakan palet warna Fase 5.3 tanpa dependensi script/CDN eksternal.
 - **Tabel Garansi Akan Habis**: Tabel HTML kondisional yang merinci perangkat dengan garansi mendekati habis (tampil hanya jika terdapat data aset relevan).
 - **Tren Komparasi 30 Hari**: Statistik komparasi tiket dibuat dan diselesaikan (30 hari berjalan vs 30 hari sebelumnya) diturunkan langsung dari data tanpa migrasi basis data.
+- **Endpoint JSON topbar**: `GET /api/search` (pencarian global Tiket/Aset/KB, maks. 5 hasil per grup, hasil KB menghormati status draft/published per peran) dan `GET /api/notifications` (jumlah + daftar tiket Open <24 jam untuk admin/IT dan monitor berstatus DOWN) untuk kotak pencarian, lonceng notifikasi, dan menu tindakan cepat pada topbar.
 
 ### C. Modul IT Assets / IPAM (`routes/assets.py`)
 - **Daftar Inventaris Aset**: Menampilkan seluruh perangkat aktif dengan kalkulasi umur perangkat otomatis, paginasi (20 data per halaman dengan pembatasan halaman dan navigasi nomor), filter status (`Procurement`, `Active`, `Under Repair`, `Retired`), dan filter penugasan (`unassigned` atau spesifik pengguna).
@@ -74,6 +76,7 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Alert DOWN / PULIH**: Alert transisi status di Riwayat Alert halaman Uptime + Telegram; DOWN setelah 2 cek DOWN otomatis berurutan dengan flag `is_alerted` (mencegah duplikasi DOWN akibat reset counter; alert PULIH hanya dikirim jika flag `is_alerted` aktif); banner DOWN saat ada layanan mati.
 - **Pengaturan Telegram (Admin)**: Simpan bot token + chat ID via halaman Pengaturan (token tidak pernah dirender); Tes Koneksi mengirim pesan tes beneran.
 - **Riwayat & Grafik per Monitor**: Halaman Riwayat dengan grafik latensi + statistik (uptime %, rata-rata/min/maks latensi, total cek, jumlah DOWN); rentang 24 jam / 7 hari / 30 hari; retensi 30 hari.
+- **Tampilan kartu monitor**: daftar layanan tampil sebagai grid kartu berisi saklar aktif/nonaktif, metrik Status/Respons/Uptime % (agregat 24 jam dari `uptime_checks`), dan sparkline 24 pemeriksaan terakhir.
 
 ### G. Modul Reports Center (`routes/reports.py`)
 - **Ekspor CSV Aset TI**: Unduh berkas CSV dengan filter kategori, status, dan opsi menyertakan aset terhapus. Memuat header block (judul, tanggal dibuat laporan, pembuat laporan, filter), summary block (total aset, rincian status dan kategori), 18 kolom detail termasuk 4 kolom baru: `Serial Number`, `Assigned To`, `Purchase Date`, dan `Warranty Expiry`, serta footer total baris data (`Total Baris Data: N`).
@@ -100,6 +103,9 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Dua tema tampilan**: Tema gelap (bawaan) dan tema terang untuk seluruh aplikasi termasuk halaman login, diganti lewat tombol toggle di header; pilihan pengguna tersimpan otomatis di peramban (`localStorage`).
 - **Tampilan responsif**: Navigasi sidebar menjadi drawer pada layar kecil; tabel data berubah menjadi kartu berlabel pada lebar ≤620px; target sentuh minimal 44px.
 - **Animasi antarmuka**: Animasi masuk halaman/kartu, modal, dan dropdown dengan durasi singkat (150–300ms), otomatis nonaktif bila pengguna mengaktifkan *reduced motion* di sistemnya.
+
+### K. Modul Branding (`routes/branding.py`)
+- Halaman **Pengaturan Branding** (`/settings/branding`, khusus admin): nama aplikasi, tagline, URL logo, headline + teks halaman login, teks footer — tersimpan pada tabel `branding_settings` (satu baris, migrasi 024) dan disuntikkan ke semua template via context processor `inject_branding` dengan nilai cadangan fail-safe.
 
 ---
 

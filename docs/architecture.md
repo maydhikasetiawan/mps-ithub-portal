@@ -56,6 +56,7 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 - **Tujuan**: Menampilkan statistik ringkasan operasional secara waktu nyata, 4 grafik server-rendered SVG (grafik harian "Tiket Baru — 30 Hari Terakhir" / `daily_chart_svg`, tiket per kategori, tiket per status, dan aset per status) yang menggunakan palet Fase 5.3, tabel HTML kondisional "Garansi Akan Habis" (muncul hanya jika terdapat aset mendekati habis garansi), serta baris tren komparasi 30 hari (tiket dibuat/diselesaikan periode 30 hari berjalan vs 30 hari sebelumnya) tanpa dependensi eksternal maupun migrasi basis data.
 - **Rute Utama**:
   - `GET /` & `GET /dashboard` — Agregasi total aset aktif, jumlah tiket terbuka/dalam pengerjaan, persentase ketersediaan layanan (*uptime percentage*), 4 grafik analitis SVG 30 hari, tabel HTML garansi kondisional, dan metrik tren.
+  - Endpoint JSON untuk topbar: `/api/search` (pencarian global) dan `/api/notifications` (lonceng notifikasi) — keduanya di balik `login_required`.
 
 ### c. `assets` (`routes/assets.py`, URL prefix: `/assets`)
 - **Tujuan**: Manajemen inventaris aset TI dan IP Address Management (IPAM). Mendukung pencatatan aset, nomor seri perangkat (`serial_number` pada formulir tambah/edit, halaman detail, dan impor), penghitungan usia perangkat, validasi keunikan tag aset, penugasan perangkat, pemantauan masa garansi dan opsi tanpa garansi, jejak audit riwayat perubahan (*asset activities*), impor massal dari CSV, pencetakan label fisik QR, soft delete beralasan, pemulihan (*restore*), serta penghapusan permanen khusus admin dengan verifikasi ganda.
@@ -175,6 +176,9 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET /api/v1/tickets` & `GET /api/v1/tickets/<int:ticket_id>` — Daftar dan detail tiket bantuan aktif.
   - `GET /api/v1/assets` & `GET /api/v1/assets/<int:asset_id>` — Daftar dan detail aset TI aktif.
   - `GET /api/v1/monitors` & `GET /api/v1/monitors/<int:monitor_id>` — Daftar dan detail status target uptime monitor.
+
+### i. `branding` (`routes/branding.py`, URL prefix: `/settings`)
+- Halaman pengaturan branding white-label per instalasi (khusus admin); data dari tabel `branding_settings` dibaca fail-safe oleh `get_branding()` di `database/db.py` dan disuntikkan ke template via context processor.
 
 ---
 

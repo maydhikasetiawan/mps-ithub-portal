@@ -6,6 +6,17 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [2026-10-20] - Fase 8: Port Total Mockup & Fitur Topbar
+- 8.1 Sistem Tombol & Ikon SVG (main `071cb25`): Sprite ikon SVG inline (`templates/_icons.html`) menggantikan ikon emoji; sistem tombol diseragamkan mengikuti mockup (metrik desktop min-height 39px, radius 9px, font 13px/700; target sentuh ≥44px pada layar kecil).
+- 8.2 Branding White-Label (main `60240ce`, migrasi 024): Tabel `branding_settings` satu baris + halaman admin "Pengaturan Branding" (`/settings/branding`) untuk nama aplikasi, tagline, logo, headline/teks login, dan teks footer per instalasi (bukan multi-tenant); nilai saat ini menjadi bawaan cadangan (fail-safe).
+- 8.3 Shell Baru (main `2e4dc49`): Sidebar 248px dengan seksi WORKSPACE/ADMINISTRATION, ikon navigasi SVG, badge jumlah asli (tiket terbuka & total aset), profil pindah ke footer sidebar (dropdown membuka ke atas), topbar sticky dengan efek blur.
+- 8.4 Header Halaman & Kartu Statistik (main `c0ff650`): Pola `.page-head` di halaman daftar, kartu statistik `.stat-card` termasuk baris statistik global Aset, penyelarasan toolbar 39px; perbaikan lapisan presentasi ikon SVG (stroke, bukan siluet solid).
+- 8.5 Dasbor (main `6804fda`, penyesuaian feed `4761892`): Banner kesehatan layanan, 4 kartu statistik, panel "Aktivitas Terbaru" gabungan aktivitas tiket + aset (maks. 5 item).
+- 8.6 Login Dua Kolom (main `1aa683c`, perbaikan fidelitas `44ba871`, perbaikan layout `181501b`): Halaman login port mockup dua kolom (panel cerita + formulir flat), checkbox "Ingat saya" tampil (backend menyusul di 8.9).
+- 8.7 Aksi Baris Ikon-Saja (main `2443366`, perbaikan alignment `3d977d9`): Semua aksi baris tabel menjadi tombol ikon `.mini-btn` dengan tooltip CSS dari `aria-label`; header kolom AKSI rata tengah; tombol hapus akun sendiri tampil nonaktif pada baris pengguna yang sedang login.
+- 8.8 Kartu Monitor Uptime (main `fdab42c`, perbaikan spasi `3881c9c`): Daftar monitor menjadi grid kartu — saklar on/off (form toggle yang sama), metrik Status/Respons/Uptime % 24 jam dari data `uptime_checks`, sparkline 24 pemeriksaan terakhir (bar DOWN berwarna merah).
+- 8.9 Fitur Topbar & Remember-Me (main `a86938b`, perbaikan endpoint `3c619e3`): Pencarian global (`GET /api/search`, grup Tiket/Aset/KB, menghormati hak akses peran), lonceng notifikasi (`GET /api/notifications`: tiket Open <24 jam + monitor DOWN, polling 60 detik), menu "Tindakan cepat" per peran, dan backend "Ingat saya" (sesi bertanda berlaku idle 30 hari; sesi biasa tetap 30 menit). Catatan: rilis awal 8.9 sempat menyebabkan error 500 pada halaman admin/IT selama ±8 menit akibat nama endpoint yang salah pada menu cepat; diperbaiki pada commit `3c619e3`.
+
 ## [2026-10-20] - Fase 7: Modernisasi UI
 - 7.1 Sentralisasi Gaya (main `eabd55b`): Seluruh gaya inline dan blok `<style>` per halaman dipindah ke satu berkas terpusat `static/css/theme.css`; tidak ada perubahan visual selain perbaikan tombol Telegram Settings.
 - 7.2 Penyegaran Tema (5 sub-batch, main `fe70d7a`, `5a04d55`, `163b69f`, `57d6b53`, `12fdb32`, `e149f0a`): Sistem token desain baru dengan dua tema aktif (gelap bawaan + terang, toggle di header, tersimpan di `localStorage` kunci `mpshub-theme`); fon Public Sans + IBM Plex Mono; kolom STATUS dan SLA pada daftar tiket dipisah menjadi dua kolom; tabel menjadi pola kartu berlabel `data-label` pada layar ≤620px.
