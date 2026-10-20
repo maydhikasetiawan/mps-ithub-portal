@@ -44,11 +44,11 @@
             <td data-label="DIHAPUS OLEH"><strong>{{ a.deleted_by or '-' }}</strong></td>
             <td data-label="AKSI">
                 {% if session['role'] != 'guest' %}
-                <div class="flex gap-6 items-center">
+                <div class="row-actions">
                     <form method="POST" action="{{ url_for('assets.restore', asset_id=a.id) }}" class="inline-form">
-                        <button type="submit" class="btn-primary">Restore</button>
+                        <button type="submit" class="mini-btn" aria-label="Pulihkan aset"><svg class="icon" aria-hidden="true"><use href="#i-restore"/></svg></button>
                     </form>
-                    <a href="{{ url_for('assets.hard_delete', asset_id=a.id) }}" class="btn-danger">Hapus Permanen</a>
+                    <a href="{{ url_for('assets.hard_delete', asset_id=a.id) }}" class="mini-btn danger" aria-label="Hapus permanen"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></a>
                 </div>
                 {% else %}
                 -

@@ -42,10 +42,10 @@
             </div>
 
             {% if session['role'] in ['admin', 'it'] %}
-            <div class="flex gap-8 items-center">
-                <a href="{{ url_for('knowledge_base.edit', article_id=a.id) }}" class="btn-secondary btn-sm-44">Edit</a>
+            <div class="row-actions">
+                <a href="{{ url_for('knowledge_base.edit', article_id=a.id) }}" class="mini-btn" aria-label="Edit artikel"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
                 <form method="POST" action="{{ url_for('knowledge_base.delete', article_id=a.id) }}" class="inline-form" data-confirm="Apakah Anda yakin ingin menghapus artikel ini?">
-                    <button type="submit" class="btn-danger btn-sm-44">Hapus</button>
+                    <button type="submit" class="mini-btn danger" aria-label="Hapus artikel"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
                 </form>
             </div>
             {% endif %}

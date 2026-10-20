@@ -192,6 +192,19 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 /* Utility for responsive tables (per-page tasks will apply) */
 .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
+/* row actions (mockup mini-btn) */
+.row-actions { display: flex; justify-content: flex-end; gap: 6px; align-items: center; }
+.mini-btn { width: 31px; height: 31px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--muted); display: grid; place-items: center; cursor: pointer; text-decoration: none; position: relative; }
+.mini-btn .icon { width: 14px; height: 14px; }
+.mini-btn:hover { color: var(--text); border-color: var(--line-strong); }
+.mini-btn.danger { color: var(--danger); }
+.mini-btn.danger:hover { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+.mini-btn::after { content: attr(aria-label); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translate(-50%, 2px); background: var(--text); color: var(--bg); font-size: 11px; font-weight: 600; line-height: 1; padding: 5px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease; z-index: 60; }
+.mini-btn:hover::after, .mini-btn:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.row-actions .mini-btn:last-child::after { left: auto; right: 0; transform: translate(0, 2px); }
+.row-actions .mini-btn:last-child:hover::after, .row-actions .mini-btn:last-child:focus-visible::after { transform: translate(0, 0); }
+@media (max-width: 768px) { .row-actions { justify-content: flex-start; } .mini-btn { width: 44px; height: 44px; } .mini-btn .icon { width: 16px; height: 16px; } }
+
 @media (max-width: 768px) {
     /* Touch target improvements for shared layout elements */
     .nav-link { min-height: 44px; display: flex; align-items: center; }

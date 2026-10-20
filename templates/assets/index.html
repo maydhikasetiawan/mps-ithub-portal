@@ -96,8 +96,10 @@
             </td>
             <td data-label="AKSI">
                 {% if session['role'] != 'guest' %}
-                <a href="{{ url_for('assets.edit', asset_id=a.id) }}" class="btn-primary">Edit</a>
-                <a href="{{ url_for('assets.delete', asset_id=a.id) }}" class="btn-danger">Hapus</a>
+                <div class="row-actions">
+                    <a href="{{ url_for('assets.edit', asset_id=a.id) }}" class="mini-btn" aria-label="Edit aset"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
+                    <a href="{{ url_for('assets.delete', asset_id=a.id) }}" class="mini-btn danger" aria-label="Hapus aset"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></a>
+                </div>
                 {% else %}
                 -
                 {% endif %}

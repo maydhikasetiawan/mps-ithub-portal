@@ -80,18 +80,16 @@
             <td data-label="LATENCY"><strong class="text-accent">{{ m.latency }} ms</strong></td>
             <td data-label="TERAKHIR DICEK"><small class="text-muted">{{ m.last_check.strftime('%Y-%m-%d %H:%M:%S') if m.last_check else '-' }}</small></td>
             <td data-label="AKSI">
-                <div class="flex gap-8 items-center flex-wrap">
-                    <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="btn-primary">🔄 Cek Now</a>
-                    <a href="{{ url_for('uptime.history', monitor_id=m.id) }}" class="btn-secondary">📈 Riwayat</a>
+                <div class="row-actions">
+                    <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="mini-btn" aria-label="Cek sekarang"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></a>
+                    <a href="{{ url_for('uptime.history', monitor_id=m.id) }}" class="mini-btn" aria-label="Riwayat monitor"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></a>
                     {% if session['role'] in ['admin', 'it'] %}
-                    <a href="{{ url_for('uptime.edit', monitor_id=m.id) }}" class="btn-secondary">✏️ Edit</a>
+                    <a href="{{ url_for('uptime.edit', monitor_id=m.id) }}" class="mini-btn" aria-label="Edit monitor"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
                     <form method="POST" action="{{ url_for('uptime.toggle', monitor_id=m.id) }}" class="inline-form">
-                        <button type="submit" class="btn-secondary">
-                            {% if m.enabled %}⏸️ Nonaktifkan{% else %}▶️ Aktifkan{% endif %}
-                        </button>
+                        <button type="submit" class="mini-btn" aria-label="{% if m.enabled %}Nonaktifkan monitor{% else %}Aktifkan monitor{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-{% if m.enabled %}pause{% else %}play{% endif %}"/></svg></button>
                     </form>
                     <form method="POST" action="{{ url_for('uptime.delete', monitor_id=m.id) }}" class="inline-form" data-confirm="Hapus target ini?">
-                        <button type="submit" class="btn-danger">Hapus</button>
+                        <button type="submit" class="mini-btn danger" aria-label="Hapus monitor"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
                     </form>
                     {% endif %}
                 </div>

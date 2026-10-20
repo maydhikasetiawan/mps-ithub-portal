@@ -53,10 +53,10 @@
                         <td data-label="PEMBUAT">{{ t.author or '-' }}</td>
                         <td data-label="TANGGAL"><small class="text-muted">{{ t.created_at.strftime('%Y-%m-%d %H:%M') if t.created_at else '-' }}</small></td>
                         <td data-label="AKSI">
-                            <div class="flex gap-6 items-center">
-                                <a href="{{ url_for('tickets.edit_canned_response', template_id=t.id) }}" class="btn-primary">Edit</a>
+                            <div class="row-actions">
+                                <a href="{{ url_for('tickets.edit_canned_response', template_id=t.id) }}" class="mini-btn" aria-label="Edit template"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
                                 <form method="POST" action="{{ url_for('tickets.delete_canned_response', template_id=t.id) }}" class="inline-form" data-confirm="Hapus template respon ini?">
-                                    <button type="submit" class="btn-danger">Hapus</button>
+                                    <button type="submit" class="mini-btn danger" aria-label="Hapus template"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
                                 </form>
                             </div>
                         </td>

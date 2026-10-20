@@ -45,11 +45,11 @@
             <td data-label="WAKTU DIHAPUS"><small class="text-muted">{{ u.deleted_at.strftime('%Y-%m-%d %H:%M') if u.deleted_at else '-' }}</small></td>
             <td data-label="DIHAPUS OLEH"><strong>{{ u.deleted_by or '-' }}</strong></td>
             <td data-label="AKSI">
-                <div class="flex gap-6 items-center">
+                <div class="row-actions">
                     <form method="POST" action="{{ url_for('users.restore', user_id=u.id) }}" class="inline-form">
-                        <button type="submit" class="btn-primary">Restore</button>
+                        <button type="submit" class="mini-btn" aria-label="Pulihkan pengguna"><svg class="icon" aria-hidden="true"><use href="#i-restore"/></svg></button>
                     </form>
-                    <a href="{{ url_for('users.hard_delete', user_id=u.id) }}" class="btn-danger">Hapus Permanen</a>
+                    <a href="{{ url_for('users.hard_delete', user_id=u.id) }}" class="mini-btn danger" aria-label="Hapus permanen"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></a>
                 </div>
             </td>
         </tr>

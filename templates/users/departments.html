@@ -33,9 +33,11 @@
                     <td data-label="ID"><code>#{{ d.id }}</code></td>
                     <td data-label="NAMA DEPARTEMEN"><strong>{{ d.name }}</strong></td>
                     <td data-label="AKSI">
-                        <form method="POST" action="{{ url_for('users.delete_department', dept_id=d.id) }}" class="inline-form" data-confirm="Hapus departemen ini?">
-                            <button type="submit" class="btn-danger">Hapus</button>
-                        </form>
+                        <div class="row-actions">
+                            <form method="POST" action="{{ url_for('users.delete_department', dept_id=d.id) }}" class="inline-form" data-confirm="Hapus departemen ini?">
+                                <button type="submit" class="mini-btn danger" aria-label="Hapus departemen"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% else %}

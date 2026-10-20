@@ -35,9 +35,11 @@
                     <td data-label="ID"><code>#{{ c.id }}</code></td>
                     <td data-label="NAMA KATEGORI"><strong>{{ c.name }}</strong></td>
                     <td data-label="AKSI">
-                        <form method="POST" action="{{ url_for('tickets.delete_category', category_id=c.id) }}" class="inline-form" data-confirm="Hapus kategori ini?">
-                            <button type="submit" class="btn-danger">Hapus</button>
-                        </form>
+                        <div class="row-actions">
+                            <form method="POST" action="{{ url_for('tickets.delete_category', category_id=c.id) }}" class="inline-form" data-confirm="Hapus kategori ini?">
+                                <button type="submit" class="mini-btn danger" aria-label="Hapus kategori"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% else %}
