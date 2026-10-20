@@ -199,6 +199,8 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 .mini-btn:hover { color: var(--text); border-color: var(--line-strong); }
 .mini-btn.danger { color: var(--danger); }
 .mini-btn.danger:hover { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+.mini-btn:disabled { opacity: .35; cursor: not-allowed; }
+.mini-btn:disabled::after { display: none; }
 .mini-btn::after { content: attr(aria-label); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translate(-50%, 2px); background: var(--text); color: var(--bg); font-size: 11px; font-weight: 600; line-height: 1; padding: 5px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease; z-index: 60; }
 .mini-btn:hover::after, .mini-btn:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
 .row-actions .mini-btn:last-child::after { left: auto; right: 0; transform: translate(0, 2px); }

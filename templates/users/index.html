@@ -29,7 +29,7 @@
             <th>ROLE</th>
             <th>DEPARTEMEN</th>
             <th>TANGGAL DAFTAR</th>
-            <th>AKSI</th>
+            <th style="text-align: right;">AKSI</th>
         </tr>
     </thead>
     <tbody>
@@ -53,7 +53,7 @@
                     {% if u.id != session['user_id'] %}
                     <a href="{{ url_for('users.delete', user_id=u.id) }}" class="mini-btn danger" aria-label="Hapus pengguna"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></a>
                     {% else %}
-                    <small class="text-faint">(Akun Anda)</small>
+                    <button type="button" class="mini-btn danger" disabled aria-label="Tidak dapat menghapus akun sendiri"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
                     {% endif %}
                 </div>
             </td>
