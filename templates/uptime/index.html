@@ -45,64 +45,62 @@
 </div>
 {% endif %}
 
-<div class="table-responsive">
-<table class="data-table">
-    <thead>
-        <tr>
-            <th>NAMA SERVICE</th>
-            <th>TARGET / HOST</th>
-            <th>TIPE CHECK</th>
-            <th>STATUS</th>
-            <th>LATENCY</th>
-            <th>TERAKHIR DICEK</th>
-            <th style="text-align: right;">AKSI</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for m in monitors %}
-        {% if not m.enabled %}
-        <tr class="opacity-60">
-        {% else %}
-        <tr>
-        {% endif %}
-            <td data-label="NAMA SERVICE"><strong>{{ m.name }}</strong></td>
-            <td data-label="TARGET / HOST"><code>{{ m.target }}{% if m.port %}:{{ m.port }}{% endif %}</code></td>
-            <td data-label="TIPE CHECK"><span class="badge badge-active">{{ m.type }}</span></td>
-            <td data-label="STATUS">
-                {% if not m.enabled %}
-                <span class="badge badge-yellow">⏸️ NONAKTIF</span>
-                {% else %}
-                <span class="badge {% if m.status == 'UP' %}badge-green{% elif m.status == 'DOWN' %}badge-red{% else %}badge-yellow{% endif %}">
-                    {% if m.status == 'UP' %}🟢 ONLINE{% elif m.status == 'DOWN' %}🔴 OFFLINE{% else %}🟡 UNKNOWN{% endif %}
-                </span>
-                {% endif %}
-            </td>
-            <td data-label="LATENCY"><strong class="text-accent">{{ m.latency }} ms</strong></td>
-            <td data-label="TERAKHIR DICEK"><small class="text-muted">{{ m.last_check.strftime('%Y-%m-%d %H:%M:%S') if m.last_check else '-' }}</small></td>
-            <td data-label="AKSI">
-                <div class="row-actions">
-                    <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="mini-btn" aria-label="Cek sekarang"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></a>
-                    <a href="{{ url_for('uptime.history', monitor_id=m.id) }}" class="mini-btn" aria-label="Riwayat monitor"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></a>
-                    {% if session['role'] in ['admin', 'it'] %}
-                    <a href="{{ url_for('uptime.edit', monitor_id=m.id) }}" class="mini-btn" aria-label="Edit monitor"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
-                    <form method="POST" action="{{ url_for('uptime.toggle', monitor_id=m.id) }}" class="inline-form">
-                        <button type="submit" class="mini-btn" aria-label="{% if m.enabled %}Nonaktifkan monitor{% else %}Aktifkan monitor{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-{% if m.enabled %}pause{% else %}play{% endif %}"/></svg></button>
-                    </form>
-                    <form method="POST" action="{{ url_for('uptime.delete', monitor_id=m.id) }}" class="inline-form" data-confirm="Hapus target ini?">
-                        <button type="submit" class="mini-btn danger" aria-label="Hapus monitor"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
-                    </form>
-                    {% endif %}
+{% if monitors %}
+<div class="uptime-grid">
+    {% for m in monitors %}
+    <article class="monitor-card{% if not m.enabled %} disabled{% endif %}">
+        <div class="monitor-head">
+            <div class="monitor-title">
+                <span class="monitor-icon"><svg class="icon" aria-hidden="true"><use href="#i-{% if m.type in ['HTTP', 'HTTPS'] %}pulse{% else %}server{% endif %}"/></svg></span>
+                <div>
+                    <h3>{{ m.name }}</h3>
+                    <div class="target">{{ m.target }}{% if m.port %}:{{ m.port }}{% endif %}</div>
                 </div>
-            </td>
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="7" class="empty-state">Belum ada target monitor yang dipantau.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+            </div>
+            {% if session['role'] in ['admin', 'it'] %}
+            <form method="POST" action="{{ url_for('uptime.toggle', monitor_id=m.id) }}" class="inline-form">
+                <button type="submit" class="switch-btn" aria-pressed="{{ 'true' if m.enabled else 'false' }}" aria-label="{% if m.enabled %}Nonaktifkan{% else %}Aktifkan{% endif %} monitoring {{ m.name }}"></button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="monitor-metrics">
+            <div class="metric"><span>Status</span><strong style="color: {% if not m.enabled %}var(--muted){% elif m.status == 'UP' %}var(--ok){% elif m.status == 'DOWN' %}var(--danger){% else %}var(--amber){% endif %}">{% if not m.enabled %}NONAKTIF{% elif m.status == 'UP' %}ONLINE{% elif m.status == 'DOWN' %}OFFLINE{% else %}UNKNOWN{% endif %}</strong></div>
+            <div class="metric"><span>Respons</span><strong>{{ m.latency }} ms</strong></div>
+            <div class="metric"><span>Uptime</span><strong>{% if m.uptime_pct is not none %}{{ m.uptime_pct }}%{% else %}—{% endif %}</strong></div>
+        </div>
+        <div class="sparkline">
+            {% for p in m.spark %}<i style="height: {{ p.h }}%" {% if p.down %}class="down"{% endif %}></i>{% endfor %}
+        </div>
+        <div class="monitor-foot">
+            <div>
+                {% if not m.enabled %}
+                <span class="badge badge-yellow">NONAKTIF</span>
+                {% elif m.status == 'UP' %}
+                <span class="badge badge-green">ONLINE</span>
+                {% elif m.status == 'DOWN' %}
+                <span class="badge badge-red">OFFLINE</span>
+                {% else %}
+                <span class="badge badge-yellow">UNKNOWN</span>
+                {% endif %}
+                <small class="text-muted">{{ m.last_check.strftime('%Y-%m-%d %H:%M:%S') if m.last_check else '-' }}</small>
+            </div>
+            <div class="monitor-actions">
+                <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="mini-btn" aria-label="Cek sekarang"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></a>
+                <a href="{{ url_for('uptime.history', monitor_id=m.id) }}" class="mini-btn" aria-label="Riwayat monitor"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></a>
+                {% if session['role'] in ['admin', 'it'] %}
+                <a href="{{ url_for('uptime.edit', monitor_id=m.id) }}" class="mini-btn" aria-label="Edit monitor"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
+                <form method="POST" action="{{ url_for('uptime.delete', monitor_id=m.id) }}" class="inline-form" data-confirm="Hapus target ini?">
+                    <button type="submit" class="mini-btn danger" aria-label="Hapus monitor"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </article>
+    {% endfor %}
 </div>
+{% else %}
+<div class="empty-state">Belum ada target monitor yang dipantau.</div>
+{% endif %}
 
 <h3 class="section-title-spaced">Riwayat Alert</h3>
 <div class="table-responsive">

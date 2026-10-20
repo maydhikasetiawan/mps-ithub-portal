@@ -92,6 +92,35 @@ def index():
     cur.execute("SELECT * FROM monitors ORDER BY id DESC;")
     monitors_list = cur.fetchall()
 
+    for m in monitors_list:
+        cur.execute("""
+            SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'UP') AS up
+            FROM uptime_checks
+            WHERE monitor_id = %s AND checked_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours';
+        """, (m['id'],))
+        row = cur.fetchone()
+        tot = row['total'] or 0
+        up = row['up'] or 0
+        m['uptime_pct'] = round(up / tot * 100, 1) if tot > 0 else None
+
+        cur.execute("""
+            SELECT status, latency FROM uptime_checks
+            WHERE monitor_id = %s ORDER BY checked_at DESC LIMIT 24;
+        """, (m['id'],))
+        checks = cur.fetchall()
+        checks.reverse()
+        up_lats = [c['latency'] for c in checks if c['status'] == 'UP' and c['latency'] is not None]
+        max_lat = max(up_lats) if up_lats else 0
+        spark = []
+        for c in checks:
+            if c['status'] == 'DOWN':
+                spark.append({'h': 15, 'down': True})
+            else:
+                lat = c['latency'] or 0
+                h = max(15, round(lat / max_lat * 100)) if max_lat > 0 else 15
+                spark.append({'h': h, 'down': False})
+        m['spark'] = spark
+
     cur.execute("""
         SELECT a.*, mon.name AS monitor_name
         FROM uptime_alerts a
