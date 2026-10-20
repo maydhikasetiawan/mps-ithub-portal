@@ -1,6 +1,7 @@
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Flask
+from flask.sessions import SecureCookieSessionInterface
 from werkzeug.middleware.proxy_fix import ProxyFix
 from routes.auth import auth_bp
 from routes.dashboard import dashboard_bp
@@ -31,6 +32,18 @@ app.secret_key = secret_key
 # every request refreshes the expiry, so the 30 minutes count idle time.
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+
+# Remember-me: a session flagged 'remember_me' at login (the user
+# checked "Ingat saya") gets a 30-day idle lifetime; every other
+# session keeps the 30-minute lifetime configured above.
+class _RememberMeSessionInterface(SecureCookieSessionInterface):
+    def get_expiration_time(self, app, session):
+        if session.get('remember_me'):
+            return datetime.now(timezone.utc) + timedelta(days=30)
+        return super().get_expiration_time(app, session)
+
+
+app.session_interface = _RememberMeSessionInterface()
 
 # Register Blueprints
 app.register_blueprint(auth_bp)

@@ -78,6 +78,27 @@
             <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle navigation menu">☰</button>
             <h2>{% block header_title %}Operational Dashboard{% endblock %}</h2>
             <div class="header-actions">
+                <div class="search-wrap">
+                    <label class="search-box"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><input type="text" id="global-search" placeholder="Cari aset, tiket, artikel..." aria-label="Cari di portal" autocomplete="off"></label>
+                    <div class="search-results" id="search-results" hidden></div>
+                </div>
+                <div class="top-wrap">
+                    <button type="button" class="icon-btn bell-btn" id="bell-btn" aria-label="Notifikasi" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg><span class="bell-badge" id="bell-badge" hidden>0</span></button>
+                    <div class="notif-panel" id="notif-panel" hidden></div>
+                </div>
+                {% if session['role'] in ['admin', 'it', 'user'] %}
+                <div class="top-wrap">
+                    <button type="button" class="btn-secondary" id="quick-btn" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span class="quick-label">Tindakan cepat</span></button>
+                    <div class="quick-menu" id="quick-menu" hidden>
+                        <a href="{{ url_for('tickets.add') }}" class="quick-item">Tiket Baru</a>
+                        {% if session['role'] in ['admin', 'it'] %}
+                        <a href="{{ url_for('assets.add') }}" class="quick-item">Tambah Aset</a>
+                        <a href="{{ url_for('knowledge_base.add') }}" class="quick-item">Artikel Baru</a>
+                        <a href="{{ url_for('uptime.add_monitor') }}" class="quick-item">Tambah Monitor</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
                 <button type="button" id="themeBtn" class="theme-toggle" aria-label="Ganti tema"><svg class="icon icon-moon" aria-hidden="true"><use href="#i-moon"/></svg><svg class="icon icon-sun" aria-hidden="true"><use href="#i-sun"/></svg></button>
             </div>
         </div>
@@ -187,6 +208,165 @@
                     try { localStorage.setItem('mpshub-theme', next); } catch (e) {}
                 });
             } catch (e) {}
+        })();
+    </script>
+    <script>
+        (function() {
+            var searchInput = document.getElementById('global-search');
+            var searchResults = document.getElementById('search-results');
+            var bellBtn = document.getElementById('bell-btn');
+            var bellBadge = document.getElementById('bell-badge');
+            var notifPanel = document.getElementById('notif-panel');
+            var quickBtn = document.getElementById('quick-btn');
+            var quickMenu = document.getElementById('quick-menu');
+
+            function el(tag, cls, text) {
+                var node = document.createElement(tag);
+                if (cls) node.className = cls;
+                if (text !== undefined) node.textContent = text;
+                return node;
+            }
+            function closeAll() {
+                if (searchResults) searchResults.hidden = true;
+                if (notifPanel) notifPanel.hidden = true;
+                if (quickMenu) quickMenu.hidden = true;
+                if (bellBtn) bellBtn.setAttribute('aria-expanded', 'false');
+                if (quickBtn) quickBtn.setAttribute('aria-expanded', 'false');
+            }
+
+            // Global search
+            var searchTimer = null;
+            if (searchInput && searchResults) {
+                searchInput.addEventListener('input', function() {
+                    var q = searchInput.value.trim();
+                    clearTimeout(searchTimer);
+                    if (q.length < 2) { searchResults.hidden = true; return; }
+                    searchTimer = setTimeout(function() {
+                        fetch('/api/search?q=' + encodeURIComponent(q))
+                            .then(function(r) { return r.json(); })
+                            .then(function(data) { renderSearch(data, q); })
+                            .catch(function() { searchResults.hidden = true; });
+                    }, 250);
+                });
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        var first = searchResults.querySelector('a.pop-item');
+                        if (first && !searchResults.hidden) { e.preventDefault(); window.location = first.href; }
+                    }
+                });
+            }
+            function renderSearch(data, q) {
+                searchResults.textContent = '';
+                var total = 0;
+                var groups = [
+                    ['TIKET', data.tickets || [], function(t) { return [t.title, t.code]; }],
+                    ['ASET', data.assets || [], function(a) { return [a.name, a.tag]; }],
+                    ['ARTIKEL', data.kb || [], function(k) { return [k.title, k.category || '']; }]
+                ];
+                groups.forEach(function(g) {
+                    if (!g[1].length) return;
+                    total += g[1].length;
+                    searchResults.appendChild(el('div', 'pop-label', g[0]));
+                    g[1].forEach(function(item) {
+                        var pair = g[2](item);
+                        var a = el('a', 'pop-item');
+                        a.href = item.url;
+                        a.appendChild(el('strong', '', pair[0]));
+                        a.appendChild(el('span', '', pair[1]));
+                        searchResults.appendChild(a);
+                    });
+                });
+                if (!total) {
+                    searchResults.appendChild(el('div', 'pop-empty', 'Tidak ada hasil untuk "' + q + '".'));
+                }
+                searchResults.hidden = false;
+            }
+
+            // Notification bell
+            function renderBadge(count) {
+                if (!bellBadge) return;
+                bellBadge.textContent = count;
+                bellBadge.hidden = !(count > 0);
+            }
+            function loadNotifications(renderPanel) {
+                fetch('/api/notifications')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        renderBadge(data.count || 0);
+                        if (renderPanel) renderNotifPanel(data);
+                    })
+                    .catch(function() {});
+            }
+            function renderNotifPanel(data) {
+                notifPanel.textContent = '';
+                var has = false;
+                if (data.new_tickets && data.new_tickets.length) {
+                    has = true;
+                    notifPanel.appendChild(el('div', 'pop-label', 'Tiket baru (24 jam)'));
+                    data.new_tickets.forEach(function(t) {
+                        var a = el('a', 'pop-item');
+                        a.href = t.url;
+                        a.appendChild(el('strong', '', t.title));
+                        a.appendChild(el('span', '', t.code + ' ? ' + t.time));
+                        notifPanel.appendChild(a);
+                    });
+                }
+                if (data.down_monitors && data.down_monitors.length) {
+                    has = true;
+                    notifPanel.appendChild(el('div', 'pop-label', 'Monitor down'));
+                    data.down_monitors.forEach(function(m) {
+                        var a = el('a', 'pop-item');
+                        a.href = m.url;
+                        a.appendChild(el('strong', '', m.name));
+                        a.appendChild(el('span', 'notif-down', 'Sedang OFFLINE'));
+                        notifPanel.appendChild(a);
+                    });
+                }
+                if (!has) {
+                    notifPanel.appendChild(el('div', 'pop-empty', 'Tidak ada notifikasi baru.'));
+                }
+            }
+            if (bellBtn && notifPanel) {
+                loadNotifications(false);
+                setInterval(function() { loadNotifications(false); }, 60000);
+                bellBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var willOpen = notifPanel.hidden;
+                    closeAll();
+                    if (willOpen) {
+                        loadNotifications(true);
+                        notifPanel.hidden = false;
+                        bellBtn.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            }
+
+            // Quick actions
+            if (quickBtn && quickMenu) {
+                quickBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var willOpen = quickMenu.hidden;
+                    closeAll();
+                    if (willOpen) {
+                        quickMenu.hidden = false;
+                        quickBtn.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            }
+
+            document.addEventListener('click', function(e) {
+                var t = e.target;
+                var searchWrap = searchInput ? searchInput.closest('.search-wrap') : null;
+                var bellWrap = bellBtn ? bellBtn.closest('.top-wrap') : null;
+                var quickWrap = quickBtn ? quickBtn.closest('.top-wrap') : null;
+                var inside = (searchWrap && searchWrap.contains(t)) ||
+                             (bellWrap && bellWrap.contains(t)) ||
+                             (quickWrap && quickWrap.contains(t));
+                if (!inside) closeAll();
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') closeAll();
+            });
         })();
     </script>
     {% include '_confirm_modal.html' %}

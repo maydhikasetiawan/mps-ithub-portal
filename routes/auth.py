@@ -105,6 +105,7 @@ def login():
 
             if user and check_password_hash(user['password_hash'], password):
                 session.permanent = True
+                session['remember_me'] = bool(request.form.get('remember'))
                 _reset_attempts(ip, username)
                 session['user_id'] = user['id']
                 session['username'] = user['username']

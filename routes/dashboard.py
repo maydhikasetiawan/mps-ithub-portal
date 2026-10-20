@@ -1,5 +1,5 @@
 import html
-from flask import Blueprint, render_template, session
+from flask import Blueprint, render_template, session, request, jsonify, url_for
 from routes.auth import login_required
 from database.db import get_db_connection
 from datetime import date, timedelta
@@ -330,3 +330,108 @@ def index():
         recent_activities=recent_activities,
         active_page='dashboard'
     )
+
+@dashboard_bp.route('/api/search')
+@login_required
+def api_search():
+    q = (request.args.get('q') or '').strip()
+    result = {'tickets': [], 'assets': [], 'kb': []}
+    if len(q) < 2:
+        return jsonify(result)
+    like = f'%{q}%'
+    role = session.get('role', 'guest')
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, ticket_code, title FROM tickets
+            WHERE is_deleted = FALSE
+              AND (LOWER(ticket_code) LIKE LOWER(%s) OR LOWER(title) LIKE LOWER(%s))
+            ORDER BY id DESC LIMIT 5;
+        """, (like, like))
+        result['tickets'] = [
+            {'code': r['ticket_code'], 'title': r['title'],
+             'url': url_for('tickets.detail', ticket_id=r['id'])}
+            for r in cur.fetchall()
+        ]
+        if role in ('admin', 'it', 'guest'):
+            cur.execute("""
+                SELECT id, asset_tag, name FROM assets
+                WHERE is_deleted = FALSE
+                  AND (LOWER(asset_tag) LIKE LOWER(%s) OR LOWER(name) LIKE LOWER(%s)
+                       OR LOWER(COALESCE(ip_address, '')) LIKE LOWER(%s))
+                ORDER BY id DESC LIMIT 5;
+            """, (like, like, like))
+            result['assets'] = [
+                {'tag': r['asset_tag'], 'name': r['name'],
+                 'url': url_for('assets.detail', asset_id=r['id'])}
+                for r in cur.fetchall()
+            ]
+        kb_sql = ("SELECT id, title, category FROM kb_articles "
+                  "WHERE LOWER(title) LIKE LOWER(%s)")
+        if role not in ('admin', 'it'):
+            kb_sql += " AND status = 'published'"
+        kb_sql += " ORDER BY id DESC LIMIT 5;"
+        cur.execute(kb_sql, (like,))
+        result['kb'] = [
+            {'title': r['title'], 'category': r['category'],
+             'url': url_for('knowledge_base.detail', article_id=r['id'])}
+            for r in cur.fetchall()
+        ]
+        cur.close()
+    except Exception:
+        return jsonify({'tickets': [], 'assets': [], 'kb': []})
+    finally:
+        conn.close()
+    return jsonify(result)
+
+
+@dashboard_bp.route('/api/notifications')
+@login_required
+def api_notifications():
+    role = session.get('role', 'guest')
+    new_tickets = []
+    new_ticket_count = 0
+    down_monitors = []
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        if role in ('admin', 'it'):
+            cur.execute("""
+                SELECT COUNT(*) AS c FROM tickets
+                WHERE is_deleted = FALSE AND status = 'Open'
+                  AND created_at >= NOW() - INTERVAL '24 hours';
+            """)
+            new_ticket_count = cur.fetchone()['c']
+            cur.execute("""
+                SELECT id, ticket_code, title, created_at FROM tickets
+                WHERE is_deleted = FALSE AND status = 'Open'
+                  AND created_at >= NOW() - INTERVAL '24 hours'
+                ORDER BY id DESC LIMIT 5;
+            """)
+            new_tickets = [
+                {'code': r['ticket_code'], 'title': r['title'],
+                 'time': r['created_at'].strftime('%Y-%m-%d %H:%M') if r['created_at'] else '',
+                 'url': url_for('tickets.detail', ticket_id=r['id'])}
+                for r in cur.fetchall()
+            ]
+        if role in ('admin', 'it', 'guest'):
+            cur.execute("""
+                SELECT id, name FROM monitors
+                WHERE enabled = TRUE AND last_status = 'DOWN'
+                ORDER BY name ASC;
+            """)
+            down_monitors = [
+                {'name': r['name'], 'url': url_for('uptime.index')}
+                for r in cur.fetchall()
+            ]
+        cur.close()
+        conn.close()
+    except Exception:
+        new_tickets, new_ticket_count, down_monitors = [], 0, []
+    return jsonify({
+        'count': new_ticket_count + len(down_monitors),
+        'new_tickets': new_tickets,
+        'new_ticket_count': new_ticket_count,
+        'down_monitors': down_monitors,
+    })
