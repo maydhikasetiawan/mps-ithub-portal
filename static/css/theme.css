@@ -98,6 +98,33 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 .stat-card-foot { font-size: 12px; color: var(--muted); margin-top: 3px; }
 @media (max-width: 1080px) { .stats-grid-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 620px) { .stats-grid-4 { grid-template-columns: 1fr; } .page-head h1 { font-size: 23px; } }
+/* health banner */
+.health-banner { background: linear-gradient(105deg, var(--surface), var(--accent-soft)); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; }
+.health-banner.warn { background: linear-gradient(105deg, var(--surface), var(--warn-soft)); }
+.health-main { display: flex; gap: 14px; align-items: center; }
+.health-main strong { display: block; font-size: 16px; }
+.health-main div span { color: var(--muted); font-size: 12.5px; }
+.health-orb { width: 42px; height: 42px; border-radius: 12px; background: var(--ok-soft); color: var(--ok); display: grid; place-items: center; flex: none; }
+.health-orb .icon { width: 21px; height: 21px; }
+.health-banner.warn .health-orb { background: var(--warn-soft); color: var(--warn); }
+.health-meta { display: flex; gap: 26px; }
+.health-meta div strong { font-size: 20px; display: block; }
+.health-meta div span { font-size: 11px; color: var(--muted); }
+/* split + panel + activity */
+.split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 14px; align-items: start; margin-bottom: 20px; }
+@media (max-width: 1080px) { .split { grid-template-columns: 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.panel-head { padding: 15px 18px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.panel-title strong { display: block; font-size: 14px; }
+.panel-title span { font-size: 12px; color: var(--muted); }
+.panel-body { padding: 6px 18px 12px; }
+.activity-item { display: flex; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+.activity-item:last-child { border-bottom: 0; }
+.activity-icon { width: 30px; height: 30px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); display: grid; place-items: center; flex: none; }
+.activity-icon .icon { width: 15px; height: 15px; }
+.activity-item strong { font-size: 13px; display: block; }
+.activity-item p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.activity-time { margin-left: auto; font-size: 11px; color: var(--muted); font-family: var(--mono); white-space: nowrap; padding-left: 10px; }
 .hamburger-btn { display: none; background: var(--surface); border: 1px solid var(--line); color: var(--accent); padding: 10px 14px; border-radius: 6px; font-size: 20px; cursor: pointer; min-height: 44px; min-width: 44px; }
 .hamburger-btn:hover { background: var(--line); }
 .sidebar-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; opacity: 0; transition: opacity 0.3s ease; }
@@ -523,7 +550,7 @@ hr.form-divider { border: 0; border-top: 1px solid var(--line); margin: 20px 0; 
 .main-content { animation: mps-fade-up 0.22s ease-out; }
 .login-card { animation: mps-fade-up 0.25s ease-out backwards; }
 
-.card, .stat-box, .stat-card, .detail-card, .form-card, .kb-card, .chart-card, .warranty-card { animation: mps-fade-up 0.25s ease-out backwards; }
+.card, .stat-box, .stat-card, .detail-card, .form-card, .kb-card, .chart-card, .warranty-card, .panel, .health-banner { animation: mps-fade-up 0.25s ease-out backwards; }
 .stats-grid > *, .stats-grid-4 > *, .card-grid > *, .card-grid-2 > *, .trend-grid > * { animation: mps-fade-up 0.25s ease-out backwards; }
 .stats-grid > *:nth-child(2), .stats-grid-4 > *:nth-child(2), .card-grid > *:nth-child(2), .card-grid-2 > *:nth-child(2), .trend-grid > *:nth-child(2) { animation-delay: 0.05s; }
 .stats-grid > *:nth-child(3), .stats-grid-4 > *:nth-child(3), .card-grid > *:nth-child(3), .card-grid-2 > *:nth-child(3), .trend-grid > *:nth-child(3) { animation-delay: 0.1s; }

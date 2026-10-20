@@ -4,32 +4,91 @@
 {% block header_title %}Operational Dashboard{% endblock %}
 
 {% block content %}
-<div class="card-grid">
-    <div class="card">
-        <h4>TOTAL ASSETS (IPAM)</h4>
-        <h2>{{ total_assets }}</h2>
+<div class="page-head">
+    <div>
+        <h1>Dashboard</h1>
+        <p>Ringkasan kondisi layanan dan pekerjaan tim hari ini.</p>
     </div>
-    <div class="card">
-        <h4>OPEN TICKETS</h4>
-        <h2 class="stat-warn">{{ open_tickets }}</h2>
+    {% if session['role'] != 'guest' %}
+    <div class="page-head-actions">
+        <a href="{{ url_for('tickets.add') }}" class="btn-primary">+ Buat Tiket Baru</a>
     </div>
-    <div class="card">
-        <h4>SERVICES ONLINE</h4>
-        <h2 class="stat-ok">{{ uptime_percentage }}%</h2>
+    {% endif %}
+</div>
+
+<section class="health-banner{% if down_names %} warn{% endif %}">
+    <div class="health-main">
+        <span class="health-orb"><svg class="icon" aria-hidden="true"><use href="#i-{% if down_names %}alert{% else %}check{% endif %}"/></svg></span>
+        <div>
+            {% if down_names %}
+            <strong>Ada layanan yang terganggu</strong>
+            <span>{{ down_names|length }} layanan DOWN: {{ down_names|join(', ') }}</span>
+            {% else %}
+            <strong>Operasional berjalan normal</strong>
+            <span>{{ up_monitors_e }} dari {{ active_monitors }} layanan aktif dalam kondisi sehat</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="health-meta">
+        <div><strong>{{ uptime_percentage }}%</strong><span>Layanan online</span></div>
+        <div><strong>{{ open_tickets }}</strong><span>Tiket terbuka</span></div>
+    </div>
+</section>
+
+<div class="stats-grid-4">
+    <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-label">Tiket Terbuka</span><span class="stat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-ticket"/></svg></span></div>
+        <div class="stat-card-value">{{ open_tickets }}</div>
+        <div class="stat-card-foot">{{ high_priority_open }} prioritas tinggi / kritis</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-label">Total Aset</span><span class="stat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg></span></div>
+        <div class="stat-card-value">{{ total_assets }}</div>
+        <div class="stat-card-foot">{{ active_assets }} aktif • {{ repair_assets }} dalam perbaikan</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-label">Layanan Online</span><span class="stat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-pulse"/></svg></span></div>
+        <div class="stat-card-value">{{ up_monitors_e }} / {{ active_monitors }}</div>
+        <div class="stat-card-foot">{% if down_names %}{{ down_names|length }} layanan DOWN{% elif paused_monitors %}{{ paused_monitors }} monitor dinonaktifkan{% else %}Semua layanan terpantau sehat{% endif %}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-label">Pengguna Aktif</span><span class="stat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg></span></div>
+        <div class="stat-card-value">{{ total_users }}</div>
+        <div class="stat-card-foot">{{ total_departments }} departemen</div>
     </div>
 </div>
 
-<div class="card chart-card">
-    <h3 class="chart-card-title">Tiket Baru — 30 Hari Terakhir</h3>
-    <div class="chart-stats-sub">
-        <span>Total 30 hari: <strong>{{ total_created_30d }}</strong></span>
-        <span>Rata-rata: <strong>{{ avg_created_per_day }} / hari</strong></span>
+<div class="split">
+    <div class="card chart-card">
+        <h3 class="chart-card-title">Tiket Baru — 30 Hari Terakhir</h3>
+        <div class="chart-stats-sub">
+            <span>Total 30 hari: <strong>{{ total_created_30d }}</strong></span>
+            <span>Rata-rata: <strong>{{ avg_created_per_day }} / hari</strong></span>
+        </div>
+        {% if daily_chart_svg %}
+            {{ daily_chart_svg|safe }}
+        {% else %}
+            <p class="chart-empty">Belum ada data</p>
+        {% endif %}
     </div>
-    {% if daily_chart_svg %}
-        {{ daily_chart_svg|safe }}
-    {% else %}
-        <p class="chart-empty">Belum ada data</p>
-    {% endif %}
+    <div class="panel">
+        <div class="panel-head"><div class="panel-title"><strong>Aktivitas Terbaru</strong><span>Pembaruan lintas modul</span></div></div>
+        <div class="panel-body">
+            {% if recent_activities %}
+            <div class="activity-list">
+                {% for a in recent_activities %}
+                <div class="activity-item">
+                    <span class="activity-icon"><svg class="icon" aria-hidden="true"><use href="#i-{{ 'ticket' if a.source == 'ticket' else 'box' }}"/></svg></span>
+                    <div><strong>{{ a.title }}</strong><p>{{ a.text }}</p></div>
+                    <span class="activity-time">{{ a.time }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted">Belum ada aktivitas tercatat.</p>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
 <div class="card-grid-2">

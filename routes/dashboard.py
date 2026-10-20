@@ -198,6 +198,103 @@ def index():
     ticket_status_chart_svg = build_horizontal_bar_svg(ticket_status_items)
     asset_status_chart_svg = build_horizontal_bar_svg(asset_status_items)
 
+    # enabled-based monitor counts + down_names
+    cur.execute("""
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(CASE WHEN status = 'UP' THEN 1 ELSE 0 END), 0) AS up,
+               COALESCE(SUM(CASE WHEN status = 'DOWN' THEN 1 ELSE 0 END), 0) AS down
+        FROM monitors WHERE enabled = TRUE;
+    """)
+    m_enabled = cur.fetchone()
+    active_monitors = int(m_enabled['total'] or 0)
+    up_monitors_e = int(m_enabled['up'] or 0)
+
+    cur.execute("SELECT name FROM monitors WHERE enabled = TRUE AND status = 'DOWN' ORDER BY name;")
+    down_names = [r['name'] for r in cur.fetchall()]
+
+    paused_monitors = total_monitors - active_monitors
+
+    # high-priority open tickets
+    cur.execute("""
+        SELECT COUNT(*) AS count FROM tickets
+        WHERE status IN ('Open', 'In Progress') AND priority IN ('High', 'Critical') AND is_deleted = FALSE;
+    """)
+    high_priority_open = int(cur.fetchone()['count'] or 0)
+
+    # asset status split
+    cur.execute("SELECT COUNT(*) AS count FROM assets WHERE status = 'Active' AND is_deleted = FALSE;")
+    active_assets = int(cur.fetchone()['count'] or 0)
+    cur.execute("SELECT COUNT(*) AS count FROM assets WHERE status = 'Under Repair' AND is_deleted = FALSE;")
+    repair_assets = int(cur.fetchone()['count'] or 0)
+
+    # users + departments
+    cur.execute("SELECT COUNT(*) AS count FROM users WHERE is_deleted = FALSE;")
+    total_users = int(cur.fetchone()['count'] or 0)
+    cur.execute("SELECT COUNT(*) AS count FROM departments;")
+    total_departments = int(cur.fetchone()['count'] or 0)
+
+    # Activity feed (top 8, newest first)
+    recent_activities = []
+    try:
+        cur.execute("""
+            SELECT ta.created_at, ta.actor, ta.content, t.ticket_code
+            FROM ticket_activities ta JOIN tickets t ON t.id = ta.ticket_id
+            ORDER BY ta.created_at DESC LIMIT 8;
+        """)
+        t_acts = cur.fetchall()
+
+        cur.execute("""
+            SELECT aa.created_at, aa.actor, aa.action, aa.field_name, aa.old_value, aa.new_value, a.asset_tag, a.name
+            FROM asset_activities aa JOIN assets a ON a.id = aa.asset_id
+            ORDER BY aa.created_at DESC LIMIT 8;
+        """)
+        a_acts = cur.fetchall()
+
+        raw_feed = []
+        for r in t_acts:
+            raw_feed.append({
+                'created_at': r['created_at'],
+                'source': 'ticket',
+                'title': f"Tiket {r['ticket_code']}",
+                'text': r['content'],
+            })
+
+        for r in a_acts:
+            act = r['action']
+            actor = r['actor'] or 'system'
+            if act == 'created':
+                txt = f"Aset dibuat oleh {actor}."
+            elif act == 'soft-deleted':
+                txt = "Aset dipindahkan ke Riwayat Terhapus."
+            elif act == 'restored':
+                txt = "Aset dikembalikan dari Riwayat Terhapus."
+            elif act == 'updated':
+                old_val = r['old_value'] or '-'
+                new_val = r['new_value'] or '-'
+                txt = f"{r['field_name']} diubah: {old_val} → {new_val}"
+            else:
+                txt = str(act)
+
+            raw_feed.append({
+                'created_at': r['created_at'],
+                'source': 'asset',
+                'title': r['asset_tag'] or r['name'] or 'Aset',
+                'text': txt,
+            })
+
+        raw_feed.sort(key=lambda x: x['created_at'], reverse=True)
+        for item in raw_feed[:8]:
+            dt = item['created_at']
+            time_str = dt.strftime('%d %b %Y, %H:%M') if hasattr(dt, 'strftime') else str(dt)
+            recent_activities.append({
+                'source': item['source'],
+                'title': item['title'],
+                'text': item['text'],
+                'time': time_str,
+            })
+    except Exception:
+        recent_activities = []
+
     cur.close()
     conn.close()
 
@@ -221,5 +318,15 @@ def index():
         resolved_this_week=resolved_this_week,
         resolved_prev_week=resolved_prev_week,
         resolved_delta_str=resolved_delta_str,
+        active_monitors=active_monitors,
+        up_monitors_e=up_monitors_e,
+        down_names=down_names,
+        paused_monitors=paused_monitors,
+        high_priority_open=high_priority_open,
+        active_assets=active_assets,
+        repair_assets=repair_assets,
+        total_users=total_users,
+        total_departments=total_departments,
+        recent_activities=recent_activities,
         active_page='dashboard'
     )
