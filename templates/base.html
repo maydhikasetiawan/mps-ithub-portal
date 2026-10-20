@@ -94,7 +94,7 @@
                         {% if session['role'] in ['admin', 'it'] %}
                         <a href="{{ url_for('assets.add') }}" class="quick-item">Tambah Aset</a>
                         <a href="{{ url_for('knowledge_base.add') }}" class="quick-item">Artikel Baru</a>
-                        <a href="{{ url_for('uptime.add_monitor') }}" class="quick-item">Tambah Monitor</a>
+                        <a href="{{ url_for('uptime.add') }}" class="quick-item">Tambah Monitor</a>
                         {% endif %}
                     </div>
                 </div>
