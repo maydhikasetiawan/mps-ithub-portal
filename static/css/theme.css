@@ -56,8 +56,8 @@ html[data-theme="dark"] {
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif; }
 .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
-body { background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
-.sidebar { width: 248px; background: var(--surface); border-right: 1px solid var(--line); padding: 18px 14px; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; transition: transform 0.3s ease; }
+body { background: var(--bg); color: var(--text); display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
+.sidebar { width: 248px; background: var(--surface); border-right: 1px solid var(--line); padding: 18px 14px; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; height: 100dvh; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 100; transition: transform 0.3s ease; }
 .main-content { flex: 1; padding: 0; overflow-y: auto; margin-left: 248px; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 4px 6px 18px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
 .brand-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: none; }
@@ -455,7 +455,7 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: none; }
 
 /* Login */
 body.login-body { background: var(--bg); color: var(--text); display: block; min-height: 100vh; overflow: auto; }
-.login-shell { min-height: 100vh; display: grid; grid-template-columns: minmax(300px, 1fr) minmax(430px, 46%); background: var(--bg); }
+.login-shell { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(300px, 1fr) minmax(430px, 46%); background: var(--bg); }
 .login-story { position: relative; overflow: hidden; padding: clamp(34px, 6vw, 82px); display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(145deg, rgba(57,200,184,.13), transparent 42%), radial-gradient(circle at 72% 70%, rgba(40,120,208,.14), transparent 36%), var(--bg); }
 .login-story::before { content: ""; position: absolute; inset: 0; opacity: .18; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 44px 44px; mask-image: linear-gradient(to bottom, black, transparent 85%); }
 .story-top, .story-copy { position: relative; z-index: 1; }
