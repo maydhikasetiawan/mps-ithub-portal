@@ -4,27 +4,27 @@
 {% block header_title %}Konfirmasi Hapus Tiket Permanen{% endblock %}
 
 {% block content %}
-<div class="form-card" style="max-width: 500px; border-color: #ef4444;">
-    <h3 style="color: #ef4444; margin-bottom: 10px;">🚨 Khusus Admin: Hapus Permanen</h3>
-    <p style="color: #cbd5e1; font-size: 13px; margin-bottom: 20px;">
+<div class="form-card form-narrow-500 form-card-danger">
+    <h3 class="text-danger mb-10">🚨 Khusus Admin: Hapus Permanen</h3>
+    <p class="text-body mb-20">
         Tiket <strong>{{ ticket.ticket_code }}</strong> ({{ ticket.title }}) akan dihapus secara permanen dari database.
     </p>
 
     {% if error %}
-    <div style="background: #ef444422; border: 1px solid #ef4444; color: #fca5a5; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 20px;">
+    <div class="alert-error-box">
         {{ error }}
     </div>
     {% endif %}
 
     <form method="POST">
         <div class="form-group">
-            <label style="color: #f8fafc;">Masukkan Password Admin Anda (<strong>{{ session['username'] }}</strong>):</label>
+            <label class="text-strong">Masukkan Password Admin Anda (<strong>{{ session['username'] }}</strong>):</label>
             <input type="password" name="confirm_password" class="form-control" required placeholder="Masukkan password Admin...">
         </div>
 
-        <div style="margin-top: 25px;">
-            <button type="submit" class="btn-danger" style="padding: 10px 20px; font-weight: bold; cursor: pointer;">Hapus Permanen Tiket</button>
-            <a href="{{ url_for('tickets.index') }}" style="color: #94a3b8; margin-left: 15px; font-size: 13px; text-decoration: none;">Batal</a>
+        <div class="mt-25">
+            <button type="submit" class="btn-danger font-bold cursor-pointer text-13 btn-px-20">Hapus Permanen Tiket</button>
+            <a href="{{ url_for('tickets.index') }}" class="back-link ml-15">Batal</a>
         </div>
     </form>
 </div>

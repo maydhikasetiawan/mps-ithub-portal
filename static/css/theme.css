@@ -364,7 +364,12 @@ body.login-body { background: var(--bg); color: var(--text); display: flex; alig
 .btn-export { width: 100%; padding: 12px; background: #10b981; color: #0f172a; border: none; border-radius: var(--radius-sm); font-weight: bold; cursor: pointer; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
 .btn-export:hover { background: #059669; }
 .btn-sm-44 { min-height: 44px; padding: 8px 14px; font-size: 13px; }
+.btn-px-18 { padding: 10px 18px; }
+.btn-px-20 { padding: 10px 20px; }
 hr.form-divider { border: 0; border-top: 1px solid var(--line); margin: 20px 0; padding-top: 0; }
+.form-card-danger { border-color: var(--danger); }
+.alert-error-box { background: var(--danger-soft); border: 1px solid var(--danger); color: var(--danger); padding: 10px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 20px; }
+.code-chip-danger { color: var(--danger); background: var(--surface-2); padding: 2px 6px; border-radius: 4px; }
 
 /* Utilities (ordered last so overrides win on equal specificity) */
 .flex { display: flex; }
@@ -430,3 +435,4 @@ hr.form-divider { border: 0; border-top: 1px solid var(--line); margin: 20px 0; 
 .gap-14 { gap: 14px; }
 .block { display: block; }
 .font-bold { font-weight: bold; }
+.form-narrow-550 { max-width: 550px; }
