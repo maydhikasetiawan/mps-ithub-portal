@@ -299,12 +299,14 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 @media (max-width: 620px) { .detail-grid { grid-template-columns: 1fr; } }
 
 @media (max-width: 620px) {
-  .data-table thead { display: none; }
   .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }
-  .data-table tr { margin-bottom: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 12px; background: var(--surface); }
-  .data-table td { display: flex; justify-content: space-between; gap: 12px; text-align: right; padding: 8px 0; border-bottom: 1px solid var(--line); }
-  .data-table td:last-child { border-bottom: none; }
-  .data-table td::before { content: attr(data-label); font-weight: 700; color: var(--muted); text-align: left; }
+  .data-table thead { display: none; }
+  .data-table tr { padding: 13px 14px; border-bottom: 1px solid var(--line); }
+  .data-table tbody tr:last-child { border-bottom: 0; }
+  .data-table td { padding: 4px 0; border: 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; text-align: right; }
+  .data-table td::before { content: attr(data-label); color: var(--faint); font-size: 9px; letter-spacing: .05em; text-transform: uppercase; font-weight: 700; text-align: left; }
+  .data-table td:first-child { display: block; text-align: left; padding-bottom: 10px; }
+  .data-table td:first-child::before { display: none; }
 }
 
 /* Theme toggle */
