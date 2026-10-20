@@ -1,12 +1,15 @@
 {% extends 'base.html' %}
 
-{% block title %}User Management - MPS-ITHub{% endblock %}
+{% block title %}User Management - {{ branding.app_name }}{% endblock %}
 {% block header_title %}User Management (Admin){% endblock %}
 
 {% block content %}
 <div class="list-header">
-    <div>
+    <div class="flex gap-10 items-center">
         <a href="{{ url_for('users.departments') }}" class="btn-secondary">🏢 Kelola Departemen</a>
+        {% if session['role'] == 'admin' %}
+        <a href="{{ url_for('branding.branding_settings') }}" class="btn-secondary">🎨 Pengaturan Branding</a>
+        {% endif %}
     </div>
     <div class="flex gap-10 items-center">
         <a href="{{ url_for('users.add') }}" class="btn-primary">+ Tambah User Baru</a>

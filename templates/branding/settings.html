@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Pengaturan Branding - {{ branding.app_name }}{% endblock %}
+{% block header_title %}Pengaturan Branding{% endblock %}
+
+{% block content %}
+<div class="form-card form-narrow">
+    <h3 class="text-accent mb-15">🎨 Identitas Aplikasi</h3>
+    <form method="POST" action="{{ url_for('branding.branding_settings') }}">
+        <div class="form-group">
+            <label for="app_name">Nama Aplikasi</label>
+            <input type="text" id="app_name" name="app_name" class="form-control" value="{{ branding.app_name }}" required>
+        </div>
+        <div class="form-group">
+            <label for="tagline">Tagline</label>
+            <input type="text" id="tagline" name="tagline" class="form-control" value="{{ branding.tagline }}">
+        </div>
+        <div class="form-group">
+            <label for="logo_url">URL Logo</label>
+            <input type="text" id="logo_url" name="logo_url" class="form-control" value="{{ branding.logo_url }}">
+        </div>
+        <div class="form-group">
+            <label for="login_headline">Headline Login</label>
+            <input type="text" id="login_headline" name="login_headline" class="form-control" value="{{ branding.login_headline }}">
+        </div>
+        <div class="form-group">
+            <label for="login_text">Teks Login</label>
+            <textarea id="login_text" name="login_text" class="form-control" rows="4">{{ branding.login_text }}</textarea>
+        </div>
+        <div class="form-group">
+            <label for="footer_text">Teks Footer</label>
+            <input type="text" id="footer_text" name="footer_text" class="form-control" value="{{ branding.footer_text }}">
+        </div>
+        <button type="submit" class="btn-primary w-full">Simpan</button>
+    </form>
+
+    <div class="mt-20 text-center">
+        <a href="{{ url_for('users.index') }}" class="back-link text-14">Kembali ke User Management</a>
+    </div>
+</div>
+{% endblock %}

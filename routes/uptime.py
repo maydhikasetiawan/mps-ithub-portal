@@ -7,7 +7,7 @@ import threading
 import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from routes.auth import login_required, roles_required
-from database.db import get_db_connection
+from database.db import get_db_connection, get_branding
 
 uptime_bp = Blueprint('uptime', __name__, url_prefix='/uptime')
 
@@ -402,7 +402,7 @@ def telegram_settings():
 def telegram_test():
     token, chat_id = get_telegram_config()
     ok, error = send_telegram_message(
-        token, chat_id, "🔔 Tes koneksi Telegram MPS-ITHub — koneksi aktif."
+        token, chat_id, f"🔔 Tes koneksi Telegram {get_branding()['app_name']} — koneksi aktif."
     )
     if ok:
         flash("Koneksi Telegram aktif — pesan tes terkirim.", "success")

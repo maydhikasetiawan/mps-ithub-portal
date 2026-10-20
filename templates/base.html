@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}MPS-ITHub{% endblock %}</title>
+    <title>{% block title %}{{ branding.app_name }}{% endblock %}</title>
     <script>
         try {
             var theme = localStorage.getItem('mpshub-theme');
@@ -22,7 +22,7 @@
     {% include '_icons.html' %}
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
     <div class="sidebar">
-        <div class="brand">🛡️ MPS-ITHub</div>
+        <div class="brand">🛡️ {{ branding.app_name }}</div>
         <ul class="nav-menu">
             <li class="nav-item"><a href="{{ url_for('dashboard.index') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">📊 Dashboard</a></li>
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - MPS Operational IT Hub</title>
+    <title>Login - {{ branding.app_name }}</title>
     <script>
         try {
             var theme = localStorage.getItem('mpshub-theme');
@@ -22,7 +22,7 @@
     {% include '_icons.html' %}
     <div class="login-card">
         <div class="logo-placeholder">🛡️</div>
-        <h2>MPS-ITHub</h2>
+        <h2>{{ branding.app_name }}</h2>
         <p class="subtitle">IT Service Desk & Infrastructure Portal</p>
 
         {% with messages = get_flashed_messages() %}

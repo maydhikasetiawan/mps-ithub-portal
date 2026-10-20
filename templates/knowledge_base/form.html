@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if is_edit %}Edit Artikel{% else %}Tambah Artikel{% endif %} - Knowledge Base - MPS-ITHub{% endblock %}
+{% block title %}{% if is_edit %}Edit Artikel{% else %}Tambah Artikel{% endif %} - Knowledge Base - {{ branding.app_name }}{% endblock %}
 {% block header_title %}{% if is_edit %}Edit Artikel Knowledge Base{% else %}Tambah Artikel Knowledge Base{% endif %}{% endblock %}
 
 {% block content %}
