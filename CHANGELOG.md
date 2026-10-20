@@ -6,6 +6,12 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [2026-10-20] - Fase 7: Modernisasi UI
+- 7.1 Sentralisasi Gaya (main `eabd55b`): Seluruh gaya inline dan blok `<style>` per halaman dipindah ke satu berkas terpusat `static/css/theme.css`; tidak ada perubahan visual selain perbaikan tombol Telegram Settings.
+- 7.2 Penyegaran Tema (5 sub-batch, main `fe70d7a`, `5a04d55`, `163b69f`, `57d6b53`, `12fdb32`, `e149f0a`): Sistem token desain baru dengan dua tema aktif (gelap bawaan + terang, toggle di header, tersimpan di `localStorage` kunci `mpshub-theme`); fon Public Sans + IBM Plex Mono; kolom STATUS dan SLA pada daftar tiket dipisah menjadi dua kolom; tabel menjadi pola kartu berlabel `data-label` pada layar ≤620px.
+- 7.3 Lapisan Gerak (main `5fe8673`, fix dropdown `0bfea0f`): Animasi masuk halaman dan kartu (berjenjang), animasi modal konfirmasi (fade + scale) dan dropdown profil, banner tiket baru fade-in, transisi hover/focus tombol, baris tabel, dan input — hanya properti `opacity`/`transform`, 150–300ms, dinonaktifkan oleh `prefers-reduced-motion`.
+- 7.4 Perbaikan Mobile & Dokumentasi: Atribut `data-label` untuk tabel garansi dasbor; target sentuh `.page-link`, `.range-btn`, dan `.nav-link` menjadi minimal 44px; dokumentasi sistem tema ditambahkan ke `docs/architecture.md` dan `docs/features.md`.
+
 ## [2026-10-18] - Pre-UI Refinements
 - Batch 1 Pengamanan Tiket Guest & Log Aktivitas (main `f475c3d`):
   - Memperbaiki celah IDOR tiket guest dengan menambahkan peran `'guest'` pada pemeriksaan kepemilikan tiket (`user_role in ('user', 'guest')`) di rute daftar tiket, detail tiket, dan unduh lampiran berkas.

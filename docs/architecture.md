@@ -294,3 +294,15 @@ Otomatisasi pengiriman kode ke server produksi diatur melalui GitHub Actions pad
      - Menghentikan dan menghapus container lama `my-web-app`.
      - Menyiapkan jaringan docker `app-monitoring_default`.
      - Menjalankan container baru di port `5000:5000` dengan kebijakan restart otomatis (`--restart always`) serta menginjeksikan secrets: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, `SECRET_KEY`, dan `API_KEY` (via `-e API_KEY=${{ secrets.API_KEY }}`). Container memulai proses via `entrypoint.sh` yang menjalankan migrasi otomatis `alembic upgrade head` (bersifat idempoten — no-op bila sudah di head) sebelum menjalankan server produksi Gunicorn 26.2.0 dengan perintah: `gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 4 --timeout 45 --graceful-timeout 30 --forwarded-allow-ips="*" --access-logfile - --error-logfile - --log-level info app:app` (model worker `gthread`, PID 1, log akses dan error ke stdout). Prosedur rollback dilakukan dengan melakukan revert commit pada Git (`git revert`).
+
+## 7. Sistem Tema & Antarmuka (UI Theme System)
+
+- **Satu berkas gaya terpusat**: Seluruh tampilan aplikasi diatur oleh `static/css/theme.css` (Fase 7.1). Tidak ada blok `<style>` per halaman dan tidak ada atribut `style=""` inline di templat, kecuali pengecualian yang disengaja di bawah.
+- **Token desain**: Nilai warna, radius, dan bayangan didefinisikan sebagai variabel CSS pada `:root` (tema gelap, bawaan) dan diganti pada `[data-theme="light"]` (tema terang). Komponen hanya memakai variabel token (mis. `var(--surface)`, `var(--text)`, `var(--accent)`), tidak ada warna hex langsung di aturan komponen.
+- **Dua tema aktif**: Gelap (bawaan) dan terang, diganti lewat tombol toggle di header. Pilihan disimpan di `localStorage` dengan kunci `mpshub-theme`; skrip kecil di `<head>` menerapkan tema sebelum render agar tidak ada kedipan tema yang salah. Halaman login juga mendukung kedua tema.
+- **Tipografi**: Public Sans untuk teks dan IBM Plex Mono untuk kode/nilai mono, dimuat dari Google Fonts dengan fallback fon sistem.
+- **Ikon**: Tetap memakai emoji; tidak ada set ikon SVG.
+- **Responsif**: Di bawah 620px, tabel `.data-table` berubah menjadi pola kartu memakai atribut `data-label` pada setiap sel data sebagai nama kolom. Target sentuh kontrol interaktif minimal 44px.
+- **Lapisan gerak (Fase 7.3)**: Animasi masuk halaman dan kartu, animasi modal konfirmasi dan dropdown profil, serta transisi hover/focus — semuanya hanya memakai properti `opacity` dan `transform` (150–300ms) dan dinonaktifkan lewat `@media (prefers-reduced-motion: reduce)`.
+- **Pengecualian**: `templates/assets/label.html` (label fisik untuk dicetak) tidak memakai `theme.css` dan tidak bertema — halamannya selalu terang untuk kebutuhan cetak.
+- **Hook JavaScript yang tidak boleh diganti namanya**: `#new-ticket-banner` / `.is-visible`, `#confirm-modal`, `#profile-button` / `#profile-dropdown-menu`, `#hamburger-btn` / `.sidebar.open` / `.sidebar-backdrop.open`.

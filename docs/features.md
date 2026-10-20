@@ -95,6 +95,12 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Autentikasi Header API Key**: Autentikasi kunci tunggal dari variabel lingkungan `API_KEY` via header `X-API-Key` dengan verifikasi *constant-time* (`hmac.compare_digest`) dan fail-closed 401 saat tidak diset atau salah.
 - **Paginasi & Filter**: Parameter paginasi standar (`limit` default 20 max 100, `offset` default 0), filter exact-match status/kategori/prioritas/assignee, otomatis mengecualikan entitas soft-deleted, serta pemetaan kolom tabel riil `monitors`. Referensi lengkap: [docs/API.md](API.md).
 
+### J. Tema & Antarmuka (UI Theme)
+
+- **Dua tema tampilan**: Tema gelap (bawaan) dan tema terang untuk seluruh aplikasi termasuk halaman login, diganti lewat tombol toggle di header; pilihan pengguna tersimpan otomatis di peramban (`localStorage`).
+- **Tampilan responsif**: Navigasi sidebar menjadi drawer pada layar kecil; tabel data berubah menjadi kartu berlabel pada lebar ≤620px; target sentuh minimal 44px.
+- **Animasi antarmuka**: Animasi masuk halaman/kartu, modal, dan dropdown dengan durasi singkat (150–300ms), otomatis nonaktif bila pengguna mengaktifkan *reduced motion* di sistemnya.
+
 ---
 
 ## 2. Matriks Hak Akses (Roles Matrix)

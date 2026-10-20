@@ -109,14 +109,14 @@
             <tbody>
                 {% for w in expiring_warranties %}
                 <tr>
-                    <td>
+                    <td data-label="ASSET TAG">
                         <a href="{{ url_for('assets.detail', asset_id=w.id) }}" class="table-link">
                             {{ w.asset_tag }}
                         </a>
                     </td>
-                    <td>{{ w.name }}</td>
-                    <td><code>{{ w.warranty_expiry }}</code></td>
-                    <td>
+                    <td data-label="NAMA PERANGKAT">{{ w.name }}</td>
+                    <td data-label="GARANSI HABIS"><code>{{ w.warranty_expiry }}</code></td>
+                    <td data-label="STATUS GARANSI">
                         <strong class="{% if w.days_remaining < 0 %}warranty-expired{% else %}warranty-soon{% endif %}">
                             {{ w.status_text }}
                         </strong>
