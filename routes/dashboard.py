@@ -233,7 +233,7 @@ def index():
     cur.execute("SELECT COUNT(*) AS count FROM departments;")
     total_departments = int(cur.fetchone()['count'] or 0)
 
-    # Activity feed (top 8, newest first)
+    # Activity feed (top 5, newest first)
     recent_activities = []
     try:
         cur.execute("""
@@ -283,7 +283,7 @@ def index():
             })
 
         raw_feed.sort(key=lambda x: x['created_at'], reverse=True)
-        for item in raw_feed[:8]:
+        for item in raw_feed[:5]:
             dt = item['created_at']
             time_str = dt.strftime('%d %b %Y, %H:%M') if hasattr(dt, 'strftime') else str(dt)
             recent_activities.append({
