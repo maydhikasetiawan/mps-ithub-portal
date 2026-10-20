@@ -65,7 +65,9 @@
                             </span>
                         </span>
                     </div>
+                    {% if session['role'] != 'guest' %}
                     <a href="{{ url_for('users.change_password') }}" class="profile-dropdown-item item-link" role="menuitem">🔑 Ganti Password</a>
+                    {% endif %}
                     <form method="POST" action="{{ url_for('auth.logout') }}" data-confirm="Keluar dari aplikasi?" data-confirm-label="Ya, Keluar" class="m-0">
                         <button type="submit" class="profile-dropdown-item item-danger" role="menuitem">🚪 Logout</button>
                     </form>

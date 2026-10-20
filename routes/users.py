@@ -358,6 +358,9 @@ def edit(user_id):
 @users_bp.route('/change-password', methods=['GET', 'POST'])
 @login_required
 def change_password():
+    if session.get('role') == 'guest':
+        flash("Akun guest tidak dapat mengganti password.", "danger")
+        return redirect(url_for('dashboard.index'))
     if request.method == 'POST':
         old_password = request.form.get('old_password')
         new_password = request.form.get('new_password')
