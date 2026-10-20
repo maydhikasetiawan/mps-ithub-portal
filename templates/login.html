@@ -20,39 +20,58 @@
 </head>
 <body class="login-body">
     {% include '_icons.html' %}
-    <div class="login-card">
-        <div class="logo-placeholder">🛡️</div>
-        <h2>{{ branding.app_name }}</h2>
-        <p class="subtitle">IT Service Desk & Infrastructure Portal</p>
-
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        {% if error %}
-        <div class="alert">{{ error }}</div>
-        {% endif %}
-
-        <form method="POST">
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" required placeholder="Masukkan username">
+    <div class="login-shell">
+        <section class="login-story">
+            <div class="login-brand">
+                {% if branding.logo_url %}
+                <img src="{{ branding.logo_url }}" alt="" class="brand-logo">
+                {% else %}
+                <span class="brand-icon"><svg class="icon" aria-hidden="true"><use href="#i-pulse"/></svg></span>
+                {% endif %}
+                <div>
+                    <strong>{{ branding.app_name }}</strong>
+                    <span>{{ branding.tagline }}</span>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="password" required placeholder="Masukkan password">
-            </div>
-            <button type="submit">Sign In</button>
-        </form>
+            <h1>{{ branding.login_headline }}</h1>
+            <p>{{ branding.login_text }}</p>
+        </section>
+        <main class="login-panel">
+            <div class="login-card">
+                <h2>Masuk ke workspace</h2>
+                <p class="panel-sub">Gunakan akun internal yang diberikan administrator.</p>
 
-        <div class="login-demo">
-            <p>Akses Tamu (Read-Only Demo):</p>
-            <p>Username: <code>guest</code> | Password: <code>guest</code></p>
-        </div>
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% if error %}
+                <div class="alert">{{ error }}</div>
+                {% endif %}
+
+                <form method="POST">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" name="username" required placeholder="Masukkan username">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" name="password" required placeholder="Masukkan password">
+                    </div>
+                    <label class="remember-row"><input type="checkbox" name="remember"> Ingat saya</label>
+                    <button type="submit">Masuk ke Dashboard</button>
+                </form>
+
+                <div class="login-demo">
+                    <p>Akses Tamu (Read-Only Demo):</p>
+                    <p>Username: <code>guest</code> | Password: <code>guest</code></p>
+                </div>
+            </div>
+        </main>
     </div>
 </body>
 </html>
