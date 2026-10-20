@@ -4,6 +4,21 @@
 {% block header_title %}IT Service Desk & Ticketing{% endblock %}
 
 {% block content %}
+<div class="page-head">
+    <div>
+        <h1>IT Service Desk & Ticketing</h1>
+        <p>Antrian tiket masuk, penugasan teknisi, dan status penyelesaian.</p>
+    </div>
+    <div class="page-head-actions">
+        {% if session['role'] == 'admin' %}
+        <a href="{{ url_for('tickets.manage_categories') }}" class="btn-secondary">⚙️ Kelola Kategori</a>
+        {% endif %}
+        {% if session['role'] != 'guest' %}
+        <a href="{{ url_for('tickets.add') }}" class="btn-primary">+ Buat Tiket Baru</a>
+        {% endif %}
+    </div>
+</div>
+
 <div class="list-header">
     <!-- Kelompok Tombol Filter Status (Kiri) -->
     <div class="flex gap-8 flex-wrap items-center">
@@ -22,16 +37,6 @@
                 <option value="me" {% if assignee_filter == 'me' %}selected{% endif %}>Assigned to me</option>
             </select>
         </form>
-    </div>
-
-    <!-- Kelompok Tombol Aksi Admin & Tiket (Kanan) -->
-    <div class="flex gap-10 items-center">
-        {% if session['role'] == 'admin' %}
-        <a href="{{ url_for('tickets.manage_categories') }}" class="btn-secondary">⚙️ Kelola Kategori</a>
-        {% endif %}
-        {% if session['role'] != 'guest' %}
-        <a href="{{ url_for('tickets.add') }}" class="btn-primary">+ Buat Tiket Baru</a>
-        {% endif %}
     </div>
 </div>
 

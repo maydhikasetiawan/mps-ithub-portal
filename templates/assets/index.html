@@ -4,29 +4,12 @@
 {% block header_title %}IT Assets & IPAM Inventory{% endblock %}
 
 {% block content %}
-<div class="list-header">
-    <form method="GET" class="filter-bar">
-        <input type="text" name="q" class="filter-input" placeholder="Cari nama, tag, IP, atau lokasi..." value="{{ search_query }}">
-        <select name="status" class="filter-input select-narrow">
-            <option value="">Semua Status</option>
-            <option value="Procurement" {% if status_filter == 'Procurement' %}selected{% endif %}>Procurement</option>
-            <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
-            <option value="Under Repair" {% if status_filter == 'Under Repair' %}selected{% endif %}>Under Repair</option>
-            <option value="Retired" {% if status_filter == 'Retired' %}selected{% endif %}>Retired</option>
-        </select>
-        <select name="assigned" class="filter-input select-narrow">
-            <option value="">Semua Assignment</option>
-            <option value="unassigned" {% if assigned_filter == 'unassigned' %}selected{% endif %}>Unassigned</option>
-            {% for u in users %}
-            <option value="{{ u }}" {% if assigned_filter == u %}selected{% endif %}>{{ u }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit" class="btn-primary">Cari</button>
-        {% if search_query or status_filter or assigned_filter %}
-        <a href="{{ url_for('assets.index') }}" class="btn-danger flex items-center">✕ Reset</a>
-        {% endif %}
-    </form>
-    <div class="flex gap-10">
+<div class="page-head">
+    <div>
+        <h1>IT Assets & IPAM Inventory</h1>
+        <p>Inventaris perangkat, kepemilikan, dan pemetaan alamat IP.</p>
+    </div>
+    <div class="page-head-actions">
         <a href="{{ url_for('assets.deleted_history') }}" class="btn-secondary">📜 Riwayat Terhapus</a>
         {% if session['role'] != 'guest' %}
         <a href="{{ url_for('assets.import_assets') }}" class="btn-primary">Import CSV</a>
@@ -34,6 +17,37 @@
         {% endif %}
     </div>
 </div>
+
+{% if asset_stats %}
+<div class="stats-grid-4">
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-card-label">Total Aset</span><span class="stat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg></span></div><div class="stat-card-value">{{ asset_stats.total }}</div><div class="stat-card-foot">Aset aktif terdaftar</div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-card-label">Terhubung IP</span><span class="stat-card-icon"><svg class="icon" aria-hidden="true"><use href="#i-pulse"/></svg></span></div><div class="stat-card-value">{{ asset_stats.with_ip }}</div><div class="stat-card-foot">Memiliki alamat IP</div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-card-label">Sedang Perbaikan</span><span class="stat-card-icon tone-warn"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg></span></div><div class="stat-card-value">{{ asset_stats.repair }}</div><div class="stat-card-foot">Status Under Repair</div></div>
+    <div class="stat-card"><div class="stat-card-top"><span class="stat-card-label">Garansi ≤ 90 Hari</span><span class="stat-card-icon tone-danger"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg></span></div><div class="stat-card-value">{{ asset_stats.warranty }}</div><div class="stat-card-foot">Berakhir dalam 90 hari ke depan</div></div>
+</div>
+{% endif %}
+
+<form method="GET" class="filter-bar">
+    <input type="text" name="q" class="filter-input" placeholder="Cari nama, tag, IP, atau lokasi..." value="{{ search_query }}">
+    <select name="status" class="filter-input select-narrow">
+        <option value="">Semua Status</option>
+        <option value="Procurement" {% if status_filter == 'Procurement' %}selected{% endif %}>Procurement</option>
+        <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+        <option value="Under Repair" {% if status_filter == 'Under Repair' %}selected{% endif %}>Under Repair</option>
+        <option value="Retired" {% if status_filter == 'Retired' %}selected{% endif %}>Retired</option>
+    </select>
+    <select name="assigned" class="filter-input select-narrow">
+        <option value="">Semua Assignment</option>
+        <option value="unassigned" {% if assigned_filter == 'unassigned' %}selected{% endif %}>Unassigned</option>
+        {% for u in users %}
+        <option value="{{ u }}" {% if assigned_filter == u %}selected{% endif %}>{{ u }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn-primary">Cari</button>
+    {% if search_query or status_filter or assigned_filter %}
+    <a href="{{ url_for('assets.index') }}" class="btn-danger flex items-center">✕ Reset</a>
+    {% endif %}
+</form>
 
 <div class="table-responsive">
 <table class="data-table">

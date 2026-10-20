@@ -116,6 +116,25 @@ def index():
     cur.execute(data_query, tuple(params) + (PER_PAGE, offset))
 
     assets_list = cur.fetchall()
+
+    cur.execute("SELECT COUNT(*) AS c FROM assets WHERE is_deleted = FALSE;")
+    stat_total = cur.fetchone()['c']
+    cur.execute("SELECT COUNT(*) AS c FROM assets WHERE is_deleted = FALSE AND ip_address IS NOT NULL AND ip_address <> '';")
+    stat_with_ip = cur.fetchone()['c']
+    cur.execute("SELECT COUNT(*) AS c FROM assets WHERE is_deleted = FALSE AND status = 'Under Repair';")
+    stat_repair = cur.fetchone()['c']
+    cur.execute("""
+        SELECT COUNT(*) AS c FROM assets WHERE is_deleted = FALSE AND warranty_expiry IS NOT NULL
+        AND warranty_expiry >= CURRENT_DATE AND warranty_expiry <= CURRENT_DATE + INTERVAL '90 days';
+    """)
+    stat_warranty = cur.fetchone()['c']
+    asset_stats = {
+        'total': stat_total,
+        'with_ip': stat_with_ip,
+        'repair': stat_repair,
+        'warranty': stat_warranty,
+    }
+
     cur.close()
     conn.close()
 
@@ -136,7 +155,7 @@ def index():
     for asset in assets_list:
         asset['age'] = calculate_age(asset['created_at'])
 
-    return render_template('assets/index.html', assets=assets_list, search_query=search_query, status_filter=status_filter, assigned_filter=assigned_filter, users=assignable_users, active_page='assets', pagination=pagination)
+    return render_template('assets/index.html', assets=assets_list, search_query=search_query, status_filter=status_filter, assigned_filter=assigned_filter, users=assignable_users, active_page='assets', pagination=pagination, asset_stats=asset_stats)
 
 # --- TAMBAH ASET BARU ---
 @assets_bp.route('/add', methods=['GET', 'POST'])

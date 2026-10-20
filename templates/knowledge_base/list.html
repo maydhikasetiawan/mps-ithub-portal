@@ -4,10 +4,13 @@
 {% block header_title %}Knowledge Base{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-20 flex-wrap gap-12">
-    <p class="text-muted text-14 m-0">Pusat panduan dan dokumentasi solusi teknis.</p>
-    {% if session['role'] in ['admin', 'it'] %}
+<div class="page-head">
     <div>
+        <h1>Knowledge Base</h1>
+        <p>Pusat panduan dan dokumentasi solusi teknis.</p>
+    </div>
+    {% if session['role'] in ['admin', 'it'] %}
+    <div class="page-head-actions">
         <a href="{{ url_for('knowledge_base.add') }}" class="btn-primary">+ Tambah Artikel</a>
     </div>
     {% endif %}

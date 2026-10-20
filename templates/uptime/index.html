@@ -4,6 +4,22 @@
 {% block header_title %}Service Uptime & Health Monitor{% endblock %}
 
 {% block content %}
+<div class="page-head">
+    <div>
+        <h1>Service Uptime & Health Monitor</h1>
+        <p>Kesehatan layanan dan server yang dipantau secara berkala.</p>
+    </div>
+    <div class="page-head-actions">
+        <a href="{{ url_for('uptime.check_all') }}" class="btn-secondary">🔄 Check All Services</a>
+        {% if session['role'] in ['admin', 'it'] %}
+        <a href="{{ url_for('uptime.add') }}" class="btn-primary">+ Tambah Target Monitor</a>
+        {% endif %}
+        {% if session['role'] == 'admin' %}
+        <a href="{{ url_for('uptime.telegram_settings') }}" class="btn-secondary">⚙️ Pengaturan Telegram</a>
+        {% endif %}
+    </div>
+</div>
+
 <!-- RINGKASAN STATISTIK HEALTH -->
 <div class="stats-grid">
     <div class="stat-box">
@@ -21,18 +37,7 @@
     </div>
 </div>
 
-<div class="list-header">
-    <h3 class="section-title">Daftar Layanan & Server</h3>
-    <div class="flex gap-10 items-center flex-wrap">
-        <a href="{{ url_for('uptime.check_all') }}" class="btn-secondary">🔄 Check All Services</a>
-        {% if session['role'] in ['admin', 'it'] %}
-        <a href="{{ url_for('uptime.add') }}" class="btn-primary">+ Tambah Target Monitor</a>
-        {% endif %}
-        {% if session['role'] == 'admin' %}
-        <a href="{{ url_for('uptime.telegram_settings') }}" class="btn-secondary">⚙️ Pengaturan Telegram</a>
-        {% endif %}
-    </div>
-</div>
+<h3 class="section-title">Daftar Layanan & Server</h3>
 
 {% if down_names %}
 <div class="alert-danger">

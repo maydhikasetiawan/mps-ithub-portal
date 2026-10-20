@@ -4,14 +4,16 @@
 {% block header_title %}User Management (Admin){% endblock %}
 
 {% block content %}
-<div class="list-header">
-    <div class="flex gap-10 items-center">
+<div class="page-head">
+    <div>
+        <h1>User Management</h1>
+        <p>Kelola akun pengguna, peran, dan departemen.</p>
+    </div>
+    <div class="page-head-actions">
         <a href="{{ url_for('users.departments') }}" class="btn-secondary">🏢 Kelola Departemen</a>
         {% if session['role'] == 'admin' %}
         <a href="{{ url_for('branding.branding_settings') }}" class="btn-secondary">🎨 Pengaturan Branding</a>
         {% endif %}
-    </div>
-    <div class="flex gap-10 items-center">
         <a href="{{ url_for('users.add') }}" class="btn-primary">+ Tambah User Baru</a>
         <a href="{{ url_for('users.deleted_history') }}" class="btn-secondary">📜 Riwayat Terhapus</a>
     </div>
