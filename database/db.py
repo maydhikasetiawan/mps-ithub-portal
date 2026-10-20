@@ -55,3 +55,21 @@ def get_branding():
     except Exception:
         pass
     return dict(BRANDING_DEFAULTS)
+
+
+def get_nav_counts():
+    """get_nav_counts: Sidebar badge counts: open tickets + active assets (same
+    definitions as the dashboard stat cards). Never raises:
+    returns {} on any error."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) AS count FROM tickets WHERE status IN ('Open', 'In Progress') AND is_deleted = FALSE;")
+        tickets = cur.fetchone()['count']
+        cur.execute("SELECT COUNT(*) AS count FROM assets WHERE is_deleted = FALSE;")
+        assets = cur.fetchone()['count']
+        cur.close()
+        conn.close()
+        return {'tickets': tickets, 'assets': assets}
+    except Exception:
+        return {}

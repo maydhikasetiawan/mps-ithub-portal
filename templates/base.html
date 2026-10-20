@@ -22,81 +22,85 @@
     {% include '_icons.html' %}
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
     <div class="sidebar">
-        <div class="brand">🛡️ {{ branding.app_name }}</div>
+        <div class="brand">
+            {% if branding.logo_url %}
+            <img class="brand-logo" src="{{ branding.logo_url }}" alt="">
+            {% else %}
+            <span class="brand-icon"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg></span>
+            {% endif %}
+            <span class="brand-text"><strong>{{ branding.app_name }}</strong><small>{{ branding.tagline }}</small></span>
+        </div>
         <ul class="nav-menu">
-            <li class="nav-item"><a href="{{ url_for('dashboard.index') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">📊 Dashboard</a></li>
-
-            <!-- Modul IPAM: Hanya untuk Admin, IT, dan Guest -->
+            <li class="nav-label">WORKSPACE</li>
+            <li class="nav-item"><a href="{{ url_for('dashboard.index') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>Dashboard</span></a></li>
             {% if session['role'] in ['admin', 'it', 'guest'] %}
-            <li class="nav-item"><a href="{{ url_for('assets.index') }}" class="nav-link {% if active_page == 'assets' %}active{% endif %}">🖥️ IT Assets (IPAM)</a></li>
+            <li class="nav-item"><a href="{{ url_for('assets.index') }}" class="nav-link {% if active_page == 'assets' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-box"/></svg><span>IT Assets (IPAM)</span>{% if nav_counts.get('assets') %}<span class="count">{{ nav_counts['assets'] }}</span>{% endif %}</a></li>
             {% endif %}
-
-            <!-- Modul Service Desk: Untuk Semua Role -->
-            <li class="nav-item"><a href="{{ url_for('tickets.index') }}" class="nav-link {% if active_page == 'tickets' %}active{% endif %}">🎫 Service Desk</a></li>
-            <li class="nav-item"><a href="{{ url_for('knowledge_base.index') }}" class="nav-link {% if active_page == 'knowledge_base' %}active{% endif %}">📚 Knowledge Base</a></li>
-
-            <!-- Modul Uptime Monitor: Untuk Admin, IT, dan Guest -->
+            <li class="nav-item"><a href="{{ url_for('tickets.index') }}" class="nav-link {% if active_page == 'tickets' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-ticket"/></svg><span>Service Desk</span>{% if nav_counts.get('tickets') %}<span class="count">{{ nav_counts['tickets'] }}</span>{% endif %}</a></li>
+            <li class="nav-item"><a href="{{ url_for('knowledge_base.index') }}" class="nav-link {% if active_page == 'knowledge_base' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg><span>Knowledge Base</span></a></li>
             {% if session['role'] in ['admin', 'it', 'guest'] %}
-            <li class="nav-item"><a href="{{ url_for('uptime.index') }}" class="nav-link {% if active_page == 'uptime' %}active{% endif %}">🌐 Uptime Monitor</a></li>
+            <li class="nav-item"><a href="{{ url_for('uptime.index') }}" class="nav-link {% if active_page == 'uptime' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-pulse"/></svg><span>Uptime Monitor</span></a></li>
             {% endif %}
-
-            <!-- Modul Reports Center: Hanya untuk Admin dan IT -->
             {% if session['role'] in ['admin', 'it'] %}
-            <li class="nav-item"><a href="{{ url_for('reports.index') }}" class="nav-link {% if active_page == 'reports' %}active{% endif %}">📈 Reports Center</a></li>
-            {% endif %}
-
-            <!-- Modul User Management: Khusus Super Admin -->
+            <li class="nav-label">ADMINISTRATION</li>
+            <li class="nav-item"><a href="{{ url_for('reports.index') }}" class="nav-link {% if active_page == 'reports' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-report"/></svg><span>Reports Center</span></a></li>
             {% if session['role'] == 'admin' %}
-            <li class="nav-item"><a href="{{ url_for('users.index') }}" class="nav-link {% if active_page == 'users' %}active{% endif %}">👥 User Management</a></li>
+            <li class="nav-item"><a href="{{ url_for('users.index') }}" class="nav-link {% if active_page == 'users' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span>User Management</span></a></li>
+            {% endif %}
             {% endif %}
         </ul>
+        <div class="side-profile">
+            <div class="profile-dropdown-wrapper">
+                <button type="button" id="profile-button" class="profile-btn" aria-haspopup="true" aria-expanded="false">
+                    <span class="avatar-initial">{{ session['username'][0] | upper }}</span>
+                    <span class="profile-btn-text"><strong>{{ session['username'] }}</strong><small>{{ session['role'] | capitalize }}</small></span>
+                    <svg class="icon profile-chevron" aria-hidden="true"><use href="#i-chevron"/></svg>
+                </button>
+                <div id="profile-dropdown-menu" class="profile-dropdown-panel" role="menu">
+                    <div class="profile-dropdown-header">
+                        <span class="profile-dropdown-header-label">Masuk sebagai</span>
+                        <span class="profile-dropdown-header-user">👤 <strong>{{ session['username'] }}</strong>
+                            <span class="badge {% if session['role'] == 'admin' %}badge-red{% elif session['role'] == 'it' %}badge-yellow{% elif session['role'] == 'user' %}badge-green{% else %}badge-repair{% endif %}">
+                                [{{ session['role'] | upper }}]
+                            </span>
+                        </span>
+                    </div>
+                    <a href="{{ url_for('users.change_password') }}" class="profile-dropdown-item item-link" role="menuitem">🔑 Ganti Password</a>
+                    <form method="POST" action="{{ url_for('auth.logout') }}" data-confirm="Keluar dari aplikasi?" data-confirm-label="Ya, Keluar" class="m-0">
+                        <button type="submit" class="profile-dropdown-item item-danger" role="menuitem">🚪 Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="main-content">
         <div class="header">
             <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle navigation menu">☰</button>
             <h2>{% block header_title %}Operational Dashboard{% endblock %}</h2>
             <div class="header-actions">
-                <button type="button" id="themeBtn" class="theme-toggle" aria-label="Ganti tema">🌙</button>
-                <div class="profile-dropdown-wrapper">
-                    <button type="button" id="profile-button" class="profile-btn" aria-haspopup="true" aria-expanded="false">
-                        <span>👤 <strong>{{ session['username'] }}</strong></span>
-                        <span class="profile-chevron" aria-hidden="true">▾</span>
-                    </button>
-                    <div id="profile-dropdown-menu" class="profile-dropdown-panel" role="menu">
-                        <div class="profile-dropdown-header">
-                            <span class="profile-dropdown-header-label">Masuk sebagai</span>
-                            <span class="profile-dropdown-header-user">👤 <strong>{{ session['username'] }}</strong>
-                                <span class="badge {% if session['role'] == 'admin' %}badge-red{% elif session['role'] == 'it' %}badge-yellow{% elif session['role'] == 'user' %}badge-green{% else %}badge-repair{% endif %}">
-                                    [{{ session['role'] | upper }}]
-                                </span>
-                            </span>
-                        </div>
-                        <a href="{{ url_for('users.change_password') }}" class="profile-dropdown-item item-link" role="menuitem">🔑 Ganti Password</a>
-                        <form method="POST" action="{{ url_for('auth.logout') }}" data-confirm="Keluar dari aplikasi?" data-confirm-label="Ya, Keluar" class="m-0">
-                            <button type="submit" class="profile-dropdown-item item-danger" role="menuitem">🚪 Logout</button>
-                        </form>
-                    </div>
-                </div>
+                <button type="button" id="themeBtn" class="theme-toggle" aria-label="Ganti tema"><svg class="icon icon-moon" aria-hidden="true"><use href="#i-moon"/></svg><svg class="icon icon-sun" aria-hidden="true"><use href="#i-sun"/></svg></button>
             </div>
         </div>
 
-        {% if session['role'] == 'guest' %}
-        <div class="flash flash-guest">
-            ℹ️ Anda login sebagai <strong>Guest (Read-Only)</strong>. Anda dapat melihat data tetapi tidak memiliki izin untuk menambah/mengubah data.
-        </div>
-        {% endif %}
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash {{ 'flash-success' if category == 'success' else 'flash-danger' }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+        <div class="page-wrap">
+            {% if session['role'] == 'guest' %}
+            <div class="flash flash-guest">
+                ℹ️ Anda login sebagai <strong>Guest (Read-Only)</strong>. Anda dapat melihat data tetapi tidak memiliki izin untuk menambah/mengubah data.
+            </div>
             {% endif %}
-        {% endwith %}
 
-        {% block content %}{% endblock %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash {{ 'flash-success' if category == 'success' else 'flash-danger' }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
     </div>
 
     <script>
@@ -177,13 +181,10 @@
             try {
                 var btn = document.getElementById('themeBtn');
                 if (!btn) return;
-                var current = document.documentElement.getAttribute('data-theme');
-                btn.textContent = current === 'light' ? '☀️' : '🌙';
                 btn.addEventListener('click', function() {
                     var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
                     document.documentElement.setAttribute('data-theme', next);
                     try { localStorage.setItem('mpshub-theme', next); } catch (e) {}
-                    btn.textContent = next === 'light' ? '☀️' : '🌙';
                 });
             } catch (e) {}
         })();
