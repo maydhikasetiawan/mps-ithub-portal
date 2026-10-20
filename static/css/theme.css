@@ -208,7 +208,7 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 @media (max-width: 768px) { .row-actions { justify-content: flex-start; } .mini-btn { width: 44px; height: 44px; } .mini-btn .icon { width: 16px; height: 16px; } }
 
 /* uptime monitor cards (mockup port) */
-.uptime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.uptime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 15px; }
 @media (max-width: 1080px) { .uptime-grid { grid-template-columns: 1fr; } }
 .monitor-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: 18px; transition: opacity .2s, border-color .2s; }
 .monitor-card.disabled { opacity: .55; }
