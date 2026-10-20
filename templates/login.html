@@ -22,19 +22,20 @@
     {% include '_icons.html' %}
     <div class="login-shell">
         <section class="login-story">
-            <div class="login-brand">
-                {% if branding.logo_url %}
-                <img src="{{ branding.logo_url }}" alt="" class="brand-logo">
-                {% else %}
-                <span class="brand-icon"><svg class="icon" aria-hidden="true"><use href="#i-pulse"/></svg></span>
-                {% endif %}
-                <div>
-                    <strong>{{ branding.app_name }}</strong>
-                    <span>{{ branding.tagline }}</span>
+            <div class="story-top">
+                <div class="brand-lockup">
+                    {% if branding.logo_url %}
+                    <img src="{{ branding.logo_url }}" alt="" class="brand-logo">
+                    {% else %}
+                    <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-pulse"/></svg></span>
+                    {% endif %}
+                    <span>{{ branding.app_name }}</span>
                 </div>
             </div>
-            <h1>{{ branding.login_headline }}</h1>
-            <p>{{ branding.login_text }}</p>
+            <div class="story-copy">
+                <h1>{{ branding.login_headline }}</h1>
+                <p>{{ branding.login_text }}</p>
+            </div>
         </section>
         <main class="login-panel">
             <div class="login-card">
@@ -63,7 +64,7 @@
                         <input type="password" name="password" required placeholder="Masukkan password">
                     </div>
                     <label class="remember-row"><input type="checkbox" name="remember"> Ingat saya</label>
-                    <button type="submit">Masuk ke Dashboard</button>
+                    <button type="submit">Masuk ke Dashboard <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
                 </form>
 
                 <div class="login-demo">
