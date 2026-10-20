@@ -411,7 +411,7 @@ html[data-theme="light"] .theme-toggle .icon-moon { display: none; }
 .flash-guest { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
 
 /* Login */
-body.login-body { background: var(--bg); color: var(--text); min-height: 100vh; overflow: auto; }
+body.login-body { background: var(--bg); color: var(--text); display: block; min-height: 100vh; overflow: auto; }
 .login-shell { min-height: 100vh; display: grid; grid-template-columns: minmax(300px, 1fr) minmax(430px, 46%); background: var(--bg); }
 .login-story { position: relative; overflow: hidden; padding: clamp(34px, 6vw, 82px); display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(145deg, rgba(57,200,184,.13), transparent 42%), radial-gradient(circle at 72% 70%, rgba(40,120,208,.14), transparent 36%), var(--bg); }
 .login-story::before { content: ""; position: absolute; inset: 0; opacity: .18; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 44px 44px; mask-image: linear-gradient(to bottom, black, transparent 85%); }
