@@ -234,6 +234,7 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 .monitor-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 13px; border-top: 1px solid var(--line); }
 .monitor-actions { display: flex; gap: 6px; }
 @media (max-width: 768px) { .monitor-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } .metric { padding: 8px; } .metric strong { font-size: 10px; } .monitor-foot { align-items: flex-end; } }
+@media (max-width: 768px) { .monitor-foot > div:first-child { display: flex; align-items: center; gap: 8px; min-width: 0; } .monitor-foot small { white-space: nowrap; } .monitor-actions { flex: none; } }
 
 @media (max-width: 768px) {
     /* Touch target improvements for shared layout elements */
@@ -246,8 +247,12 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
     .sidebar-backdrop.open { display: block; }
     .main-content { margin-left: 0; padding: 0; }
     .page-wrap { padding: 20px 16px 44px; }
-    .header { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; padding: 13px 16px; }
+    .header { flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 12px; padding: 13px 16px; }
     .header > div { width: auto; margin-left: auto; justify-content: flex-end; flex-wrap: wrap; }
+    .header h2 { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-actions { flex: none; flex-wrap: nowrap; }
+    .page-head { gap: 12px; margin-bottom: 16px; }
+    .page-head-actions .btn-primary, .page-head-actions .btn-secondary { font-size: 12px; padding: 0 10px; min-height: 34px; }
     .filter-bar { flex-direction: column; }
     .filter-input { width: 100%; min-width: 0; }
     .form-control { width: 100%; }
@@ -473,7 +478,7 @@ body.login-body { background: var(--bg); color: var(--text); display: block; min
 .story-stat span { color: var(--muted); font-size: 12px; }
 .field-wrap { position: relative; }
 .field-wrap input { padding-right: 48px; }
-.eye-btn { position: absolute; right: 6px; top: 6px; width: 36px; height: 36px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; border-radius: 8px; cursor: pointer; }
+.eye-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; border-radius: 8px; cursor: pointer; }
 .eye-btn .icon { width: 20px; height: 20px; }
 .login-panel { background: var(--surface); border-left: 1px solid var(--line); display: grid; place-items: center; padding: 32px; }
 .login-card { width: min(390px, 100%); }

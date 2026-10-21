@@ -93,8 +93,7 @@
                 {% endif %}
             </td>
             <td data-label="PELAPOR / DEPARTEMEN">
-                <strong>{{ t.created_by }}</strong>
-                <small class="text-muted">({{ t.department or 'IT' }})</small>
+                <span><strong>{{ t.created_by }}</strong> <small class="text-muted">({{ t.department or 'IT' }})</small></span>
             </td>
             <td data-label="ASSIGNEE">{{ t.assigned_to or '—' }}</td>
             <td data-label="AKSI">
