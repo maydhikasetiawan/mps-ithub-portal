@@ -275,6 +275,7 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 .profile-dropdown-header-label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
 .profile-dropdown-header-user { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; }
 .profile-dropdown-item { display: flex; align-items: center; gap: 9px; width: 100%; box-sizing: border-box; padding: 10px 14px; min-height: 44px; border-radius: 6px; font-size: 14px; font-weight: bold; text-decoration: none; cursor: pointer; text-align: left; }
+.profile-dropdown-item .icon { width: 18px; height: 18px; flex: none; }
 .profile-dropdown-item.item-link { color: var(--accent); background: transparent; }
 .profile-dropdown-item.item-link:hover { background: var(--surface-2); }
 .profile-dropdown-item.item-danger { color: var(--danger); background: transparent; border: none; font-family: inherit; }
@@ -473,6 +474,7 @@ body.login-body { background: var(--bg); color: var(--text); display: block; min
 .field-wrap { position: relative; }
 .field-wrap input { padding-right: 48px; }
 .eye-btn { position: absolute; right: 6px; top: 6px; width: 36px; height: 36px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; border-radius: 8px; cursor: pointer; }
+.eye-btn .icon { width: 20px; height: 20px; }
 .login-panel { background: var(--surface); border-left: 1px solid var(--line); display: grid; place-items: center; padding: 32px; }
 .login-card { width: min(390px, 100%); }
 .login-card h2 { font-size: 30px; letter-spacing: -.035em; margin: 0 0 9px; color: var(--text); }
