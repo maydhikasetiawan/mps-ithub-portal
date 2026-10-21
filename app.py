@@ -32,6 +32,10 @@ app.secret_key = secret_key
 # every request refreshes the expiry, so the 30 minutes count idle time.
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 # Remember-me: a session flagged 'remember_me' at login (the user
 # checked "Ingat saya") gets a 30-day idle lifetime; every other
