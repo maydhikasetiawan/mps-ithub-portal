@@ -35,6 +35,11 @@
             <div class="story-copy">
                 <h1>{{ branding.login_headline }}</h1>
                 <p>{{ branding.login_text }}</p>
+                <div class="story-stats">
+                    <div class="story-stat"><strong>8 modul</strong><span>dalam satu portal</span></div>
+                    <div class="story-stat"><strong>Mobile-ready</strong><span>untuk tim lapangan</span></div>
+                    <div class="story-stat"><strong>Role-aware</strong><span>akses sesuai peran</span></div>
+                </div>
             </div>
         </section>
         <main class="login-panel">
@@ -61,7 +66,10 @@
                     </div>
                     <div class="form-group">
                         <label>Password</label>
-                        <input type="password" name="password" required placeholder="Masukkan password">
+                        <div class="field-wrap">
+                            <input type="password" id="password" name="password" required placeholder="Masukkan password">
+                            <button type="button" class="eye-btn" id="showPassword" aria-label="Tampilkan password"><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg></button>
+                        </div>
                     </div>
                     <label class="remember-row"><input type="checkbox" name="remember"> Ingat saya</label>
                     <button type="submit">Masuk ke Dashboard <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
@@ -74,5 +82,13 @@
             </div>
         </main>
     </div>
+    <script>
+        document.getElementById('showPassword').addEventListener('click', function () {
+            var input = document.getElementById('password');
+            var show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            this.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
+        });
+    </script>
 </body>
 </html>

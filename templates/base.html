@@ -59,17 +59,17 @@
                 <div id="profile-dropdown-menu" class="profile-dropdown-panel" role="menu">
                     <div class="profile-dropdown-header">
                         <span class="profile-dropdown-header-label">Masuk sebagai</span>
-                        <span class="profile-dropdown-header-user">👤 <strong>{{ session['username'] }}</strong>
+                        <span class="profile-dropdown-header-user"><strong>{{ session['username'] }}</strong>
                             <span class="badge {% if session['role'] == 'admin' %}badge-red{% elif session['role'] == 'it' %}badge-yellow{% elif session['role'] == 'user' %}badge-green{% else %}badge-repair{% endif %}">
                                 [{{ session['role'] | upper }}]
                             </span>
                         </span>
                     </div>
                     {% if session['role'] != 'guest' %}
-                    <a href="{{ url_for('users.change_password') }}" class="profile-dropdown-item item-link" role="menuitem">🔑 Ganti Password</a>
+                    <a href="{{ url_for('users.change_password') }}" class="profile-dropdown-item item-link" role="menuitem"><svg class="icon" aria-hidden="true"><use href="#i-key"/></svg> Ganti Password</a>
                     {% endif %}
                     <form method="POST" action="{{ url_for('auth.logout') }}" data-confirm="Keluar dari aplikasi?" data-confirm-label="Ya, Keluar" class="m-0">
-                        <button type="submit" class="profile-dropdown-item item-danger" role="menuitem">🚪 Logout</button>
+                        <button type="submit" class="profile-dropdown-item item-danger" role="menuitem"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg> Logout</button>
                     </form>
                 </div>
             </div>
