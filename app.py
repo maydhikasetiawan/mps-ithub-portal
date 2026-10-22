@@ -1,4 +1,6 @@
 import os
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from flask import Flask
 from flask.sessions import SecureCookieSessionInterface
@@ -14,7 +16,7 @@ from routes.api import api_bp
 from routes.branding import branding_bp
 from database.db import get_branding, get_nav_counts
 from flask import session, redirect, url_for, request, flash
-from routes.uptime import uptime_bp, start_uptime_scheduler
+from routes.uptime import uptime_bp, start_uptime_scheduler, send_telegram_alert
 
 app = Flask(__name__)
 # Trust X-Forwarded-* headers from the single Nginx reverse
@@ -83,6 +85,40 @@ app.register_blueprint(uptime_bp)
 @app.route('/health')
 def health():
     return {"status": "healthy"}, 200
+
+
+# --- Fase 9.2: Telegram alert for HTTP 500 errors ---------------------------
+# Reuses send_telegram_alert from routes.uptime (reads telegram_settings,
+# never raises). Rate limit: at most 1 alert per error signature
+# (exception class + path) per 300 seconds. Gunicorn runs 1 worker,
+# so this in-memory window is exact; the lock covers its 4 threads.
+_error_alert_lock = threading.Lock()
+_error_alert_last = {}
+_ERROR_ALERT_WINDOW = 300
+
+
+@app.errorhandler(500)
+def handle_internal_error(error):
+    try:
+        original = getattr(error, 'original_exception', None)
+        exc = original if original is not None else error
+        signature = f"{type(exc).__name__}:{request.path}"
+        now = time.monotonic()
+        with _error_alert_lock:
+            due = now - _error_alert_last.get(signature, -_ERROR_ALERT_WINDOW) >= _ERROR_ALERT_WINDOW
+            if due:
+                _error_alert_last[signature] = now
+        if due:
+            text = (
+                "🚨 Error 500 — MPS-ITHub Portal\n"
+                f"{request.method} {request.path}\n"
+                f"{type(exc).__name__}: {exc}"
+            )[:500]
+            send_telegram_alert(text)
+    except Exception:
+        app.logger.exception("Failed to send HTTP 500 Telegram alert")
+    return error
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
