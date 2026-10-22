@@ -84,8 +84,8 @@
                 </span>
             </td>
             <td class="text-center" data-label="SLA">
-                {% if t.sla and (t.sla.state == 'approaching' or t.sla.state == 'breached') %}
-                <span class="badge {% if t.sla.state == 'approaching' %}badge-yellow{% else %}badge-red{% endif %}">
+                {% if t.sla and (t.sla.state == 'approaching' or t.sla.state == 'breached' or t.sla.state == 'met') %}
+                <span class="badge {% if t.sla.state == 'approaching' %}badge-yellow{% elif t.sla.state == 'met' %}badge-green{% else %}badge-red{% endif %}">
                     {{ t.sla.badge_text }}
                 </span>
                 {% else %}
