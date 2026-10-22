@@ -234,7 +234,7 @@ body { background: var(--bg); color: var(--text); display: flex; height: 100vh; 
 .monitor-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 13px; border-top: 1px solid var(--line); }
 .monitor-actions { display: flex; gap: 6px; }
 @media (max-width: 768px) { .monitor-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } .metric { padding: 8px; } .metric strong { font-size: 10px; } .monitor-foot { align-items: flex-end; } }
-@media (max-width: 768px) { .monitor-foot > div:first-child { display: flex; align-items: center; gap: 8px; min-width: 0; } .monitor-foot small { white-space: nowrap; } .monitor-actions { flex: none; } }
+@media (max-width: 768px) { .monitor-foot > div:first-child { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; } .monitor-foot small { white-space: nowrap; } .monitor-actions { flex: none; } }
 
 @media (max-width: 768px) {
     /* Touch target improvements for shared layout elements */
