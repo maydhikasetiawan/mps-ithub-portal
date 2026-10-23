@@ -45,14 +45,15 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/${{ github.repository }}:latest
-            docker stop my-web-app || true
-            docker rm my-web-app || true
+            docker stop mps-ithub-portal || true
+            docker rm mps-ithub-portal || true
 
             docker network create app-monitoring_default || true
 
             docker run -d \
-              --name my-web-app \
+              --name mps-ithub-portal \
               --restart always \
               --network app-monitoring_default \
               -p 5000:5000 \
@@ -63,6 +64,6 @@ jobs:
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
               -e WEBHOOK_URL=${{ secrets.WEBHOOK_URL }} \
               -e API_KEY=${{ secrets.API_KEY }} \
-              -v /home/ubuntu/my-web-app-uploads:/app/uploads \
+              -v /home/ubuntu/mps-ithub-portal-uploads:/app/uploads \
               -e UPLOAD_FOLDER=/app/uploads \
               ghcr.io/${{ github.repository }}:latest
