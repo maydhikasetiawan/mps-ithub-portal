@@ -147,7 +147,7 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Notifikasi Webhook | Otomatis via `WEBHOOK_URL` | Ya | Ya | Ya* | Tidak | Dipicu otomatis pada `ticket.created`, `ticket.status_changed`, `ticket.assigned` (*user: hanya saat buat tiket; email ditunda) |
 | | Lampiran Berkas (Upload/Download) | `/tickets/<id>/attachments/*` | Ya | Ya | Ya* | Unduh | Unggah: `admin`, `it`, `user` (*tiket sendiri, guest dilarang); Unduh: semua peran yang berhak melihat tiket |
 | | Kelola Kategori Tiket | `/tickets/categories` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
-| | Hapus Kategori Tiket | `/tickets/categories/delete/<id>` [GET] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
+| | Hapus Kategori Tiket | `/tickets/categories/delete/<id>` [POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Tiket Permanen | `/tickets/delete-permanent/<id>` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Penilaian Kepuasan (CSAT) | `/tickets/<id>` [POST action=submit_rating] | Ya* | Ya* | Ya* | Tidak | Form rating hanya untuk pelapor tiket pada tiket Resolved/Closed (*guest dilarang) |
 | | Buka Ulang Tiket (Reopen) | `/tickets/<id>` [POST action=reopen] | Ya | Ya | Ya* | Tidak | Pelapor tiket (*user tiket sendiri) atau `admin`/`it` pada tiket Resolved/Closed |
@@ -163,11 +163,11 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Tambah Monitor | `/uptime/add` [GET, POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | | Ubah Monitor | `/uptime/edit/<id>` [GET, POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | | Toggle Pemantauan | `/uptime/toggle/<id>` [POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
-| | Pindai Target (Single/All) | `/uptime/check/<id>`, `/check-all` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
+| | Pindai Target (Single/All) | `/uptime/check/<id>`, `/check-all` [POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | | Riwayat Monitor | `/uptime/<id>/history` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
 | | Pengaturan Telegram | `/uptime/telegram-settings` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Tes Koneksi Telegram | `/uptime/telegram-test` [POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Monitor | `/uptime/delete/<id>` [POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
-| **Reports** | Halaman Laporan & Ekspor | `/reports/`, `/reports/export/*` [GET] | Ya | Ya | Ya** | Ya** | `@login_required` (**menu navbar disembunyikan untuk `user` & `guest`) |
+| **Reports** | Halaman Laporan & Ekspor | `/reports/`, `/reports/export/*` [GET] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | **Users** | Kelola Akun Pengguna | `/users/`, `/add`, `/edit/*`, `/delete/*` | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Kelola Departemen | `/users/departments*` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |

@@ -6,7 +6,7 @@ Panduan ini menjelaskan langkah-langkah menyiapkan dan menjalankan **MPS-ITHub P
 
 ## 1. Prasyarat Sistem (Prerequisites)
 
-- **Python**: Versi 3.11 atau lebih baru
+- **Python**: Versi 3.13 atau lebih baru
 - **PostgreSQL**: Server PostgreSQL aktif (lokal atau melalui Docker)
 - **Git**: Untuk manajemen repositori
 - **Virtual Environment**: Modul `venv` bawaan Python

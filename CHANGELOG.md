@@ -6,6 +6,12 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [2026-10-23] - Pasca-Fase 9: Hardening Otorisasi, Tes Otomatis, Dependensi & CSRF
+- Hardening Otorisasi Reports & Uptime (main `5e580ff`): Indeks Reports dan kedua ekspor CSV kini `@roles_required('admin', 'it')` (sebelumnya cukup login — akun guest publik dapat mengunduh CSV berisi IP/MAC/serial); endpoint `check` uptime menjadi POST-only + admin/it dan pemicunya di template menjadi form POST terbungkus peran.
+- Suite Tes Otomatis + Gerbang CI (main `787ce81`): Suite pytest pertama repo (`tests/`, DB-free: penjaga auth, RBAC ekspor, perhitungan SLA) dan job `test` pada workflow deploy yang menjadi gerbang `build-and-push` — tes merah menghalangi deployment.
+- Refresh Dependensi, Python 3.13 & Dockerfile (main `7de0a2e`): pip-audit 74 temuan -> 0 (Flask 3.1.3, Werkzeug 3.1.9, Pillow 13.0.0, Alembic 1.20.1, psycopg2-binary 2.9.13); base image `python:3.13-slim`; container berjalan non-root (`appuser` uid 1000); HEALTHCHECK `/health`; `.dockerignore` baru.
+- Proteksi CSRF + Kunci Scheduler (main `5c9738c`): Token CSRF per sesi (hand-rolled, tanpa dependensi baru) pada seluruh 45 form POST — POST tanpa token valid ditolak 403, blueprint API dikecualikan (auth API-key); starter scheduler uptime kini memakai double-checked locking. Suite tes bertumbuh menjadi 33 tes.
+
 ## [2026-10-23] - Fase 9: Operational Hardening
 - 9.1 Backup Database Otomatis (main `398e9aa`): Skrip `ops/backup-db.sh` (pg_dump dari container PostgreSQL, gzip, retensi 7 harian + 4 mingguan, lock anti-tumpang-tindih, offsite Backblaze B2 opsional nonaktif secara bawaan) + runbook `docs/backups.md`. Instalasi server: cron root harian 02:15 WIB, run terjadwal pertama terverifikasi 2026-10-23.
 - 9.2 Alert Error 500 ke Telegram (main `00224d09`): `@app.errorhandler(500)` mengirim alert Telegram best-effort memakai pengirim yang sama dengan monitor uptime, rate-limit 1 per (kelas exception + path) per 300 detik, sepenuhnya ter-guard (kegagalan alert tidak pernah mengubah respons error).

@@ -6,12 +6,12 @@ Dokumen ini menjelaskan rancangan arsitektur, tumpukan teknologi (*technology st
 
 ## 1. Tumpukan Teknologi (Tech Stack)
 
-- **Backend Framework**: Python 3.11, Flask 3.0.2, Werkzeug 3.0.1 (dengan middleware `ProxyFix` untuk reverse proxy)
+- **Backend Framework**: Python 3.13, Flask 3.1.3, Werkzeug 3.1.9 (dengan middleware `ProxyFix` untuk reverse proxy)
 - **Production WSGI Server**: Gunicorn 26.2.0 (server pengembangan Flask bawaan tidak digunakan di lingkungan produksi)
 - **Template Engine & UI**: Jinja2 dengan Vanilla Custom CSS (tanpa framework CSS eksternal seperti Bootstrap/Tailwind)
-- **Database & Migration**: PostgreSQL, driver `psycopg2-binary` 2.9.9 (`RealDictCursor`), skema migrasi menggunakan Alembic 1.13.1
-- **Image Processing & QR**: Pillow 10.2.0, qrcode 8.2 (pembangkitan QR server-side in-memory)
-- **Containerization**: Docker (base image `python:3.11-slim`)
+- **Database & Migration**: PostgreSQL, driver `psycopg2-binary` 2.9.13 (`RealDictCursor`), skema migrasi menggunakan Alembic 1.20.1
+- **Image Processing & QR**: Pillow 13.0.0, qrcode 8.2 (pembangkitan QR server-side in-memory)
+- **Containerization**: Docker (base image `python:3.13-slim`, berjalan sebagai non-root `appuser` uid 1000 dengan HEALTHCHECK pada `/health`)
 - **CI/CD & Infrastruktur**: GitHub Actions, GitHub Container Registry (`ghcr.io`), AWS EC2 via SSH (`appleboy/ssh-action`)
 
 ---
@@ -117,8 +117,8 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
 - **Rute Utama**:
   - `GET /uptime/` — Dasbor status monitor dan ringkasan target aktif/mati (admin, it, guest).
   - `GET, POST /uptime/add` — Menambahkan target baru dengan uji kesehatan instan (admin, it).
-  - `GET /uptime/check/<int:monitor_id>` — Uji ulang kesehatan satu target / Cek Now (admin, it, guest). Manual check does NOT count toward the 2-consecutive-DOWN alert confirmation.
-  - `GET /uptime/check-all` — Uji ulang seluruh target sekaligus (admin, it, guest).
+  - `POST /uptime/check/<int:monitor_id>` — Uji ulang kesehatan satu target / Cek Now (admin, it). Manual check does NOT count toward the 2-consecutive-DOWN alert confirmation.
+  - `POST /uptime/check-all` — Uji ulang seluruh target sekaligus (admin, it).
   - `GET, POST /uptime/edit/<int:monitor_id>` — Ubah target monitor; re-check instan saat monitor aktif (admin, it).
   - `POST /uptime/toggle/<int:monitor_id>` — Nyalakan/matikan pemantauan otomatis per monitor (admin, it).
   - `POST /uptime/delete/<int:monitor_id>` — Menghapus target monitor beserta alert dan riwayat cek-nya (cascade app-level) (admin, it).
@@ -269,6 +269,9 @@ Sistem menggunakan session cookies terenkripsi (`SECRET_KEY`) dengan proteksi du
 - Mengonfigurasi aplikasi agar mempercayai header `X-Forwarded-For`, `X-Forwarded-Proto`, dan `X-Forwarded-Host` dari tepat 1 *hop* reverse proxy Nginx. Hal ini memastikan pembentukan URL absolut seperti `url_for(..., _external=True)` (digunakan untuk muatan kode QR label aset) menghasilkan skema protokol `https://` yang sesuai dengan akses peramban pengguna.
 - **Catatan Prasyarat**: `ProxyFix` hanya berdampak jika reverse proxy Nginx meneruskan skema protokol asli klien melalui header `X-Forwarded-Proto` (konfigurasi tingkat server di luar repositori).
 
+### Proteksi CSRF (Cross-Site Request Forgery):
+Setiap form HTML bermetode `POST` membawa token per-sesi (field `_csrf_token`, dibuat secara *lazy* menggunakan `secrets.token_urlsafe(32)`). Validator `@app.before_request` menolak setiap permintaan POST yang tidak memiliki token atau token tidak cocok dengan respons status `403 Forbidden`. Blueprint `api_v1` dikecualikan dari pemeriksaan ini karena menggunakan autentikasi berbasis header API-key alih-alih cookie sesi. Cookie sesi dengan atribut `SameSite=Lax` tetap aktif sebagai lapisan perlindungan pelengkap.
+
 ### Peran Pengguna:
 - **`admin`**: Memiliki hak akses penuh mencakup manajemen pengguna, departemen, penghapusan permanen tiket dan aset, manajemen kategori, dan seluruh modul operasional.
 - **`it`**: Tim teknis IT yang dapat mengelola aset (tambah/edit/soft delete/restore), memperbarui status tiket dan catatan solusi, serta mengelola target uptime monitor.
@@ -285,12 +288,18 @@ Otomatisasi pengiriman kode ke server produksi diatur melalui GitHub Actions pad
 
 - **Concurrency Guard**: Dikonfigurasi dengan `concurrency: group: deploy-production, cancel-in-progress: false`. Jika terjadi merge/push beruntun ke `main`, proses deploy kedua akan mengantre dan deploy yang sedang berjalan tidak pernah dibatalkan di tengah jalan (*never killed mid-way*) guna menghindari kondisi inkonsistensi kontainer produksi.
 1. **Trigger**: Event `push` ke branch utama (`main`).
-2. **Job: build-and-push**:
+2. **Job: test**:
+   - Menjalankan runner `ubuntu-latest` dengan Python 3.13.
+   - Mengambil kode repositori (`actions/checkout@v4`).
+   - Memasang dependensi (`pip install -r requirements.txt pytest==8.3.4`).
+   - Menjalankan seluruh pengujian otomatis (`python -m pytest -q`). Jika ada tes yang gagal, alur deployment dihentikan (gerbang CI).
+3. **Job: build-and-push**:
+   - Berjalan setelah job `test` selesai dengan sukses (`needs: test`).
    - Menjalankan runner `ubuntu-latest`.
    - Mengambil kode repositori (`actions/checkout@v4`).
    - Melakukan login ke GitHub Container Registry (`ghcr.io`) menggunakan akun `github.actor` dan `GITHUB_TOKEN`.
    - Membangun image Docker dan melakukan push dengan tag `ghcr.io/<repository>:latest`.
-3. **Job: deploy-to-ec2**:
+4. **Job: deploy-to-ec2**:
    - Berjalan setelah job `build-and-push` selesai dengan sukses (`needs: build-and-push`).
    - Membuka koneksi SSH ke server AWS EC2 via `appleboy/ssh-action@v1.0.3` menggunakan GitHub Secrets (`SSH_HOST`, `SSH_USERNAME`, `SSH_KEY`).
    - Mengeksekusi perintah shell pada server:
