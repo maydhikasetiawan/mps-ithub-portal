@@ -16,8 +16,8 @@ Panduan ini menjelaskan langkah-langkah menyiapkan dan menjalankan **MPS-ITHub P
 ## 2. Mengklon Repositori
 
 ```bash
-git clone https://github.com/maydhikasetiawan/my-web-app.git
-cd my-web-app
+git clone https://github.com/maydhikasetiawan/mps-ithub-portal.git
+cd mps-ithub-portal
 ```
 
 ---
