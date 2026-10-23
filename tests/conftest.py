@@ -11,6 +11,8 @@ import app as app_module  # noqa: E402
 
 # Neutralize scheduler on the app module namespace
 app_module.start_uptime_scheduler = lambda: None
+app_module.get_branding = lambda: {}
+app_module.get_nav_counts = lambda: {}
 
 app = app_module.app
 app.config['SESSION_COOKIE_SECURE'] = False
@@ -52,11 +54,13 @@ class FakeConnection:
         pass
 
 
-def login_as(client, role='user', username='testuser'):
+def login_as(client, role='user', username='testuser', csrf_token='test-csrf-token'):
     with client.session_transaction() as sess:
         sess['user_id'] = 1
         sess['username'] = username
         sess['role'] = role
+        if csrf_token is not None:
+            sess['_csrf_token'] = csrf_token
 
 
 @pytest.fixture

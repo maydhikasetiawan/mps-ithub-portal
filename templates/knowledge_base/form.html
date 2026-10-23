@@ -6,6 +6,7 @@
 {% block content %}
 <div class="form-card form-wide">
     <form method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label for="title">Judul Artikel *</label>
             <input type="text" id="title" name="title" class="form-control" required placeholder="Contoh: Solusi Printer Error / Panduan Koneksi VPN" value="{{ article.title if article and article.title else '' }}">

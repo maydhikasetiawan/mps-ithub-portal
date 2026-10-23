@@ -11,6 +11,7 @@
     </p>
 
     <form method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label class="text-strong font-bold">Alasan Penghapusan User (opsional)</label>
             <textarea name="delete_reason" class="form-control" rows="4" placeholder="Contoh: Karyawan resign, mutasi divisi, atau akun tidak aktif."></textarea>

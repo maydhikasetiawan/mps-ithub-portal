@@ -6,6 +6,7 @@
 {% block content %}
 <div class="form-card">
     <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label>Judul Tiket / Ringkasan Masalah *</label>
             <input type="text" name="title" class="form-control" required placeholder="Contoh: Koneksi internet server down / Printer error">

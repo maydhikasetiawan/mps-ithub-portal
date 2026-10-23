@@ -10,6 +10,7 @@
     <div class="form-card">
         <h4 class="section-title">Tambah Departemen</h4>
         <form method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label>Nama Departemen *</label>
                 <input type="text" name="department_name" class="form-control" required placeholder="Contoh: Logistics / Marketing">
@@ -35,6 +36,7 @@
                     <td data-label="AKSI">
                         <div class="row-actions">
                             <form method="POST" action="{{ url_for('users.delete_department', dept_id=d.id) }}" class="inline-form" data-confirm="Hapus departemen ini?">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                                 <button type="submit" class="mini-btn danger" aria-label="Hapus departemen"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
                             </form>
                         </div>

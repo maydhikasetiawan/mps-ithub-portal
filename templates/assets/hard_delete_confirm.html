@@ -17,6 +17,7 @@
     {% endif %}
 
     <form method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <!-- Lapis 1: Konfirmasi Nama Perangkat -->
         <div class="form-group">
             <label class="text-strong">

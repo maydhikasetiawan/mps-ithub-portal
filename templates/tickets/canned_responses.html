@@ -11,6 +11,7 @@
     <div class="form-card">
         <h4 class="section-title">Tambah Template Baru</h4>
         <form method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label class="text-muted">Judul Template *</label>
                 <input type="text" name="title" class="form-control" required maxlength="255" placeholder="Contoh: Permintaan Informasi Tambahan" value="{{ form_data.title if form_data else '' }}">
@@ -56,6 +57,7 @@
                             <div class="row-actions">
                                 <a href="{{ url_for('tickets.edit_canned_response', template_id=t.id) }}" class="mini-btn" aria-label="Edit template"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
                                 <form method="POST" action="{{ url_for('tickets.delete_canned_response', template_id=t.id) }}" class="inline-form" data-confirm="Hapus template respon ini?">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                                     <button type="submit" class="mini-btn danger" aria-label="Hapus template"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
                                 </form>
                             </div>

@@ -6,6 +6,7 @@
 {% block content %}
 <div class="form-card">
     <form method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label>Asset Tag *</label>
             <input type="text" name="asset_tag" class="form-control" required placeholder="Contoh: AST-SRV-001">

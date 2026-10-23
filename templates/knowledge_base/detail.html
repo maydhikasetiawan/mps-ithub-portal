@@ -23,6 +23,7 @@
         <div class="flex gap-10 items-center flex-wrap">
             <a href="{{ url_for('knowledge_base.edit', article_id=article.id) }}" class="btn-secondary">Edit Artikel</a>
             <form method="POST" action="{{ url_for('knowledge_base.delete', article_id=article.id) }}" class="inline-form" data-confirm="Apakah Anda yakin ingin menghapus artikel ini?">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="btn-danger">Hapus</button>
             </form>
         </div>

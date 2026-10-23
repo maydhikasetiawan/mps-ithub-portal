@@ -11,7 +11,7 @@
     </div>
     <div class="page-head-actions">
         {% if session['role'] in ['admin', 'it'] %}
-        <form method="POST" action="{{ url_for('uptime.check_all') }}" class="inline-form"><button type="submit" class="btn-secondary">🔄 Check All Services</button></form>
+        <form method="POST" action="{{ url_for('uptime.check_all') }}" class="inline-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token }}"><button type="submit" class="btn-secondary">🔄 Check All Services</button></form>
         {% endif %}
         {% if session['role'] in ['admin', 'it'] %}
         <a href="{{ url_for('uptime.add') }}" class="btn-primary">+ Tambah Target Monitor</a>
@@ -61,6 +61,7 @@
             </div>
             {% if session['role'] in ['admin', 'it'] %}
             <form method="POST" action="{{ url_for('uptime.toggle', monitor_id=m.id) }}" class="inline-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="switch-btn" aria-pressed="{{ 'true' if m.enabled else 'false' }}" aria-label="{% if m.enabled %}Nonaktifkan{% else %}Aktifkan{% endif %} monitoring {{ m.name }}"></button>
             </form>
             {% endif %}
@@ -88,12 +89,13 @@
             </div>
             <div class="monitor-actions">
                 {% if session['role'] in ['admin', 'it'] %}
-                <form method="POST" action="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="inline-form"><button type="submit" class="mini-btn" aria-label="Cek sekarang"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button></form>
+                <form method="POST" action="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="inline-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token }}"><button type="submit" class="mini-btn" aria-label="Cek sekarang"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button></form>
                 {% endif %}
                 <a href="{{ url_for('uptime.history', monitor_id=m.id) }}" class="mini-btn" aria-label="Riwayat monitor"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></a>
                 {% if session['role'] in ['admin', 'it'] %}
                 <a href="{{ url_for('uptime.edit', monitor_id=m.id) }}" class="mini-btn" aria-label="Edit monitor"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
                 <form method="POST" action="{{ url_for('uptime.delete', monitor_id=m.id) }}" class="inline-form" data-confirm="Hapus target ini?">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="mini-btn danger" aria-label="Hapus monitor"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
                 </form>
                 {% endif %}

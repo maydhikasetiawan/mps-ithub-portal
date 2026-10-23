@@ -19,6 +19,7 @@
         </div>
         <div class="flex gap-8 items-center">
             <form method="POST" action="{{ url_for('users.restore', user_id=user.id) }}" class="inline-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="btn-primary">Restore</button>
             </form>
             <a href="{{ url_for('users.hard_delete', user_id=user.id) }}" class="btn-danger">Hapus Permanen</a>

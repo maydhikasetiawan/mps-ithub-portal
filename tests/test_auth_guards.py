@@ -71,13 +71,13 @@ class TestGuestGuards:
 
     def test_guest_uptime_check_one_post_redirects_to_dashboard(self, client):
         login_as(client, role='guest', username='guest')
-        res = client.post('/uptime/check/1')
+        res = client.post('/uptime/check/1', data={'_csrf_token': 'test-csrf-token'})
         assert res.status_code == 302
         assert redirect_path(res) in ['/', '/dashboard']
 
     def test_guest_uptime_check_all_post_redirects_to_dashboard(self, client):
         login_as(client, role='guest', username='guest')
-        res = client.post('/uptime/check-all')
+        res = client.post('/uptime/check-all', data={'_csrf_token': 'test-csrf-token'})
         assert res.status_code == 302
         assert redirect_path(res) in ['/', '/dashboard']
 
@@ -103,7 +103,7 @@ class TestAdminGuardsWithFakes:
         calls = []
         monkeypatch.setattr(routes.uptime, 'run_all_checks', lambda: calls.append(1))
         login_as(client, role='admin', username='admin')
-        res = client.post('/uptime/check-all')
+        res = client.post('/uptime/check-all', data={'_csrf_token': 'test-csrf-token'})
         assert res.status_code == 302
         assert redirect_path(res) == '/uptime/'
         assert len(calls) == 1
@@ -112,6 +112,6 @@ class TestAdminGuardsWithFakes:
         fake_conn = FakeConnection(cursor=FakeCursor(fetchone_val=None))
         monkeypatch.setattr(routes.uptime, 'get_db_connection', lambda: fake_conn)
         login_as(client, role='admin', username='admin')
-        res = client.post('/uptime/check/1')
+        res = client.post('/uptime/check/1', data={'_csrf_token': 'test-csrf-token'})
         assert res.status_code == 302
         assert redirect_path(res) == '/uptime/'

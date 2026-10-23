@@ -20,6 +20,7 @@
         {% if session['role'] != 'guest' %}
         <div>
             <form method="POST" action="{{ url_for('assets.restore', asset_id=asset.id) }}" class="inline-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="btn-primary">Restore</button>
             </form>
             <a href="{{ url_for('assets.hard_delete', asset_id=asset.id) }}" class="btn-danger">Hapus Permanen</a>

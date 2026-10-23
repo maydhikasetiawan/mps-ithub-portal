@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+import secrets
 from datetime import datetime, timedelta, timezone
 from flask import Flask
 from flask.sessions import SecureCookieSessionInterface
@@ -16,7 +17,7 @@ from routes.api import api_bp
 from routes.branding import branding_bp
 from routes.setup import setup_bp
 from database.db import get_branding, get_nav_counts
-from flask import session, redirect, url_for, request, flash
+from flask import session, redirect, url_for, request, flash, abort
 from routes.uptime import uptime_bp, start_uptime_scheduler, send_telegram_alert
 
 app = Flask(__name__)
@@ -68,11 +69,16 @@ app.register_blueprint(setup_bp)
 def inject_branding():
     return {'branding': get_branding(), 'nav_counts': get_nav_counts()}
 
+_scheduler_lock = threading.Lock()
+
 @app.before_request
 def ensure_scheduler_started():
-    if not getattr(app, '_scheduler_started', False):
-        start_uptime_scheduler()
-        app._scheduler_started = True
+    if getattr(app, '_scheduler_started', False):
+        return
+    with _scheduler_lock:
+        if not getattr(app, '_scheduler_started', False):
+            start_uptime_scheduler()
+            app._scheduler_started = True
 
 @app.before_request
 def check_mandatory_password_change():
@@ -81,6 +87,35 @@ def check_mandatory_password_change():
         if session.get('must_change_password') and request.endpoint not in ['users.change_password', 'auth.logout', 'static']:
             flash("Demi keamanan, Anda diwajibkan mengganti password setelah di-reset oleh Admin.", "warning")
             return redirect(url_for('users.change_password'))
+
+# --- CSRF protection (session token, hand-rolled) -------------------
+# Every HTML form POST must carry the per-session token rendered
+# into the form as a hidden field. The token is generated lazily
+# the first time a page renders it (or a POST is checked).
+def _csrf_token():
+    token = session.get('_csrf_token')
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session['_csrf_token'] = token
+    return token
+
+@app.context_processor
+def inject_csrf_token():
+    return {'csrf_token': _csrf_token()}
+
+@app.before_request
+def csrf_protect():
+    if request.method != 'POST':
+        return None
+    if request.endpoint is None:
+        return None  # let Flask answer 404/405 itself
+    if request.blueprint == 'api_v1':
+        return None  # API-key header auth, not cookie forms
+    sent = request.form.get('_csrf_token')
+    expected = session.get('_csrf_token')
+    if not expected or not sent or not secrets.compare_digest(expected, sent):
+        abort(403)
+    return None
 
 app.register_blueprint(uptime_bp)
 

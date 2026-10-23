@@ -11,6 +11,7 @@
     </p>
 
     <form method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label class="text-strong font-bold">Alasan Penghapusan Aset *</label>
             <textarea name="delete_reason" class="form-control" rows="4" required placeholder="Contoh: Perangkat rusak berat / tidak dapat diperbaiki, dishibahkan ke cabang, atau di-retire."></textarea>

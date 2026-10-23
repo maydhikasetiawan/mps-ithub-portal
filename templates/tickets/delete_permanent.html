@@ -17,6 +17,7 @@
     {% endif %}
 
     <form method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label class="text-strong">Masukkan Password Admin Anda (<strong>{{ session['username'] }}</strong>):</label>
             <input type="password" name="confirm_password" class="form-control" required placeholder="Masukkan password Admin...">

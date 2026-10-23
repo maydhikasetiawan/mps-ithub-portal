@@ -23,6 +23,7 @@
     <!-- Save Form -->
     <h3 class="text-accent mb-15">⚙️ Konfigurasi Bot</h3>
     <form method="POST" action="{{ url_for('uptime.telegram_settings') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label>Bot Token</label>
             <input type="password" name="bot_token" class="form-control" autocomplete="off" placeholder="Kosongkan untuk memakai token tersimpan">
@@ -39,6 +40,7 @@
     <div class="form-divider-mt">
         <h4 class="text-body mb-10 text-14">Uji Koneksi Bot</h4>
         <form method="POST" action="{{ url_for('uptime.telegram_test') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="btn-secondary w-full">📨 Tes Koneksi</button>
         </form>
         <small class="text-muted block mt-6 text-center">Mengirim pesan tes ke Chat ID tersimpan.</small>

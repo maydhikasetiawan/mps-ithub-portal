@@ -43,6 +43,7 @@
     </div>
 
     <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label>Pilih File CSV *</label>
             <input type="file" name="csv_file" class="form-control" accept=".csv" required>

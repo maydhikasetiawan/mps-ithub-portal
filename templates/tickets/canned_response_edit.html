@@ -9,6 +9,7 @@
 <div class="form-card">
     <h4 class="text-accent mb-15">Edit Template Respon</h4>
     <form method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="form-group mb-15">
             <label class="form-label-sm">Judul Template *</label>
             <input type="text" name="title" class="form-control" required maxlength="255" value="{{ template_item.title }}">

@@ -58,6 +58,7 @@
                 </div>
                 {% if session['role'] in ['admin', 'it'] %}
                 <form method="POST" class="m-0" data-confirm="Hapus relasi tiket ini?">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="action" value="unlink">
                     <input type="hidden" name="relation_id" value="{{ r.id }}">
                     <button type="submit" class="btn-danger">Hapus</button>
@@ -72,6 +73,7 @@
 
         {% if session['role'] in ['admin', 'it'] %}
         <form method="POST" class="form-divider-mt">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="action" value="link">
             <div class="flex gap-10 flex-wrap items-center">
                 <input type="text" name="target_code" class="form-control flex-1 min-w-180" placeholder="TCK-YYYYMMDD-NNN" required>
@@ -128,6 +130,7 @@
 
         {% if ticket.created_by == session['username'] %}
         <form method="POST" class="{% if rating %}form-divider-mt{% endif %}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="action" value="submit_rating">
             <div class="form-group mb-12">
                 <label class="form-label-block">
@@ -219,6 +222,7 @@
 
         {% if session['role'] in ['admin', 'it', 'user'] and ticket.status not in ['Resolved', 'Closed'] and (attachments|length < 2) %}
         <form method="POST" enctype="multipart/form-data" class="form-divider">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="action" value="upload_attachment">
             <div class="form-group mb-12">
                 <label class="form-label-sm">Unggah Lampiran Baru (Maksimal 2 file total, 5 MB/file):</label>
@@ -242,6 +246,7 @@
 
         {% if ticket.created_by == session['username'] or session['role'] in ['admin', 'it'] %}
         <form method="POST" class="form-divider-mt">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="action" value="reopen">
             <div class="form-group mb-12">
                 <textarea name="reopen_reason" class="form-control" rows="2" maxlength="500" placeholder="Alasan dibuka ulang (opsional)..."></textarea>
@@ -253,6 +258,7 @@
         {% elif session['role'] in ['admin', 'it'] %}
         <!-- Form Pengisian Hanya Buka Jika Status Masih Open / In Progress -->
         <form method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="action" value="update_status">
             <div class="form-group mb-15">
                 <label class="form-label-sm">Tugaskan ke (Assignee):</label>
@@ -298,6 +304,7 @@
     <div class="detail-box">
         <h4 class="block-title">💬 TAMBAHKAN KOMENTAR</h4>
         <form method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="action" value="comment">
             {% if session['role'] in ['admin', 'it'] %}
             <div class="flex items-center gap-10 flex-wrap mb-12">

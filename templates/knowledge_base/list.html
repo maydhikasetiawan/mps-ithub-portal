@@ -45,6 +45,7 @@
             <div class="row-actions">
                 <a href="{{ url_for('knowledge_base.edit', article_id=a.id) }}" class="mini-btn" aria-label="Edit artikel"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
                 <form method="POST" action="{{ url_for('knowledge_base.delete', article_id=a.id) }}" class="inline-form" data-confirm="Apakah Anda yakin ingin menghapus artikel ini?">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="mini-btn danger" aria-label="Hapus artikel"><svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg></button>
                 </form>
             </div>

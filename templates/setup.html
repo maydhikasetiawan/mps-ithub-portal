@@ -34,6 +34,7 @@
                 {% endwith %}
 
                 <form method="POST">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <h3>Branding</h3>
                     <div class="form-group">
                         <label>App name</label>
