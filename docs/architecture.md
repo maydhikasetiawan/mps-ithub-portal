@@ -19,7 +19,7 @@ Dokumen ini menjelaskan rancangan arsitektur, tumpukan teknologi (*technology st
 ## 2. Struktur Repositori (Repo Layout)
 
 ```text
-my-web-app/
+mps-ithub-portal/
 ├── .github/workflows/    # Definisi workflow CI/CD GitHub Actions (deploy.yml)
 ├── database/             # Modul koneksi PostgreSQL dan inisialisasi tabel dasar (db.py)
 ├── docs/                 # Dokumentasi teknis aplikasi
@@ -295,7 +295,7 @@ Otomatisasi pengiriman kode ke server produksi diatur melalui GitHub Actions pad
    - Membuka koneksi SSH ke server AWS EC2 via `appleboy/ssh-action@v1.0.3` menggunakan GitHub Secrets (`SSH_HOST`, `SSH_USERNAME`, `SSH_KEY`).
    - Mengeksekusi perintah shell pada server:
      - Melakukan `docker pull` image terbaru dari `ghcr.io`.
-     - Menghentikan dan menghapus container lama `my-web-app`.
+     - Menghentikan dan menghapus container lama `mps-ithub-portal`.
      - Menyiapkan jaringan docker `app-monitoring_default`.
      - Menjalankan container baru di port `5000:5000` dengan kebijakan restart otomatis (`--restart always`) serta menginjeksikan secrets: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, `SECRET_KEY`, dan `API_KEY` (via `-e API_KEY=${{ secrets.API_KEY }}`). Container memulai proses via `entrypoint.sh` yang menjalankan migrasi otomatis `alembic upgrade head` (bersifat idempoten — no-op bila sudah di head) sebelum menjalankan server produksi Gunicorn 26.2.0 dengan perintah: `gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 4 --timeout 45 --graceful-timeout 30 --forwarded-allow-ips="*" --access-logfile - --error-logfile - --log-level info app:app` (model worker `gthread`, PID 1, log akses dan error ke stdout). Prosedur rollback dilakukan dengan melakukan revert commit pada Git (`git revert`).
 
