@@ -180,9 +180,9 @@ def add():
     return render_template('uptime/add.html', active_page='uptime')
 
 # --- TRIGGER REFRESH / CHECK SEKARANG ---
-@uptime_bp.route('/check/<int:monitor_id>')
+@uptime_bp.route('/check/<int:monitor_id>', methods=['POST'])
 @login_required
-@roles_required('admin', 'it', 'guest')
+@roles_required('admin', 'it')
 def check_now(monitor_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -640,9 +640,9 @@ def start_uptime_scheduler():
     )
 
 # --- TRIGGER CHECK SEMUA SERVICE SEKALIGUS ---
-@uptime_bp.route('/check-all')
+@uptime_bp.route('/check-all', methods=['POST'])
 @login_required
-@roles_required('admin', 'it', 'guest')
+@roles_required('admin', 'it')
 def check_all():
     run_all_checks()
     flash("Seluruh target service berhasil dipindai ulang!", "success")

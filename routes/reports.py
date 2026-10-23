@@ -2,7 +2,7 @@ import csv
 import io
 from collections import Counter
 from flask import Blueprint, render_template, request, Response, session, flash, redirect, url_for
-from routes.auth import login_required
+from routes.auth import login_required, roles_required
 from database.db import get_db_connection
 from datetime import datetime
 from routes.tickets import compute_sla, format_duration
@@ -11,6 +11,7 @@ reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
 @reports_bp.route('/')
 @login_required
+@roles_required('admin', 'it')
 def index():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -27,6 +28,7 @@ def index():
 # --- EXPORT LAPORAN ASSETS (IPAM) ---
 @reports_bp.route('/export/assets')
 @login_required
+@roles_required('admin', 'it')
 def export_assets():
     category = request.args.get('category', '')
     status = request.args.get('status', '')
@@ -141,6 +143,7 @@ def export_assets():
 # --- EXPORT LAPORAN SERVICE DESK (TICKETS) ---
 @reports_bp.route('/export/tickets')
 @login_required
+@roles_required('admin', 'it')
 def export_tickets():
     start_date = request.args.get('start_date', '')
     end_date = request.args.get('end_date', '')

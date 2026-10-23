@@ -10,7 +10,9 @@
         <p>Kesehatan layanan dan server yang dipantau secara berkala.</p>
     </div>
     <div class="page-head-actions">
-        <a href="{{ url_for('uptime.check_all') }}" class="btn-secondary">🔄 Check All Services</a>
+        {% if session['role'] in ['admin', 'it'] %}
+        <form method="POST" action="{{ url_for('uptime.check_all') }}" class="inline-form"><button type="submit" class="btn-secondary">🔄 Check All Services</button></form>
+        {% endif %}
         {% if session['role'] in ['admin', 'it'] %}
         <a href="{{ url_for('uptime.add') }}" class="btn-primary">+ Tambah Target Monitor</a>
         {% endif %}
@@ -85,7 +87,9 @@
                 <small class="text-muted">{{ m.last_check.strftime('%Y-%m-%d %H:%M:%S') if m.last_check else '-' }}</small>
             </div>
             <div class="monitor-actions">
-                <a href="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="mini-btn" aria-label="Cek sekarang"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></a>
+                {% if session['role'] in ['admin', 'it'] %}
+                <form method="POST" action="{{ url_for('uptime.check_now', monitor_id=m.id) }}" class="inline-form"><button type="submit" class="mini-btn" aria-label="Cek sekarang"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg></button></form>
+                {% endif %}
                 <a href="{{ url_for('uptime.history', monitor_id=m.id) }}" class="mini-btn" aria-label="Riwayat monitor"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></a>
                 {% if session['role'] in ['admin', 'it'] %}
                 <a href="{{ url_for('uptime.edit', monitor_id=m.id) }}" class="mini-btn" aria-label="Edit monitor"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></a>
