@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup - {{ branding.app_name }}</title>
+    <script>
+        try {
+            var theme = localStorage.getItem('mpshub-theme');
+            document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+        } catch (e) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <meta name="color-scheme" content="light dark">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+    <div class="login-shell">
+        <main class="login-panel">
+            <div class="login-card">
+                <h2>Setup</h2>
+                <p class="panel-sub">Konfigurasi awal branding dan akun administrator pertama.</p>
+
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST">
+                    <h3>Branding</h3>
+                    <div class="form-group">
+                        <label>App name</label>
+                        <input type="text" name="app_name" value="{{ branding.app_name if branding else '' }}" required placeholder="MPS-ITHub">
+                    </div>
+                    <div class="form-group">
+                        <label>Tagline</label>
+                        <input type="text" name="tagline" value="{{ branding.tagline if branding else '' }}" required placeholder="Operations Portal">
+                    </div>
+
+                    <h3>First admin account</h3>
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" name="username" required placeholder="admin">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" required placeholder="admin@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="field-wrap">
+                            <input type="password" name="password" required placeholder="Masukkan password">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Password Confirm</label>
+                        <div class="field-wrap">
+                            <input type="password" name="password_confirm" required placeholder="Konfirmasi password">
+                        </div>
+                    </div>
+
+                    <button type="submit">Selesaikan Setup</button>
+                </form>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
