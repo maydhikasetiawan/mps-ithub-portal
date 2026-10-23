@@ -107,6 +107,10 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 ### K. Modul Branding (`routes/branding.py`)
 - Halaman **Pengaturan Branding** (`/settings/branding`, khusus admin): nama aplikasi, tagline, URL logo, headline + teks halaman login, teks footer — tersimpan pada tabel `branding_settings` (satu baris, migrasi 024) dan disuntikkan ke semua template via context processor `inject_branding` dengan nilai cadangan fail-safe.
 
+### L. Modul First-Run Setup (`routes/setup.py`)
+- Halaman bootstrap `/setup` (GET/POST) untuk instalasi baru: satu formulir menulis branding (`app_name`, `tagline`) dan membuat akun admin pertama dalam satu transaksi basis data.
+- Penjaga fail-closed: halaman hanya dirender selama belum ada user aktif (`is_deleted = FALSE` berjumlah 0); di luar itu GET dan POST sama-sama redirect ke login. Tanpa dekorator login — pemeriksaan kekosongan adalah satu-satunya kontrol aksesnya.
+
 ---
 
 ## 2. Matriks Hak Akses (Roles Matrix)

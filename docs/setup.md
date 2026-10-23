@@ -55,7 +55,7 @@ Lalu lengkapi nilai variabel sesuai kredensial server PostgreSQL lokal Anda.
    ```
 
 2. **Inisialisasi Tabel Awal**:
-   Jalankan `alembic upgrade head` — Alembic membuat SEMUA tabel (tabel dasar di migrasi `001`, seed kategori di `020`). Tidak ada akun seed; akun admin pertama dibuat via `psql` (lihat §7).
+   Jalankan `alembic upgrade head` — Alembic membuat SEMUA tabel (tabel dasar di migrasi `001`, seed kategori di `020`). Tidak ada akun seed; akun admin pertama dibuat lewat halaman `/setup` saat aplikasi pertama kali dijalankan (lihat §7).
 
 3. **Menjalankan Migrasi Skema (Alembic)**:
    Eksekusi migrasi untuk membentuk SEMUA tabel (satu perintah, sama seperti §2):
@@ -124,7 +124,7 @@ Server akan aktif dan mendengarkan permintaan pada `http://0.0.0.0:5000`.
 2. **Verifikasi Melalui Peramban (Browser Check)**:
    - Buka `http://localhost:5000/health`: Memastikan API hidup dengan respon JSON `{"status": "healthy"}` (HTTP 200).
    - Buka `http://localhost:5000`: Halaman akan otomatis diarahkan ke `/login`.
-   - Masuk menggunakan akun admin yang kamu buat via `psql` (lihat §2 / §7).
+   - Masuk menggunakan akun admin yang kamu buat via halaman `/setup` (lihat §7).
    - Pastikan halaman beralih ke Dasbor Operasional dengan metrik aktif.
 
 ---
@@ -132,5 +132,5 @@ Server akan aktif dan mendengarkan permintaan pada `http://0.0.0.0:5000`.
 ## 7. Fresh Deploys & Schema Management
 
 - **Fresh Deploys**: `alembic upgrade head` creates ALL tables (base tables in `001`, seeds in `020`) — `init_db()` no longer exists.
-- **Admin Account**: The first admin account is NOT seeded. Create it via `psql` with a strong password hashed via `generate_password_hash` (e.g. `<choose-a-strong-password>`).
+- **Admin Account**: The first admin account is NOT seeded. Open `/setup` in the browser while the users table is empty: one form writes the branding (app name + tagline) and creates the first admin account, then redirects to the login page; `/setup` is unreachable afterwards. Manual fallback: create it via `psql` with a strong password hashed via `generate_password_hash` (e.g. `<choose-a-strong-password>`).
 - **Seed Accounts Removed**: The old `init_db` seed accounts are removed and must not be reused.

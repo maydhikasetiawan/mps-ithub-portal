@@ -6,6 +6,12 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [2026-10-23] - Fase 9: Operational Hardening
+- 9.1 Backup Database Otomatis (main `398e9aa`): Skrip `ops/backup-db.sh` (pg_dump dari container PostgreSQL, gzip, retensi 7 harian + 4 mingguan, lock anti-tumpang-tindih, offsite Backblaze B2 opsional nonaktif secara bawaan) + runbook `docs/backups.md`. Instalasi server: cron root harian 02:15 WIB, run terjadwal pertama terverifikasi 2026-10-23.
+- 9.2 Alert Error 500 ke Telegram (main `00224d09`): `@app.errorhandler(500)` mengirim alert Telegram best-effort memakai pengirim yang sama dengan monitor uptime, rate-limit 1 per (kelas exception + path) per 300 detik, sepenuhnya ter-guard (kegagalan alert tidak pernah mengubah respons error).
+- 9.3 First-Run Setup Flow (main `8d35a796c`): Halaman `/setup` satu layar untuk instalasi baru — branding (nama aplikasi + tagline) dan akun admin pertama ditulis dalam satu transaksi; halaman hanya dapat dijangkau selama tabel users kosong (fail-closed di GET dan POST) dan tertutup permanen sesudahnya. Menggantikan langkah pembuatan admin pertama via `psql`.
+- Rename Repositori: `my-web-app` menjadi `mps-ithub-portal`; nama container dan paket GHCR mengikuti, langkah deploy kini login GHCR memakai token bawaan Actions (main `c3daf8d`, run #160).
+
 ## [2026-10-20] - Fase 8: Port Total Mockup & Fitur Topbar
 - 8.1 Sistem Tombol & Ikon SVG (main `071cb25`): Sprite ikon SVG inline (`templates/_icons.html`) menggantikan ikon emoji; sistem tombol diseragamkan mengikuti mockup (metrik desktop min-height 39px, radius 9px, font 13px/700; target sentuh ≥44px pada layar kecil).
 - 8.2 Branding White-Label (main `60240ce`, migrasi 024): Tabel `branding_settings` satu baris + halaman admin "Pengaturan Branding" (`/settings/branding`) untuk nama aplikasi, tagline, logo, headline/teks login, dan teks footer per instalasi (bukan multi-tenant); nilai saat ini menjadi bawaan cadangan (fail-safe).
