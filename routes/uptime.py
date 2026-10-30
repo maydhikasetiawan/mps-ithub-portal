@@ -35,17 +35,18 @@ def check_target_health(target, monitor_type='PING', port=None):
         return 'DOWN', 0
 
 def get_telegram_config():
-    """Return (bot_token, chat_id) from the saved telegram_settings row.
+    """Return (token, chat_id) from the environment and telegram_settings row.
     Returns ('', '') when not configured or on any read error."""
     try:
+        token = os.environ.get('TELEGRAM_BOT_TOKEN', '').strip()
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT bot_token, chat_id FROM telegram_settings WHERE id = 1;")
+        cur.execute("SELECT chat_id FROM telegram_settings WHERE id = 1;")
         row = cur.fetchone()
         cur.close()
         conn.close()
         if row:
-            return row['bot_token'] or '', row['chat_id'] or ''
+            return token, row['chat_id'] or ''
     except Exception:
         logging.exception("Failed to read Telegram settings")
     return '', ''
@@ -394,22 +395,12 @@ def telegram_settings():
     cur = conn.cursor()
 
     if request.method == 'POST':
-        token = request.form.get('bot_token', '').strip()
         chat_id = request.form.get('chat_id', '').strip()
-        # Empty token field = keep the saved token. To disable Telegram,
-        # clear the Chat ID and Save.
-        if token:
-            cur.execute("""
-                UPDATE telegram_settings
-                SET bot_token = %s, chat_id = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE id = 1;
-            """, (token, chat_id))
-        else:
-            cur.execute("""
-                UPDATE telegram_settings
-                SET chat_id = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE id = 1;
-            """, (chat_id,))
+        cur.execute("""
+            UPDATE telegram_settings
+            SET chat_id = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = 1;
+        """, (chat_id,))
         conn.commit()
         cur.close()
         conn.close()
@@ -420,8 +411,12 @@ def telegram_settings():
     settings = cur.fetchone()
     cur.close()
     conn.close()
+    token_configured = bool(os.environ.get('TELEGRAM_BOT_TOKEN'))
     return render_template(
-        'uptime/telegram_settings.html', settings=settings, active_page='uptime'
+        'uptime/telegram_settings.html',
+        settings=settings,
+        token_configured=token_configured,
+        active_page='uptime',
     )
 
 
