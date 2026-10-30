@@ -82,6 +82,7 @@ jobs:
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
               -e WEBHOOK_URL=${{ secrets.WEBHOOK_URL }} \
               -e API_KEY=${{ secrets.API_KEY }} \
+              -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} \
               -v /home/ubuntu/mps-ithub-portal-uploads:/app/uploads \
               -e UPLOAD_FOLDER=/app/uploads \
               ghcr.io/${{ github.repository }}:latest
