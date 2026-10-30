@@ -6,6 +6,11 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [v1.0.1] - 2026-10-30 - Token Telegram ke Environment & Offsite R2
+- Cleanup Sisa Rename: direktori uploads lama yang kosong (`my-web-app-uploads`) dan berkas nginx Grafana nonaktif dihapus dari server; tidak ada perubahan kode aplikasi.
+- Token Telegram ke Environment + Rotasi (main `c23ed09`): token bot Telegram kini dibaca dari variabel lingkungan `TELEGRAM_BOT_TOKEN` (bukan lagi kolom `telegram_settings` di basis data); secret GitHub `TELEGRAM_BOT_TOKEN` ditambahkan ke workflow deploy; token lama dicabut via BotFather dan token baru diterapkan ke secret GitHub serta `.env` bot VPS; halaman pengaturan Telegram menampilkan status token dari environment (terpasang/belum) tanpa pernah menampilkan nilainya; tes koneksi dari webapp terverifikasi live.
+- Offsite Backup Cloudflare R2 (main `83a8dc1`, perbaikan `8e47177`): skrip `ops/backup-db.sh` mendapat blok upload R2 (bucket `mpshub-backups`, prefix `daily/`, aturan lifecycle hapus >30 hari di sisi bucket); `rclone` server diperbarui 1.60 -> 1.75.2; skrip menyetel `no_check_bucket` karena token Object Read & Write tidak memiliki izin HeadBucket/CreateBucket (tanpa opsi ini upload selalu ditolak `AccessDenied`); uji restore dari objek R2 lolos dengan hitungan identik (aset 19, tiket 6, users 7); cron 02:15 WIB memakai skrip baru.
+
 ## [2026-10-23] - Pasca-Fase 9: Hardening Otorisasi, Tes Otomatis, Dependensi & CSRF
 - Hardening Otorisasi Reports & Uptime (main `5e580ff`): Indeks Reports dan kedua ekspor CSV kini `@roles_required('admin', 'it')` (sebelumnya cukup login — akun guest publik dapat mengunduh CSV berisi IP/MAC/serial); endpoint `check` uptime menjadi POST-only + admin/it dan pemicunya di template menjadi form POST terbungkus peran.
 - Suite Tes Otomatis + Gerbang CI (main `787ce81`): Suite pytest pertama repo (`tests/`, DB-free: penjaga auth, RBAC ekspor, perhitungan SLA) dan job `test` pada workflow deploy yang menjadi gerbang `build-and-push` — tes merah menghalangi deployment.
