@@ -132,6 +132,8 @@ Untuk menyimpan salinan cadangan di luar server (*offsite*):
 2. Setel variabel `R2_ENABLED=1`, `R2_BUCKET`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, dan `R2_SECRET_ACCESS_KEY` di `/etc/mpshub/backup.env`.
 3. Pasang aturan *lifecycle* pada bucket R2 Anda (misal hapus berkas lebih dari 30 hari), karena skrip ini tidak melakukan pembersihan otomatis pada penyimpanan cloud.
 
+Skrip secara otomatis menyetel `no_check_bucket` pada remote R2 untuk mencegah `AccessDenied` saat CreateBucket karena token Object Read & Write tidak memiliki izin membuat bucket (langsung PutObject). Jangan hapus opsi ini.
+
 Blok skrip Backblaze B2 tetap dipertahankan dalam keadaan nonaktif dan tidak digunakan.
 
 ---

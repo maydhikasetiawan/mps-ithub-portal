@@ -184,6 +184,8 @@ if [[ "$R2_ENABLED" == "1" ]]; then
     export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
     export RCLONE_CONFIG_R2_REGION=auto
     export RCLONE_CONFIG_R2_ACL=private
+    # Lewati cek bucket (HeadBucket/CreateBucket) yang gagal pada token R2 Object Read & Write
+    export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
     log "upload offsite ke $R2_BUCKET/$R2_PREFIX ..."
     rclone copyto "$OUT_FILE" "r2:${R2_BUCKET}/${R2_PREFIX}$(basename "$OUT_FILE")" \
         || die "upload offsite gagal"
