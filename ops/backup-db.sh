@@ -5,7 +5,8 @@
 # pg_dump database db_monitoring dari dalam container PostgreSQL,
 # streaming ke gzip -1, retensi 7 dump harian + 4 snapshot mingguan
 # (hari Senin), alert Telegram HANYA saat gagal, upload offsite
-# Backblaze B2 opsional (nonaktif secara default).
+# Cloudflare R2 opsional via environment-configured rclone remote
+# (nonaktif secara default). Blok B2 dipertahankan nonaktif dan tidak digunakan.
 #
 # Konfigurasi: skrip ini me-source /etc/mpshub/backup.env bila ada
 # (chmod 600, berisi token/chat id/rclone bila dipakai). Semua nilai
@@ -46,6 +47,12 @@ TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
 B2_ENABLED="${B2_ENABLED:-0}"                    # 1 = upload offsite aktif
 B2_REMOTE="${B2_REMOTE:-b2:mpshub-backups}"      # remote rclone
 B2_PREFIX="${B2_PREFIX:-daily/}"
+R2_ENABLED="${R2_ENABLED:-0}"                    # 1 = upload offsite R2 aktif
+R2_BUCKET="${R2_BUCKET:-}"
+R2_PREFIX="${R2_PREFIX:-daily/}"
+R2_ACCOUNT_ID="${R2_ACCOUNT_ID:-}"
+R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID:-}"
+R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY:-}"
 
 DAILY_DIR="$BACKUP_DIR/daily"
 WEEKLY_DIR="$BACKUP_DIR/weekly"
@@ -159,6 +166,30 @@ if [[ "$B2_ENABLED" == "1" ]]; then
     log "upload offsite OK"
 else
     log "offsite B2: nonaktif (set B2_ENABLED=1 untuk menyalakan)"
+fi
+
+# ----------------------------------------------------------------------
+# Offsite ke Cloudflare R2 (SEKSI TERPISAH — nonaktif secara default)
+# ----------------------------------------------------------------------
+if [[ "$R2_ENABLED" == "1" ]]; then
+    need_cmd rclone
+    [[ -n "$R2_BUCKET" ]] || die "R2_BUCKET kosong padahal R2 dinyalakan"
+    [[ -n "$R2_ACCOUNT_ID" ]] || die "R2_ACCOUNT_ID kosong padahal R2 dinyalakan"
+    [[ -n "$R2_ACCESS_KEY_ID" ]] || die "R2_ACCESS_KEY_ID kosong padahal R2 dinyalakan"
+    [[ -n "$R2_SECRET_ACCESS_KEY" ]] || die "R2_SECRET_ACCESS_KEY kosong padahal R2 dinyalakan"
+    export RCLONE_CONFIG_R2_TYPE=s3
+    export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
+    export RCLONE_CONFIG_R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+    export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+    export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+    export RCLONE_CONFIG_R2_REGION=auto
+    export RCLONE_CONFIG_R2_ACL=private
+    log "upload offsite ke $R2_BUCKET/$R2_PREFIX ..."
+    rclone copyto "$OUT_FILE" "r2:${R2_BUCKET}/${R2_PREFIX}$(basename "$OUT_FILE")" \
+        || die "upload offsite gagal"
+    log "upload offsite OK"
+else
+    log "offsite R2: nonaktif (set R2_ENABLED=1 untuk menyalakan)"
 fi
 
 log "=== backup selesai OK ==="

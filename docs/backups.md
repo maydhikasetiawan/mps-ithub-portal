@@ -13,7 +13,7 @@ Skrip `ops/backup-db.sh` bertugas melakukan pencadangan otomatis harian database
 - **Retensi**: Menyimpan 7 dump harian terbaru dan 4 snapshot mingguan (diambil otomatis setiap hari Senin).
 - **Pencatatan**: Log eksekusi tersimpan rapi di `/var/log/mpshub/backup-db.log`.
 - **Notifikasi**: Mengirim alert ke Telegram HANYA saat terjadi kegagalan (`die`).
-- **Offsite (Opsional)**: Dukungan pengunggahan cadangan ke Backblaze B2 via `rclone` (nonaktif secara default).
+- **Offsite (Opsional)**: Dukungan pengunggahan cadangan ke Cloudflare R2 via `rclone` (nonaktif secara default).
 
 ---
 
@@ -125,12 +125,14 @@ Cadangan data yang tidak pernah diuji proses restore-nya bukanlah cadangan yang 
 
 ---
 
-## 8. Offsite Backblaze B2 (Opsional)
+## 8. Offsite Cloudflare R2 (Opsional)
 
 Untuk menyimpan salinan cadangan di luar server (*offsite*):
-1. Konfigurasikan remote `rclone` dengan nama `b2` (ikuti panduan `rclone config` untuk Backblaze B2).
-2. Setel variabel `B2_ENABLED=1` di `/etc/mpshub/backup.env`.
-3. Pasang aturan *lifecycle* pada bucket B2 Anda (misal hapus berkas lebih dari 30 hari), karena skrip ini tidak melakukan pembersihan otomatis pada penyimpanan cloud.
+1. Tidak diperlukan berkas konfigurasi remote `rclone` (skrip mengonfigurasi remote secara otomatis dari variabel environment).
+2. Setel variabel `R2_ENABLED=1`, `R2_BUCKET`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, dan `R2_SECRET_ACCESS_KEY` di `/etc/mpshub/backup.env`.
+3. Pasang aturan *lifecycle* pada bucket R2 Anda (misal hapus berkas lebih dari 30 hari), karena skrip ini tidak melakukan pembersihan otomatis pada penyimpanan cloud.
+
+Blok skrip Backblaze B2 tetap dipertahankan dalam keadaan nonaktif dan tidak digunakan.
 
 ---
 
