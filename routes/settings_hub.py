@@ -2,8 +2,10 @@ import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from routes.auth import login_required, roles_required
 from routes.tickets import get_sla_targets
+from routes.uptime import get_telegram_config, send_telegram_message
 import database.db
 from database.db import (
+    get_branding,
     get_hub_setting,
     set_hub_setting,
     delete_hub_setting,
@@ -17,6 +19,31 @@ settings_hub_bp = Blueprint('settings_hub', __name__)
 @login_required
 @roles_required('admin')
 def hub():
+    branding = get_branding()
+
+    try:
+        conn = database.db.get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM telegram_settings WHERE id = 1;")
+        settings = cur.fetchone()
+        cur.close()
+        conn.close()
+    except Exception:
+        settings = None
+
+    if hub_setting_decrypt_failed('telegram_bot_token'):
+        token_status = "tersimpan tetapi tidak dapat dibaca - masukkan ulang"
+    else:
+        db_token = get_hub_setting('telegram_bot_token')
+        if db_token is not None:
+            token_status = "dari database (tersimpan)"
+        elif os.environ.get('TELEGRAM_BOT_TOKEN'):
+            token_status = "dari environment (terpasang)"
+        else:
+            token_status = "belum diset"
+
+    token_configured = bool(token_status != 'belum diset')
+
     sla_keys = [
         'sla_critical_response', 'sla_critical_resolution',
         'sla_high_response', 'sla_high_resolution',
@@ -82,6 +109,10 @@ def hub():
     return render_template(
         'settings/hub.html',
         active_page='settings',
+        branding=branding,
+        settings=settings,
+        token_status=token_status,
+        token_configured=token_configured,
         sla_targets=sla_targets,
         sla_source=sla_source,
         webhook_source=webhook_source,
@@ -211,4 +242,98 @@ def update_api_key():
         return redirect(url_for('settings_hub.hub'))
 
     flash("API key berhasil disimpan.", "success")
+    return redirect(url_for('settings_hub.hub'))
+
+
+@settings_hub_bp.route('/settings/branding', methods=['POST'])
+@login_required
+@roles_required('admin')
+def update_branding():
+    app_name = request.form.get('app_name', '').strip()
+    tagline = request.form.get('tagline', '').strip()
+    logo_url = request.form.get('logo_url', '').strip()
+    login_headline = request.form.get('login_headline', '').strip()
+    login_text = request.form.get('login_text', '').strip()
+    footer_text = request.form.get('footer_text', '').strip()
+
+    current = get_branding()
+    if not app_name:
+        app_name = current['app_name']
+
+    conn = database.db.get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE branding_settings
+        SET app_name = %s, tagline = %s, logo_url = %s,
+            login_headline = %s, login_text = %s, footer_text = %s,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = 1;
+    """, (app_name, tagline, logo_url, login_headline, login_text, footer_text))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash('Pengaturan branding disimpan.', 'success')
+    return redirect(url_for('settings_hub.hub'))
+
+
+@settings_hub_bp.route('/settings/telegram', methods=['POST'])
+@login_required
+@roles_required('admin')
+def update_telegram():
+    chat_id = request.form.get('chat_id', '').strip()
+    bot_token = request.form.get('bot_token', '').strip()
+
+    conn = database.db.get_db_connection()
+    cur = conn.cursor()
+
+    if bot_token:
+        try:
+            set_hub_setting('telegram_bot_token', bot_token, is_secret=True)
+        except ValueError:
+            cur.close()
+            conn.close()
+            flash("Kunci enkripsi SETTINGS_ENCRYPTION_KEY belum dikonfigurasi; chat_id tidak disimpan.", "danger")
+            return redirect(url_for('settings_hub.hub'))
+
+    cur.execute("""
+        UPDATE telegram_settings
+        SET chat_id = %s, updated_at = CURRENT_TIMESTAMP
+        WHERE id = 1;
+    """, (chat_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash("Pengaturan Telegram berhasil disimpan.", "success")
+    return redirect(url_for('settings_hub.hub'))
+
+
+@settings_hub_bp.route('/settings/telegram-test', methods=['POST'])
+@login_required
+@roles_required('admin')
+def test_telegram():
+    token, chat_id = get_telegram_config()
+    ok, error = send_telegram_message(
+        token, chat_id, f"🔔 Tes koneksi Telegram {get_branding()['app_name']} — koneksi aktif."
+    )
+    if ok:
+        flash("Koneksi Telegram aktif — pesan tes terkirim.", "success")
+    else:
+        flash(f"Koneksi Telegram GAGAL: {error}", "danger")
+    return redirect(url_for('settings_hub.hub'))
+
+
+@settings_hub_bp.route('/settings/branding', methods=['GET'])
+def redirect_branding():
+    return redirect(url_for('settings_hub.hub'))
+
+
+@settings_hub_bp.route('/uptime/telegram-settings', methods=['GET', 'POST'])
+def redirect_telegram_settings():
+    return redirect(url_for('settings_hub.hub'))
+
+
+@settings_hub_bp.route('/uptime/telegram-test', methods=['GET', 'POST'])
+def redirect_telegram_test():
     return redirect(url_for('settings_hub.hub'))

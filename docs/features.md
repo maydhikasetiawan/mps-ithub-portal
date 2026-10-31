@@ -104,8 +104,8 @@ Dokumen ini memuat inventaris fitur lengkap **MPS-ITHub Portal** beserta matriks
 - **Tampilan responsif**: Navigasi sidebar menjadi drawer pada layar kecil; tabel data berubah menjadi kartu berlabel pada lebar ≤620px; target sentuh minimal 44px.
 - **Animasi antarmuka**: Animasi masuk halaman/kartu, modal, dan dropdown dengan durasi singkat (150–300ms), otomatis nonaktif bila pengguna mengaktifkan *reduced motion* di sistemnya.
 
-### K. Modul Branding (`routes/branding.py`)
-- Halaman **Pengaturan Branding** (`/settings/branding`, khusus admin): nama aplikasi, tagline, URL logo, headline + teks halaman login, teks footer — tersimpan pada tabel `branding_settings` (satu baris, migrasi 024) dan disuntikkan ke semua template via context processor `inject_branding` dengan nilai cadangan fail-safe.
+### K. Modul Branding (`routes/settings_hub.py`)
+- Modul **Pengaturan Branding** pada Hub Pengaturan (`/settings`, form submit `POST /settings/branding`, khusus admin; URL lama `GET /settings/branding` dialihkan ke `/settings`): nama aplikasi, tagline, URL logo, headline + teks halaman login, teks footer - tersimpan pada tabel `branding_settings` (satu baris, migrasi 024) dan disuntikkan ke semua template via context processor `inject_branding` dengan nilai cadangan fail-safe.
 
 ### L. Modul First-Run Setup (`routes/setup.py`)
 - Halaman bootstrap `/setup` (GET/POST) untuk instalasi baru: satu formulir menulis branding (`app_name`, `tagline`) dan membuat akun admin pertama dalam satu transaksi basis data.
@@ -165,8 +165,8 @@ Matriks berikut didasarkan langsung pada dekorator `@roles_required`, `@login_re
 | | Toggle Pemantauan | `/uptime/toggle/<id>` [POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | | Pindai Target (Single/All) | `/uptime/check/<id>`, `/check-all` [POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | | Riwayat Monitor | `/uptime/<id>/history` [GET] | Ya | Ya | Tidak | Ya | `@roles_required('admin', 'it', 'guest')` |
-| | Pengaturan Telegram | `/uptime/telegram-settings` [GET, POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
-| | Tes Koneksi Telegram | `/uptime/telegram-test` [POST] | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
+| | Pengaturan Telegram | `/settings/telegram` [POST] (redirect dari `/uptime/telegram-settings`) | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
+| | Tes Koneksi Telegram | `/settings/telegram-test` [POST] (redirect dari `/uptime/telegram-test`) | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |
 | | Hapus Monitor | `/uptime/delete/<id>` [POST] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | **Reports** | Halaman Laporan & Ekspor | `/reports/`, `/reports/export/*` [GET] | Ya | Ya | Tidak | Tidak | `@roles_required('admin', 'it')` |
 | **Users** | Kelola Akun Pengguna | `/users/`, `/add`, `/edit/*`, `/delete/*` | Ya | Tidak | Tidak | Tidak | `@roles_required('admin')` |

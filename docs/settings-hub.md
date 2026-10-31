@@ -7,12 +7,19 @@ Dokumen ini menjelaskan pengelolaan pengaturan sistem terpusat melalui halaman `
 
 Halaman Hub Pengaturan mencakup modul-modul berikut:
 
-1. **Pengaturan Branding**: Tautan ke kustomisasi identitas aplikasi (`/settings/branding`).
-2. **Pengaturan Telegram**: Tautan ke konfigurasi bot Telegram (`/uptime/telegram-settings`).
+1. **Pengaturan Branding**: Kustomisasi identitas aplikasi (nama aplikasi, tagline, URL logo, headline dan teks login, teks footer). Tersimpan pada tabel `branding_settings`. Formulir dikirim via `POST /settings/branding`.
+2. **Pengaturan Telegram**: Konfigurasi bot Telegram (Chat ID dan Bot Token terenkripsi) serta pengujian koneksi bot. Tersimpan pada tabel `telegram_settings` dan `hub_settings`. Formulir dikirim via `POST /settings/telegram` dan `POST /settings/telegram-test`.
 3. **Target SLA Tiket**: Konfigurasi batas waktu respon dan resolusi tiket untuk setiap prioritas (Critical, High, Medium, Low). Tersimpan di database.
 4. **Integrasi Webhook**: URL endpoint webhook untuk event tiket. Tersimpan terenkripsi di database.
 5. **Interval Pemantauan Uptime**: Durasi antar pengecekan layanan uptime (60 - 3600 detik). Tersimpan di database.
 6. **Kunci API (API Key)**: Kunci autentikasi REST API. Tersimpan terenkripsi di database.
+
+### Pengalihan URL Lama (Redirects)
+
+URL lama berikut dialihkan otomatis ke `/settings`:
+- `GET /settings/branding` -> dialihkan ke `/settings`
+- `GET /uptime/telegram-settings` -> dialihkan ke `/settings`
+- `POST /uptime/telegram-test` -> dialihkan ke `/settings`
 ---
 
 ## 2. Pembuatan Kunci Enkripsi

@@ -14,7 +14,6 @@ from routes.reports import reports_bp
 from routes.users import users_bp # 1. Import Blueprint Users
 from routes.knowledge_base import knowledge_base_bp
 from routes.api import api_bp
-from routes.branding import branding_bp
 from routes.settings_hub import settings_hub_bp
 from routes.setup import setup_bp
 from database.db import get_branding, get_nav_counts
@@ -63,7 +62,6 @@ app.register_blueprint(knowledge_base_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(users_bp) # 2. Register Blueprint Users
 app.register_blueprint(api_bp)
-app.register_blueprint(branding_bp)
 app.register_blueprint(settings_hub_bp)
 app.register_blueprint(setup_bp)
 

@@ -123,8 +123,8 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `POST /uptime/toggle/<int:monitor_id>` — Nyalakan/matikan pemantauan otomatis per monitor (admin, it).
   - `POST /uptime/delete/<int:monitor_id>` — Menghapus target monitor beserta alert dan riwayat cek-nya (cascade app-level) (admin, it).
   - `GET /uptime/<int:monitor_id>/history` — Riwayat cek per monitor: grafik latensi SVG + statistik (uptime %, rata-rata/min/maks latensi, total cek, jumlah DOWN), rentang 24 jam / 7 hari / 30 hari (admin, it, guest).
-  - `GET, POST /uptime/telegram-settings` — Pengaturan Telegram (bot token + chat ID, disimpan di database, token tidak pernah dirender) — ADMIN ONLY.
-  - `POST /uptime/telegram-test` — Kirim pesan tes ke Chat ID tersimpan — ADMIN ONLY.
+  - `GET /uptime/telegram-settings` - Dialihkan (redirect 302) ke `/settings` (modul Telegram kini berada pada Hub Pengaturan).
+  - `POST /uptime/telegram-test` - Dialihkan (redirect 302) ke `/settings` (aksi tes kini melalui `POST /settings/telegram-test`).
 - **Pengecekan Terjadwal (Scheduler)**: Daemon thread yang dijalankan saat startup aplikasi (`start_uptime_scheduler()`) dengan interval dari variabel lingkungan `UPTIME_CHECK_INTERVAL` (default 300 detik). Hanya memeriksa monitor dengan `enabled = TRUE`, menggunakan fungsi *helper* `run_all_checks()` yang sama dengan rute manual *Check All*.
 - **Mekanisme Alert (Transisi Status & Telegram)**: Alert hanya dikirim saat terjadi transisi status (`UP → DOWN` menghasilkan alert DOWN, `DOWN → UP` menghasilkan alert PULIH). Alert DOWN hanya terpicu pada pengecekan DOWN berturut-turut kedua jika belum ada alert aktif (flag `is_alerted` pada `monitors`); alert PULIH terpicu saat status kembali UP jika dan hanya jika terdapat alert yang sedang aktif. Flag `is_alerted` (bukan counter) berfungsi sebagai status alert, sehingga reset counter saat toggle tidak lagi menimbulkan duplikasi alert DOWN atau hilangnya alert PULIH. Baris alert disimpan dan di-*commit* ke basis data terlebih dahulu sebelum pengiriman pesan Telegram dicoba (*fail-safe*, kegagalan Telegram tidak membatalkan riwayat in-app maupun siklus scheduler). Pengiriman Telegram menggunakan pustaka standar Python `urllib` tanpa dependensi eksternal.
 - **Riwayat Pengecekan & Grafik**: Setiap pengecekan (scheduler, *Check All*, *Cek Now*, *re-check* saat edit, dan cek awal saat penambahan target) mencatat tepat satu baris riwayat ke tabel `uptime_checks`. Pembersihan otomatis (*retention cleanup*) menghapus data riwayat yang lebih lama dari 30 hari di dalam `run_all_checks()`. Tampilan rentang 24 jam menggunakan titik data mentah, sedangkan rentang 7 hari dan 30 hari menggunakan agregasi per jam (*hourly buckets*) dengan kalkulasi agregat mentah `MIN`/`MAX`/`SUM` untuk menjaga keakuratan nilai statistik latensi (fix f0c0368). Grafik latensi SVG dilengkapi garis kisi atas (*top gridline*) pada y=20 dan rata-rata latensi per *bucket* dibulatkan seragam ke 1 desimal.
@@ -177,8 +177,8 @@ Aplikasi dibangun berbasis modul Blueprint Flask:
   - `GET /api/v1/assets` & `GET /api/v1/assets/<int:asset_id>` — Daftar dan detail aset TI aktif.
   - `GET /api/v1/monitors` & `GET /api/v1/monitors/<int:monitor_id>` — Daftar dan detail status target uptime monitor.
 
-### i. `branding` (`routes/branding.py`, URL prefix: `/settings`)
-- Halaman pengaturan branding white-label per instalasi (khusus admin); data dari tabel `branding_settings` dibaca fail-safe oleh `get_branding()` di `database/db.py` dan disuntikkan ke template via context processor.
+### i. `settings_hub` (`routes/settings_hub.py`, URL prefix: `/settings`)
+- Hub pengaturan admin modular terpusat (khusus admin) mencakup modul branding (`POST /settings/branding`, URL lama `GET /settings/branding` dialihkan ke `/settings`), pengaturan bot Telegram (`POST /settings/telegram`), tes koneksi Telegram (`POST /settings/telegram-test`), target SLA tiket, webhook URL, interval pemantauan uptime, dan kunci API. Data branding dari tabel `branding_settings` dibaca fail-safe oleh `get_branding()` di `database/db.py` dan disuntikkan ke template via context processor.
 
 ---
 

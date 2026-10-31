@@ -16,9 +16,6 @@
         {% if session['role'] in ['admin', 'it'] %}
         <a href="{{ url_for('uptime.add') }}" class="btn-primary">+ Tambah Target Monitor</a>
         {% endif %}
-        {% if session['role'] == 'admin' %}
-        <a href="{{ url_for('uptime.telegram_settings') }}" class="btn-secondary">⚙️ Pengaturan Telegram</a>
-        {% endif %}
     </div>
 </div>
 

@@ -5,19 +5,67 @@
 
 {% block content %}
 <div class="form-card">
-    <!-- Section 1: Halaman Terkait -->
-    <h3 class="text-accent mb-15">Halaman Pengaturan Lainnya</h3>
-    <div class="flex gap-15 mb-20 flex-wrap">
-        <div class="info-box flex-1 min-w-200">
-            <strong>Pengaturan Branding</strong>
-            <p class="text-muted text-12 mt-5 mb-10">Kustomisasi identitas aplikasi, logo, headline login, dan teks footer.</p>
-            <a href="{{ url_for('branding.branding_settings') }}" class="btn-secondary text-12">Buka Pengaturan Branding</a>
+    <!-- Section 1: Pengaturan Branding -->
+    <div class="form-divider-mt">
+        <h3 class="text-accent mb-10">Pengaturan Branding</h3>
+        <form method="POST" action="{{ url_for('settings_hub.update_branding') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label for="app_name">Nama Aplikasi</label>
+                <input type="text" id="app_name" name="app_name" class="form-control" value="{{ branding.app_name }}" required>
+            </div>
+            <div class="form-group">
+                <label for="tagline">Tagline</label>
+                <input type="text" id="tagline" name="tagline" class="form-control" value="{{ branding.tagline }}">
+            </div>
+            <div class="form-group">
+                <label for="logo_url">URL Logo</label>
+                <input type="text" id="logo_url" name="logo_url" class="form-control" value="{{ branding.logo_url }}">
+            </div>
+            <div class="form-group">
+                <label for="login_headline">Headline Login</label>
+                <input type="text" id="login_headline" name="login_headline" class="form-control" value="{{ branding.login_headline }}">
+            </div>
+            <div class="form-group">
+                <label for="login_text">Teks Login</label>
+                <textarea id="login_text" name="login_text" class="form-control" rows="4">{{ branding.login_text }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="footer_text">Teks Footer</label>
+                <input type="text" id="footer_text" name="footer_text" class="form-control" value="{{ branding.footer_text }}">
+            </div>
+            <button type="submit" class="btn-primary">Simpan Branding</button>
+        </form>
+    </div>
+
+    <!-- Section 2: Pengaturan Telegram -->
+    <div class="form-divider-mt">
+        <h3 class="text-accent mb-10">Pengaturan Telegram</h3>
+        <div class="info-box mb-10">
+            <div>Token: <strong>{{ token_status }}</strong></div>
+            <div class="mt-5">Chat ID: <strong>{{ settings.chat_id if settings and settings.chat_id else '-' }}</strong></div>
         </div>
-        <div class="info-box flex-1 min-w-200">
-            <strong>Pengaturan Telegram</strong>
-            <p class="text-muted text-12 mt-5 mb-10">Konfigurasi Chat ID dan Bot Token untuk notifikasi insiden pemantauan.</p>
-            <a href="{{ url_for('uptime.telegram_settings') }}" class="btn-secondary text-12">Buka Pengaturan Telegram</a>
+        <div class="info-box mb-10">
+            Token ini dipakai di 3 tempat: aplikasi web, bot VPS, dan backup. Mengubah dari sini hanya mengubah copy aplikasi web. Bot VPS dan backup tetap memakai nilai lama sampai file .env mereka diperbarui.
         </div>
+        <form method="POST" action="{{ url_for('settings_hub.update_telegram') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label for="bot_token">Bot Token</label>
+                <input type="password" id="bot_token" name="bot_token" class="form-control" autocomplete="new-password" placeholder="Kosongkan jika tidak ingin mengubah token tersimpan">
+            </div>
+            <div class="form-group">
+                <label for="chat_id">Chat ID</label>
+                <input type="text" id="chat_id" name="chat_id" class="form-control" value="{{ settings.chat_id if settings and settings.chat_id else '' }}" placeholder="Contoh: -100123456789 atau 12345678">
+                <small class="text-muted block mt-5">Kosongkan Chat ID lalu Simpan untuk menonaktifkan Telegram.</small>
+            </div>
+            <button type="submit" class="btn-primary">Simpan Pengaturan Telegram</button>
+        </form>
+        <form method="POST" action="{{ url_for('settings_hub.test_telegram') }}" class="mt-15">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn-primary">Tes Koneksi</button>
+            <small class="text-muted block mt-5">Mengirim pesan tes ke Chat ID tersimpan.</small>
+        </form>
     </div>
 
     <!-- Section 2: SLA Target Module -->

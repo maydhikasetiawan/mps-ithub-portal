@@ -47,7 +47,7 @@ def test_telegram_settings_post_admin_with_bot_token(client, monkeypatch):
 
     login_as(client, role='admin', username='admin')
     res = client.post(
-        '/uptime/telegram-settings',
+        '/settings/telegram',
         data={
             '_csrf_token': 'test-csrf-token',
             'chat_id': '-100987654',
@@ -55,6 +55,9 @@ def test_telegram_settings_post_admin_with_bot_token(client, monkeypatch):
         },
     )
     assert res.status_code == 302
+    assert res.headers['Location'].endswith('/settings')
+    with client.session_transaction() as sess:
+        assert any('Pengaturan Telegram berhasil disimpan.' in msg for _, msg in sess.get('_flashes', []))
 
     hub_writes = [p for q, p in cursor.executed if 'INSERT INTO hub_settings' in q]
     assert len(hub_writes) == 1
@@ -78,7 +81,7 @@ def test_telegram_settings_post_admin_without_bot_token(client, monkeypatch):
 
     login_as(client, role='admin', username='admin')
     res = client.post(
-        '/uptime/telegram-settings',
+        '/settings/telegram',
         data={
             '_csrf_token': 'test-csrf-token',
             'chat_id': '-100987654',
@@ -86,6 +89,9 @@ def test_telegram_settings_post_admin_without_bot_token(client, monkeypatch):
         },
     )
     assert res.status_code == 302
+    assert res.headers['Location'].endswith('/settings')
+    with client.session_transaction() as sess:
+        assert any('Pengaturan Telegram berhasil disimpan.' in msg for _, msg in sess.get('_flashes', []))
     for query, params in cursor.executed:
         assert 'hub_settings' not in query
         if 'UPDATE telegram_settings' in query:
@@ -98,7 +104,7 @@ def test_telegram_settings_get_renders_bot_token_input(client, monkeypatch):
     monkeypatch.setattr(database.db, 'get_db_connection', lambda: FakeConnection(cursor=FakeCursor(fetchone_val=None)))
 
     login_as(client, role='admin', username='admin')
-    res = client.get('/uptime/telegram-settings')
+    res = client.get('/settings')
     assert res.status_code == 200
     html = res.get_data(as_text=True)
     assert 'name="bot_token"' in html

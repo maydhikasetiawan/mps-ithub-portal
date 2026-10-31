@@ -17,7 +17,8 @@ def test_hub_get_admin(client, monkeypatch):
     assert res.status_code == 200
     html = res.get_data(as_text=True)
     assert '/settings/branding' in html
-    assert '/uptime/telegram-settings' in html
+    assert '/settings/telegram' in html
+    assert '/settings/telegram-test' in html
     assert '/settings/sla' in html
     assert '/settings/webhook' in html
     assert '/settings/interval' in html
@@ -305,4 +306,124 @@ def test_api_key_delete_failure(client, monkeypatch):
     )
     assert res.status_code == 200
     assert 'Gagal menghapus API key dari database.' in res.get_data(as_text=True)
+
+
+def test_branding_post_saves_and_flashes(client, monkeypatch):
+    cursor = RecordingCursor()
+    fake_conn = FakeConnection(cursor=cursor)
+    monkeypatch.setattr(database.db, 'get_db_connection', lambda: fake_conn)
+    login_as(client, role='admin', username='admin')
+    res = client.post(
+        '/settings/branding',
+        data={
+            '_csrf_token': 'test-csrf-token',
+            'app_name': 'My Portal',
+            'tagline': 'Best Tagline',
+            'logo_url': 'https://example.com/logo.png',
+            'login_headline': 'Welcome',
+            'login_text': 'Please login',
+            'footer_text': 'Footer info',
+        },
+    )
+    assert res.status_code == 302
+    assert res.headers['Location'].endswith('/settings')
+    with client.session_transaction() as sess:
+        assert any('Pengaturan branding disimpan.' in msg for _, msg in sess.get('_flashes', []))
+    branding_updates = [p for q, p in cursor.executed if 'UPDATE branding_settings' in q]
+    assert len(branding_updates) == 1
+    assert branding_updates[0] == ('My Portal', 'Best Tagline', 'https://example.com/logo.png', 'Welcome', 'Please login', 'Footer info')
+
+
+def test_telegram_post_saves_and_flashes(client, monkeypatch):
+    test_key = Fernet.generate_key().decode()
+    monkeypatch.setenv('SETTINGS_ENCRYPTION_KEY', test_key)
+    cursor = RecordingCursor()
+    fake_conn = FakeConnection(cursor=cursor)
+    monkeypatch.setattr(database.db, 'get_db_connection', lambda: fake_conn)
+    login_as(client, role='admin', username='admin')
+    res = client.post(
+        '/settings/telegram',
+        data={
+            '_csrf_token': 'test-csrf-token',
+            'chat_id': '-100555666',
+            'bot_token': 'secret-tg-token',
+        },
+    )
+    assert res.status_code == 302
+    assert res.headers['Location'].endswith('/settings')
+    with client.session_transaction() as sess:
+        assert any('Pengaturan Telegram berhasil disimpan.' in msg for _, msg in sess.get('_flashes', []))
+    hub_writes = [p for q, p in cursor.executed if 'INSERT INTO hub_settings' in q]
+    assert len(hub_writes) == 1
+    assert hub_writes[0][0] == 'telegram_bot_token'
+    assert hub_writes[0][2] is True
+    chat_writes = [p for q, p in cursor.executed if 'UPDATE telegram_settings' in q]
+    assert len(chat_writes) == 1
+    assert chat_writes[0] == ('-100555666',)
+
+
+def test_telegram_post_missing_key_skips_chat_id(client, monkeypatch):
+    monkeypatch.delenv('SETTINGS_ENCRYPTION_KEY', raising=False)
+    cursor = RecordingCursor()
+    fake_conn = FakeConnection(cursor=cursor)
+    monkeypatch.setattr(database.db, 'get_db_connection', lambda: fake_conn)
+    login_as(client, role='admin', username='admin')
+    res = client.post(
+        '/settings/telegram',
+        data={
+            '_csrf_token': 'test-csrf-token',
+            'chat_id': '-100555666',
+            'bot_token': 'secret-tg-token',
+        },
+    )
+    assert res.status_code == 302
+    assert res.headers['Location'].endswith('/settings')
+    with client.session_transaction() as sess:
+        assert any('Kunci enkripsi SETTINGS_ENCRYPTION_KEY belum dikonfigurasi; chat_id tidak disimpan.' in msg for _, msg in sess.get('_flashes', []))
+    chat_writes = [p for q, p in cursor.executed if 'UPDATE telegram_settings' in q]
+    assert len(chat_writes) == 0
+
+
+def test_telegram_test_button_sends_and_flashes(client, monkeypatch):
+    monkeypatch.setattr(routes.settings_hub, 'get_telegram_config', lambda: ('fake-token', '-100123'))
+    monkeypatch.setattr(routes.settings_hub, 'send_telegram_message', lambda t, c, m: (True, ''))
+    login_as(client, role='admin', username='admin')
+    res = client.post(
+        '/settings/telegram-test',
+        data={'_csrf_token': 'test-csrf-token'},
+    )
+    assert res.status_code == 302
+    assert res.headers['Location'].endswith('/settings')
+    with client.session_transaction() as sess:
+        assert any('Koneksi Telegram aktif' in msg for _, msg in sess.get('_flashes', []))
+
+
+def test_old_urls_redirect_to_hub(client):
+    login_as(client, role='admin', username='admin')
+    res_b = client.get('/settings/branding')
+    assert res_b.status_code == 302
+    assert res_b.headers['Location'].endswith('/settings')
+
+    res_t = client.get('/uptime/telegram-settings')
+    assert res_t.status_code == 302
+    assert res_t.headers['Location'].endswith('/settings')
+
+    res_test_get = client.get('/uptime/telegram-test')
+    assert res_test_get.status_code == 302
+    assert res_test_get.headers['Location'].endswith('/settings')
+
+    res_test_post = client.post('/uptime/telegram-test', data={'_csrf_token': 'test-csrf-token'})
+    assert res_test_post.status_code == 302
+    assert res_test_post.headers['Location'].endswith('/settings')
+
+
+def test_duplicate_buttons_removed_from_templates():
+    with open('templates/users/index.html', 'r', encoding='utf-8') as f:
+        content = f.read()
+        assert 'branding.branding_settings' not in content
+        assert 'Pengaturan Branding' not in content
+    with open('templates/uptime/index.html', 'r', encoding='utf-8') as f:
+        content = f.read()
+        assert 'uptime.telegram_settings' not in content
+        assert 'Pengaturan Telegram' not in content
 
