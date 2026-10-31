@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Pengaturan - {{ branding.app_name }}{% endblock %}
+{% block header_title %}Pengaturan Sistem{% endblock %}
+
+{% block content %}
+<div class="form-card">
+    <!-- Section 1: Halaman Terkait -->
+    <h3 class="text-accent mb-15">Halaman Pengaturan Lainnya</h3>
+    <div class="flex gap-15 mb-20 flex-wrap">
+        <div class="info-box flex-1 min-w-200">
+            <strong>Pengaturan Branding</strong>
+            <p class="text-muted text-12 mt-5 mb-10">Kustomisasi identitas aplikasi, logo, headline login, dan teks footer.</p>
+            <a href="{{ url_for('branding.branding_settings') }}" class="btn-secondary text-12">Buka Pengaturan Branding</a>
+        </div>
+        <div class="info-box flex-1 min-w-200">
+            <strong>Pengaturan Telegram</strong>
+            <p class="text-muted text-12 mt-5 mb-10">Konfigurasi Chat ID dan Bot Token untuk notifikasi insiden pemantauan.</p>
+            <a href="{{ url_for('uptime.telegram_settings') }}" class="btn-secondary text-12">Buka Pengaturan Telegram</a>
+        </div>
+    </div>
+
+    <!-- Section 2: SLA Target Module -->
+    <div class="form-divider-mt">
+        <h3 class="text-accent mb-10">Target SLA Tiket</h3>
+        <p class="text-muted text-12 mb-10">Sumber: {{ sla_source }}</p>
+        <form method="POST" action="{{ url_for('settings_hub.update_sla') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="table-container mb-15">
+                <table class="table-clean">
+                    <thead>
+                        <tr>
+                            <th>Prioritas</th>
+                            <th>Target Respon (jam)</th>
+                            <th>Target Resolusi (jam)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Critical</strong></td>
+                            <td><input type="number" min="1" name="sla_critical_response" class="form-control" value="{{ sla_targets.Critical.response }}" required aria-label="Target Respon Critical"></td>
+                            <td><input type="number" min="1" name="sla_critical_resolution" class="form-control" value="{{ sla_targets.Critical.resolution }}" required aria-label="Target Resolusi Critical"></td>
+                        </tr>
+                        <tr>
+                            <td><strong>High</strong></td>
+                            <td><input type="number" min="1" name="sla_high_response" class="form-control" value="{{ sla_targets.High.response }}" required aria-label="Target Respon High"></td>
+                            <td><input type="number" min="1" name="sla_high_resolution" class="form-control" value="{{ sla_targets.High.resolution }}" required aria-label="Target Resolusi High"></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Medium</strong></td>
+                            <td><input type="number" min="1" name="sla_medium_response" class="form-control" value="{{ sla_targets.Medium.response }}" required aria-label="Target Respon Medium"></td>
+                            <td><input type="number" min="1" name="sla_medium_resolution" class="form-control" value="{{ sla_targets.Medium.resolution }}" required aria-label="Target Resolusi Medium"></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Low</strong></td>
+                            <td><input type="number" min="1" name="sla_low_response" class="form-control" value="{{ sla_targets.Low.response }}" required aria-label="Target Respon Low"></td>
+                            <td><input type="number" min="1" name="sla_low_resolution" class="form-control" value="{{ sla_targets.Low.resolution }}" required aria-label="Target Resolusi Low"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button type="submit" class="btn-primary">Simpan Target SLA</button>
+        </form>
+    </div>
+
+    <!-- Section 3: Webhook Module -->
+    <div class="form-divider-mt">
+        <h3 class="text-accent mb-10">Integrasi Webhook</h3>
+        <p class="text-muted text-12 mb-10">Sumber: {{ webhook_source }}</p>
+        <div class="info-box mb-10">
+            <div>Status: <strong>{%if webhook_stored %}tersimpan{% else %}belum diset{% endif %}</strong></div>
+            {% if webhook_decrypt_failed %}
+            <div class="text-danger mt-5">Kunci enkripsi tidak cocok atau data rusak - masukkan ulang URL Webhook.</div>
+            {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('settings_hub.update_webhook') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label for="webhook_url">URL Webhook</label>
+                <input type="text" id="webhook_url" name="webhook_url" class="form-control" placeholder="https://contoh.com/webhook (kosongkan untuk menonaktifkan)">
+                <small class="text-muted block mt-5">Kosongkan lalu simpan untuk menonaktifkan webhook.</small>
+            </div>
+            <button type="submit" class="btn-primary">Simpan Webhook</button>
+        </form>
+    </div>
+
+    <!-- Section 4: Uptime Interval Module -->
+    <div class="form-divider-mt">
+        <h3 class="text-accent mb-10">Interval Pemantauan Uptime</h3>
+        <p class="text-muted text-12 mt-10">Sumber: {{ interval_source }}</p>
+        <form method="POST" action="{{ url_for('settings_hub.update_interval') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label for="uptime_interval_seconds">Interval Pengecekan (detik)</label>
+                <input type="number" min="60" max="3600" id="uptime_interval_seconds" name="uptime_interval_seconds" class="form-control" value="{{ interval_value }}" required>
+                <small class="text-muted block mt-5">Nilai antara 60 dan 3600 detik (1 menit sampai 1 jam).</small>
+            </div>
+            <button type="submit" class="btn-primary">Simpan Interval</button>
+        </form>
+    </div>
+
+    <!-- Section 5: API Key Module -->
+    <div class="form-divider-mt">
+        <h3 class="text-accent mb-10">Kunci API (API Key)</h3>
+        <p class="text-muted text-12 mt-10">Sumber: {{ api_key_source }}</p>
+        <div class="info-box mb-10">
+            <div>Status: <strong>{% if api_key_stored %}tersimpan{% else %}belum diset{% endif %}</strong></div>
+            {% if api_key_decrypt_failed %}
+            <div class="text-danger mt-5">Kunci enkripsi tidak cocok atau data rusak - masukkan ulang API key.</div>
+            {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('settings_hub.update_api_key') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label for="api_key">API Key Baru</label>
+                <input type="password" id="api_key" name="api_key" class="form-control" autocomplete="new-password" placeholder="Masukkan API key baru (kosongkan untuk menghapus)">
+                <small class="text-muted block mt-5">Kosongkan lalu simpan untuk menghapus API key dari database dan kembali menggunakan environment variable.</small>
+            </div>
+            <button type="submit" class="btn-primary">Simpan Kunci API</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

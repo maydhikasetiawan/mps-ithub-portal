@@ -3,7 +3,7 @@ import hmac
 from functools import wraps
 from datetime import date, datetime
 from flask import Blueprint, request, jsonify
-from database.db import get_db_connection
+from database.db import get_db_connection, get_hub_setting, hub_setting_decrypt_failed
 
 api_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 
@@ -11,7 +11,14 @@ api_bp = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 def require_api_key(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        configured_key = os.environ.get('API_KEY', '').strip()
+        if hub_setting_decrypt_failed('api_key'):
+            configured_key = ''
+        else:
+            db_key = get_hub_setting('api_key')
+            if db_key is not None:
+                configured_key = db_key.strip()
+            else:
+                configured_key = os.environ.get('API_KEY', '').strip()
         if not configured_key:
             return jsonify({'error': 'API key not configured'}), 401
 

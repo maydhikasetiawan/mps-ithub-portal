@@ -46,6 +46,7 @@
             <li class="nav-item"><a href="{{ url_for('reports.index') }}" class="nav-link {% if active_page == 'reports' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-report"/></svg><span>Reports Center</span></a></li>
             {% if session['role'] == 'admin' %}
             <li class="nav-item"><a href="{{ url_for('users.index') }}" class="nav-link {% if active_page == 'users' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span>User Management</span></a></li>
+            <li class="nav-item"><a href="{{ url_for('settings_hub.hub') }}" class="nav-link {% if active_page == 'settings' %}active{% endif %}"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span>Pengaturan</span></a></li>
             {% endif %}
             {% endif %}
         </ul>

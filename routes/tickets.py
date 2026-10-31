@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 from routes.auth import login_required, roles_required
-from database.db import get_db_connection
+from database.db import get_db_connection, get_hub_setting, hub_setting_decrypt_failed
 from datetime import datetime, timezone
 import os
 import json
@@ -26,6 +26,36 @@ SLA_TARGETS = {
     'Low': {'response': 8, 'resolution': 72},
 }
 
+
+def get_sla_targets():
+    """Return effective SLA targets dict, falling back to SLA_TARGETS defaults."""
+    targets = {
+        'Critical': {'response': SLA_TARGETS['Critical']['response'], 'resolution': SLA_TARGETS['Critical']['resolution']},
+        'High': {'response': SLA_TARGETS['High']['response'], 'resolution': SLA_TARGETS['High']['resolution']},
+        'Medium': {'response': SLA_TARGETS['Medium']['response'], 'resolution': SLA_TARGETS['Medium']['resolution']},
+        'Low': {'response': SLA_TARGETS['Low']['response'], 'resolution': SLA_TARGETS['Low']['resolution']},
+    }
+    mapping = {
+        ('Critical', 'response'): 'sla_critical_response',
+        ('Critical', 'resolution'): 'sla_critical_resolution',
+        ('High', 'response'): 'sla_high_response',
+        ('High', 'resolution'): 'sla_high_resolution',
+        ('Medium', 'response'): 'sla_medium_response',
+        ('Medium', 'resolution'): 'sla_medium_resolution',
+        ('Low', 'response'): 'sla_low_response',
+        ('Low', 'resolution'): 'sla_low_resolution',
+    }
+    for (prio, kind), key in mapping.items():
+        raw = get_hub_setting(key)
+        if raw is not None:
+            try:
+                val = int(raw)
+                if val >= 1:
+                    targets[prio][kind] = val
+            except (ValueError, TypeError):
+                pass
+    return targets
+
 def format_duration(seconds):
     if seconds is None:
         return "-"
@@ -44,7 +74,8 @@ def compute_sla(ticket, activities=None, has_response=None, now=None):
         now = datetime.now()
 
     priority = ticket.get('priority', 'Medium')
-    targets = SLA_TARGETS.get(priority, SLA_TARGETS['Medium'])
+    sla_targets = get_sla_targets()
+    targets = sla_targets.get(priority, sla_targets['Medium'])
     status = ticket.get('status', 'Open')
     created_at = ticket['created_at']
     resolved_at = ticket.get('resolved_at')
@@ -136,7 +167,14 @@ def compute_sla(ticket, activities=None, has_response=None, now=None):
 def enqueue_webhook(event, ticket, actor):
     """Queue a webhook delivery (async). Never raises: webhook failure must
     never break the ticket flow."""
-    webhook_url = os.environ.get('WEBHOOK_URL', '').strip()
+    webhook_val = get_hub_setting('webhook_url')
+    if webhook_val is not None:
+        webhook_url = webhook_val.strip()
+    elif hub_setting_decrypt_failed('webhook_url'):
+        webhook_url = ''
+    else:
+        webhook_url = os.environ.get('WEBHOOK_URL', '').strip()
+
     if not webhook_url:
         return
     payload = {

@@ -7,7 +7,7 @@ import threading
 import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from routes.auth import login_required, roles_required
-from database.db import get_db_connection, get_branding
+from database.db import get_db_connection, get_branding, get_hub_setting, set_hub_setting, hub_setting_decrypt_failed
 
 uptime_bp = Blueprint('uptime', __name__, url_prefix='/uptime')
 
@@ -35,10 +35,17 @@ def check_target_health(target, monitor_type='PING', port=None):
         return 'DOWN', 0
 
 def get_telegram_config():
-    """Return (token, chat_id) from the environment and telegram_settings row.
+    """Return (token, chat_id) from hub_settings, then environment, and telegram_settings row.
     Returns ('', '') when not configured or on any read error."""
     try:
-        token = os.environ.get('TELEGRAM_BOT_TOKEN', '').strip()
+        if hub_setting_decrypt_failed('telegram_bot_token'):
+            token = ''
+        else:
+            db_token = get_hub_setting('telegram_bot_token')
+            if db_token is not None:
+                token = db_token.strip()
+            else:
+                token = os.environ.get('TELEGRAM_BOT_TOKEN', '').strip()
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT chat_id FROM telegram_settings WHERE id = 1;")
@@ -396,6 +403,16 @@ def telegram_settings():
 
     if request.method == 'POST':
         chat_id = request.form.get('chat_id', '').strip()
+        bot_token = request.form.get('bot_token', '').strip()
+        if bot_token:
+            try:
+                set_hub_setting('telegram_bot_token', bot_token, is_secret=True)
+            except ValueError:
+                cur.close()
+                conn.close()
+                flash("Kunci enkripsi SETTINGS_ENCRYPTION_KEY belum dikonfigurasi; chat_id tidak disimpan.", "danger")
+                return redirect(url_for('uptime.telegram_settings'))
+
         cur.execute("""
             UPDATE telegram_settings
             SET chat_id = %s, updated_at = CURRENT_TIMESTAMP
@@ -411,10 +428,23 @@ def telegram_settings():
     settings = cur.fetchone()
     cur.close()
     conn.close()
-    token_configured = bool(os.environ.get('TELEGRAM_BOT_TOKEN'))
+
+    if hub_setting_decrypt_failed('telegram_bot_token'):
+        token_status = "tersimpan tetapi tidak dapat dibaca - masukkan ulang"
+    else:
+        db_token = get_hub_setting('telegram_bot_token')
+        if db_token is not None:
+            token_status = "dari database (tersimpan)"
+        elif os.environ.get('TELEGRAM_BOT_TOKEN'):
+            token_status = "dari environment (terpasang)"
+        else:
+            token_status = "belum diset"
+
+    token_configured = bool(token_status != 'belum diset')
     return render_template(
         'uptime/telegram_settings.html',
         settings=settings,
+        token_status=token_status,
         token_configured=token_configured,
         active_page='uptime',
     )
@@ -607,11 +637,21 @@ def history(monitor_id):
     )
 
 
-CHECK_INTERVAL_SECONDS = int(os.environ.get('UPTIME_CHECK_INTERVAL', 300))
+def get_check_interval_seconds():
+    val = get_hub_setting('uptime_interval_seconds')
+    if val is not None:
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            pass
+    try:
+        return int(os.environ.get('UPTIME_CHECK_INTERVAL', 300))
+    except (ValueError, TypeError):
+        return 300
 
 
 def _scheduler_loop():
-    """Run checks immediately, then every CHECK_INTERVAL_SECONDS, forever.
+    """Run checks immediately, then every get_check_interval_seconds(), forever.
     Any exception is logged and the loop CONTINUES — a failed run must
     never kill the scheduler."""
     while True:
@@ -619,7 +659,7 @@ def _scheduler_loop():
             run_all_checks()
         except Exception:
             logging.exception("Uptime scheduler run failed")
-        time.sleep(CHECK_INTERVAL_SECONDS)
+        time.sleep(get_check_interval_seconds())
 
 
 def start_uptime_scheduler():
@@ -631,7 +671,7 @@ def start_uptime_scheduler():
     )
     thread.start()
     logging.info(
-        "Uptime scheduler started (interval %ss)", CHECK_INTERVAL_SECONDS
+        "Uptime scheduler started (interval %ss)", get_check_interval_seconds()
     )
 
 # --- TRIGGER CHECK SEMUA SERVICE SEKALIGUS ---

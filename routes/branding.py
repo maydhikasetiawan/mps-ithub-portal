@@ -38,4 +38,4 @@ def branding_settings():
         return redirect(url_for('branding.branding_settings'))
 
     branding = get_branding()
-    return render_template('branding/settings.html', branding=branding, active_page='users')
+    return render_template('branding/settings.html', branding=branding, active_page='settings')

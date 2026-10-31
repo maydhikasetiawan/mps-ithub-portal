@@ -73,3 +73,83 @@ def get_nav_counts():
         return {'tickets': tickets, 'assets': assets}
     except Exception:
         return {}
+
+
+def get_hub_setting(key):
+    """Return stored value for key, or None when absent or decrypt fails."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT value, is_secret FROM hub_settings WHERE key = %s;", (key,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not row:
+            return None
+        if row.get('is_secret'):
+            from database.crypto import decrypt_value
+            return decrypt_value(row['value'])
+        return row['value']
+    except Exception:
+        return None
+
+
+
+def hub_setting_decrypt_failed(key):
+    """Return True only when a secret row exists in hub_settings but decrypt failed."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT value, is_secret FROM hub_settings WHERE key = %s;", (key,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not row or not row.get('is_secret'):
+            return False
+        from database.crypto import decrypt_value
+        return decrypt_value(row['value']) is None
+    except Exception:
+        return False
+
+
+
+def set_hub_setting(key, value, is_secret=False):
+    """Upsert a key into hub_settings.
+    If is_secret is True, encrypts value. Raises ValueError if encryption fails or no cipher.
+    """
+    stored_value = value
+    if is_secret:
+        from database.crypto import encrypt_value
+        encrypted = encrypt_value(value)
+        if encrypted is None:
+            raise ValueError("Encryption unavailable or invalid key")
+        stored_value = encrypted
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO hub_settings (key, value, is_secret, updated_at)
+        VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+        ON CONFLICT (key) DO UPDATE SET
+            value = EXCLUDED.value,
+            is_secret = EXCLUDED.is_secret,
+            updated_at = CURRENT_TIMESTAMP;
+    """, (key, stored_value, is_secret))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+
+def delete_hub_setting(key):
+    """Delete a key from hub_settings. Return True on success, False on error."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM hub_settings WHERE key = %s;", (key,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except Exception:
+        return False

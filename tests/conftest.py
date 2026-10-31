@@ -71,3 +71,9 @@ def client():
 @pytest.fixture
 def login_as_user():
     return login_as
+
+
+@pytest.fixture(autouse=True)
+def _default_db_connection(monkeypatch):
+    import database.db
+    monkeypatch.setattr(database.db, 'get_db_connection', lambda: FakeConnection(cursor=FakeCursor(fetchone_val=None)))
