@@ -1,0 +1,12 @@
+/* PILOT ONLY - chain test file, unused anywhere. */
+/* Placeholder values, NOT production Carbon tokens. */
+/* To be deleted or replaced by the UI foundation brief. */
+:root {
+  --pilot-token-background: #ffffff;
+  --pilot-token-text: #000000;
+  --pilot-token-accent: #0000ff;
+  --pilot-token-border: #cccccc;
+  --pilot-token-spacing-1: 0.25rem;
+  --pilot-token-spacing-2: 0.5rem;
+  --pilot-token-spacing-3: 1rem;
+}
