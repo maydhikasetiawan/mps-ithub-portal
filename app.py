@@ -117,6 +117,15 @@ def csrf_protect():
         abort(403)
     return None
 
+
+@app.after_request
+def set_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
+
 app.register_blueprint(uptime_bp)
 
 @app.route('/health')

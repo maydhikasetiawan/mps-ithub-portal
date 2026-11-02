@@ -3,10 +3,11 @@
 **MPS-ITHub Portal** adalah platform portal operasional teknologi informasi internal yang dirancang untuk mengintegrasikan inventaris aset & IPAM (*IP Address Management*), sistem tiket helpdesk (*Service Desk*), pemantauan ketersediaan server dan layanan secara waktu nyata (*Uptime Monitor*), pusat pelaporan dan ekspor data, serta administrasi pengguna berbasis peran (*Role-Based Access Control*).
 
 ## Teknologi Utama (Tech Stack)
-- **Backend & Web**: Python 3.11, Flask 3.0.2, Werkzeug 3.0.1, Jinja2
+- **Backend & Web**: Python 3.13, Flask 3.1.3, Werkzeug 3.1.9, Jinja2
 - **Tampilan Antarmuka**: Vanilla Custom CSS (tanpa framework CSS eksternal)
 - **Basis Data & Migrasi**: PostgreSQL (`psycopg2-binary`), Alembic
 - **Kontainer & Deployment**: Docker, GitHub Actions CI/CD, AWS EC2
+- **Fitur Baru & Pengujian**: Admin settings hub di `/settings` (modular, encrypted secrets), pemisahan komentar tiket (catatan internal vs balasan publik pelapor), serta suite pengujian pytest tanpa basis data (62 tests).
 
 ## Dokumentasi Teknis
 Seluruh panduan teknis dan spesifikasi sistem tersedia di direktori `docs/`:
