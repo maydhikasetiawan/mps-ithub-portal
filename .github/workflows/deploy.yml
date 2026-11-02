@@ -80,9 +80,6 @@ jobs:
               -e DB_USER=${{ secrets.DB_USER }} \
               -e DB_PASS=${{ secrets.DB_PASS }} \
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
-              -e WEBHOOK_URL=${{ secrets.WEBHOOK_URL }} \
-              -e API_KEY=${{ secrets.API_KEY }} \
-              -e TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }} \
               -e SETTINGS_ENCRYPTION_KEY=${{ secrets.SETTINGS_ENCRYPTION_KEY }} \
               -v /home/ubuntu/mps-ithub-portal-uploads:/app/uploads \
               -e UPLOAD_FOLDER=/app/uploads \
