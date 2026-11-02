@@ -7,7 +7,7 @@
 - **Tampilan Antarmuka**: Vanilla Custom CSS (tanpa framework CSS eksternal)
 - **Basis Data & Migrasi**: PostgreSQL (`psycopg2-binary`), Alembic
 - **Kontainer & Deployment**: Docker, GitHub Actions CI/CD, AWS EC2
-- **Fitur Baru & Pengujian**: Admin settings hub di `/settings` (modular, encrypted secrets), pemisahan komentar tiket (catatan internal vs balasan publik pelapor), serta suite pengujian pytest tanpa basis data (62 tests).
+- **Fitur Baru & Pengujian**: Admin settings hub di `/settings` (modular, encrypted secrets), pemisahan komentar tiket (catatan internal vs balasan publik pelapor), serta suite pengujian pytest tanpa basis data (64 tests).
 
 ## Dokumentasi Teknis
 Seluruh panduan teknis dan spesifikasi sistem tersedia di direktori `docs/`:
