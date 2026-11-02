@@ -6,6 +6,14 @@ Semua perubahan penting pada proyek **MPS-ITHub Portal** didokumentasikan dalam 
 
 ## [Unreleased]
 
+## [v1.1.0] - 2026-11-02 - Admin Settings Hub, Pemisahan Komentar Tiket & Header Keamanan
+- Admin Settings Hub (main `055b186`): halaman `/settings` modular (SLA, Webhook, Interval, API Key) dengan tabel `hub_settings`; secret (API key, token Telegram, WEBHOOK_URL) disimpan terenkripsi (Fernet, kunci di environment `SETTINGS_ENCRYPTION_KEY`); baca DB dulu, fallback environment; fail-closed (tulis ditolak tanpa kunci, gagal dekripsi = nilai dianggap hilang, bukan 500).
+- Relokasi Branding & Telegram ke Hub (main `5c72c7d`): form branding + telegram pindah ke `/settings` (6 modul); 3 URL lama redirect ke `/settings`; kartu tautan Section 1, tombol duplikat, modul branding lama, dan handler telegram lama dihapus.
+- Small-Fixes Hub (main `e98c5d3`): penomoran komentar Section di `hub.html` diperbaiki; guard login + admin pada 3 handler redirect; guard koneksi `update_sla` dan penutupan koneksi `delete_hub_setting` pada jalur error.
+- Pemisahan Komentar Tiket (main `84ad42df`, migrasi `026`): kolom `is_internal` pada `ticket_activities`; admin/it dapat menulis catatan internal (hanya tim) vs balasan publik; user/guest hanya melihat komentar publik (enforcement di SQL); perhitungan SLA mengecualikan catatan internal. Suite menjadi 62 tes.
+- Header Keamanan & Sinkron README (main `1402a814`): `@app.after_request` menyetel `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin` pada semua respons; tanpa CSP (ditunda); README disinkronkan (Python 3.13, Flask 3.1.3, Werkzeug 3.1.9, hub, pemisahan komentar, suite 64 tes).
+- Secret Cleanup (ops, 2026-11-02): nilai API key + token Telegram dipindah ke DB hub (terenkripsi) dan teruji live (tes Telegram sukses); secret GitHub `API_KEY` + `TELEGRAM_BOT_TOKEN` dihapus; `WEBHOOK_URL` tidak pernah ada; 9 secret tersisa (6 bootstrap aplikasi + 3 deploy SSH) wajib tetap di environment.
+
 ## [v1.0.1] - 2026-10-30 - Token Telegram ke Environment & Offsite R2
 - Cleanup Sisa Rename: direktori uploads lama yang kosong (`my-web-app-uploads`) dan berkas nginx Grafana nonaktif dihapus dari server; tidak ada perubahan kode aplikasi.
 - Token Telegram ke Environment + Rotasi (main `c23ed09`): token bot Telegram kini dibaca dari variabel lingkungan `TELEGRAM_BOT_TOKEN` (bukan lagi kolom `telegram_settings` di basis data); secret GitHub `TELEGRAM_BOT_TOKEN` ditambahkan ke workflow deploy; token lama dicabut via BotFather dan token baru diterapkan ke secret GitHub serta `.env` bot VPS; halaman pengaturan Telegram menampilkan status token dari environment (terpasang/belum) tanpa pernah menampilkan nilainya; tes koneksi dari webapp terverifikasi live.
