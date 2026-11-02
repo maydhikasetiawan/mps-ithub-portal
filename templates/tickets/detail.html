@@ -321,6 +321,15 @@
                 <label class="form-label-sm">Komentar:</label>
                 <textarea id="comment-textarea" name="comment" class="form-control" rows="3" placeholder="Tuliskan komentar atau catatan tambahan..." required></textarea>
             </div>
+            {% if session['role'] in ['admin', 'it'] %}
+            <div class="form-group mb-15">
+                <label class="form-label-sm">Visibilitas:</label>
+                <select name="comment_visibility" class="form-control max-w-250">
+                    <option value="public" selected>Balasan untuk pelapor</option>
+                    <option value="internal">Catatan internal (hanya tim)</option>
+                </select>
+            </div>
+            {% endif %}
             <button type="submit" class="btn-primary">Kirim Komentar</button>
         </form>
         {% if session['role'] in ['admin', 'it'] %}
@@ -354,6 +363,9 @@
                         <span class="type-chip {% if act.type == 'comment' %}type-comment{% elif act.type == 'status' %}type-status{% elif act.type == 'assignment' %}type-assignment{% else %}type-other{% endif %}">
                             {{ act.type }}
                         </span>
+                        {% if act.type == 'comment' and act.is_internal %}
+                        <span class="badge badge-relation-duplicate">Internal</span>
+                        {% endif %}
                         <strong class="activity-actor">{{ act.actor }}</strong>
                     </div>
                     <small class="text-muted text-12">

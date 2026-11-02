@@ -136,3 +136,24 @@ def test_resolved_unknown_priority_fallback():
     assert res is not None
     assert res['state'] == 'met'
     assert res['target_hours'] == 24
+
+
+def test_sla_ignores_internal_comment_in_activities():
+    ticket = {
+        'id': 10,
+        'priority': 'High',
+        'status': 'Open',
+        'created_at': BASE_TIME,
+    }
+    # Internal comment from admin/it does NOT count as a response
+    activities_internal = [{'type': 'comment', 'actor_role': 'it', 'is_internal': True}]
+    res_internal = compute_sla(ticket, activities=activities_internal, now=BASE_TIME + timedelta(minutes=30))
+    assert res_internal is not None
+    assert res_internal['target_type'] == 'response'
+
+    # Public comment from admin/it DOES count as a response
+    activities_public = [{'type': 'comment', 'actor_role': 'it', 'is_internal': False}]
+    res_public = compute_sla(ticket, activities=activities_public, now=BASE_TIME + timedelta(minutes=30))
+    assert res_public is not None
+    assert res_public['target_type'] == 'resolution'
+

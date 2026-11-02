@@ -110,7 +110,9 @@ def compute_sla(ticket, activities=None, has_response=None, now=None):
     if has_response is None:
         if activities is not None:
             has_response = any(
-                act.get('type') in ['comment', 'status', 'assignment'] and act.get('actor_role') in ['admin', 'it']
+                act.get('type') in ['comment', 'status', 'assignment']
+                and act.get('actor_role') in ['admin', 'it']
+                and not act.get('is_internal')
                 for act in activities
             )
         else:
@@ -122,6 +124,7 @@ def compute_sla(ticket, activities=None, has_response=None, now=None):
                 WHERE ta.ticket_id = %s
                   AND ta.type IN ('comment', 'status', 'assignment')
                   AND u.role IN ('admin', 'it')
+                  AND ta.is_internal = FALSE
                 LIMIT 1;
             """, (ticket['id'],))
             has_response = bool(cur.fetchone())
@@ -470,7 +473,8 @@ def index():
             JOIN users u ON ta.actor = u.username
             WHERE ta.ticket_id = ANY(%s)
               AND ta.type IN ('comment', 'status', 'assignment')
-              AND u.role IN ('admin', 'it');
+              AND u.role IN ('admin', 'it')
+              AND ta.is_internal = FALSE;
         """, (open_ticket_ids,))
         responded_ids = {row['ticket_id'] for row in cur.fetchall()}
 
@@ -633,12 +637,15 @@ def detail(ticket_id):
                 flash("Akses ditolak! Guest tidak diizinkan menambahkan komentar.", "danger")
                 return redirect(url_for('tickets.detail', ticket_id=ticket_id))
 
+            comment_visibility = request.form.get('comment_visibility', 'public')
+            is_internal = (comment_visibility == 'internal' and user_role in ('admin', 'it'))
+
             comment_text = request.form.get('comment', '').strip()
             if comment_text:
                 cur.execute("""
-                    INSERT INTO ticket_activities (ticket_id, actor, type, content)
-                    VALUES (%s, %s, 'comment', %s);
-                """, (ticket_id, username, comment_text))
+                    INSERT INTO ticket_activities (ticket_id, actor, type, content, is_internal)
+                    VALUES (%s, %s, 'comment', %s, %s);
+                """, (ticket_id, username, comment_text, is_internal))
                 conn.commit()
                 flash("Komentar berhasil ditambahkan!", "success")
 
@@ -1002,11 +1009,16 @@ def detail(ticket_id):
         cur.execute("SELECT username FROM users WHERE role IN ('admin', 'it') AND is_deleted = FALSE ORDER BY username ASC;")
         assignees = cur.fetchall()
 
-    cur.execute("""
+    activity_filter = ""
+    if user_role in ('user', 'guest'):
+        activity_filter = "AND (ta.type != 'comment' OR ta.is_internal = FALSE)"
+
+    cur.execute(f"""
         SELECT ta.*, u.role as actor_role
         FROM ticket_activities ta
         LEFT JOIN users u ON ta.actor = u.username
         WHERE ta.ticket_id = %s
+          {activity_filter}
         ORDER BY ta.created_at DESC, ta.id DESC;
     """, (ticket_id,))
     activities = cur.fetchall()
