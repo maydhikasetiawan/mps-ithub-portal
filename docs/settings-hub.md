@@ -16,7 +16,7 @@ Halaman Hub Pengaturan mencakup modul-modul berikut:
 
 ### Pengalihan URL Lama (Redirects)
 
-URL lama berikut dialihkan otomatis ke `/settings`:
+URL lama berikut dialihkan otomatis ke `/settings` (memerlukan login admin):
 - `GET /settings/branding` -> dialihkan ke `/settings`
 - `GET /uptime/telegram-settings` -> dialihkan ke `/settings`
 - `POST /uptime/telegram-test` -> dialihkan ke `/settings`

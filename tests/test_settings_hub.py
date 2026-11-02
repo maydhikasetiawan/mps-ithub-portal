@@ -417,6 +417,58 @@ def test_old_urls_redirect_to_hub(client):
     assert res_test_post.headers['Location'].endswith('/settings')
 
 
+def test_old_urls_unauthenticated_redirects_to_login(client):
+    for url in ['/settings/branding', '/uptime/telegram-settings', '/uptime/telegram-test']:
+        res = client.get(url)
+        assert res.status_code == 302
+        assert '/login' in res.headers.get('Location', '')
+
+
+def test_sla_post_connection_failure(client, monkeypatch):
+    def fail_conn():
+        raise RuntimeError("DB connection error")
+    monkeypatch.setattr(database.db, 'get_db_connection', fail_conn)
+    login_as(client, role='admin', username='admin')
+    valid_data = {
+        '_csrf_token': 'test-csrf-token',
+        'sla_critical_response': '1', 'sla_critical_resolution': '3',
+        'sla_high_response': '2', 'sla_high_resolution': '6',
+        'sla_medium_response': '4', 'sla_medium_resolution': '12',
+        'sla_low_response': '8', 'sla_low_resolution': '24',
+    }
+    res = client.post('/settings/sla', data=valid_data, follow_redirects=True)
+    assert res.status_code == 200
+    assert 'Gagal menyimpan target SLA ke database.' in res.get_data(as_text=True)
+
+
+def test_delete_hub_setting_closes_resources_on_failure(monkeypatch):
+    class TrackingCursor:
+        def __init__(self):
+            self.closed = False
+        def execute(self, *args, **kwargs):
+            raise RuntimeError("DB execute error")
+        def close(self):
+            self.closed = True
+
+    class TrackingConnection:
+        def __init__(self, cur):
+            self._cur = cur
+            self.closed = False
+        def cursor(self):
+            return self._cur
+        def commit(self):
+            pass
+        def close(self):
+            self.closed = True
+
+    cur = TrackingCursor()
+    conn = TrackingConnection(cur)
+    monkeypatch.setattr(database.db, 'get_db_connection', lambda: conn)
+    assert database.db.delete_hub_setting('test_key') is False
+    assert cur.closed is True
+    assert conn.closed is True
+
+
 def test_duplicate_buttons_removed_from_templates():
     with open('templates/users/index.html', 'r', encoding='utf-8') as f:
         content = f.read()

@@ -157,9 +157,11 @@ def update_sla():
         flash("Target SLA dibatalkan. Semua nilai harus berupa bilangan bulat >= 1 dan waktu respon <= waktu resolusi.", "danger")
         return redirect(url_for('settings_hub.hub'))
 
-    conn = database.db.get_db_connection()
-    cur = conn.cursor()
+    conn = None
+    cur = None
     try:
+        conn = database.db.get_db_connection()
+        cur = conn.cursor()
         for k, v in parsed.items():
             cur.execute("""
                 INSERT INTO hub_settings (key, value, is_secret, updated_at)
@@ -172,11 +174,14 @@ def update_sla():
         conn.commit()
         flash("Target SLA berhasil disimpan.", "success")
     except Exception:
-        conn.rollback()
+        if conn is not None:
+            conn.rollback()
         flash("Gagal menyimpan target SLA ke database.", "danger")
     finally:
-        cur.close()
-        conn.close()
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
 
     return redirect(url_for('settings_hub.hub'))
 
@@ -325,15 +330,21 @@ def test_telegram():
 
 
 @settings_hub_bp.route('/settings/branding', methods=['GET'])
+@login_required
+@roles_required('admin')
 def redirect_branding():
     return redirect(url_for('settings_hub.hub'))
 
 
 @settings_hub_bp.route('/uptime/telegram-settings', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin')
 def redirect_telegram_settings():
     return redirect(url_for('settings_hub.hub'))
 
 
 @settings_hub_bp.route('/uptime/telegram-test', methods=['GET', 'POST'])
+@login_required
+@roles_required('admin')
 def redirect_telegram_test():
     return redirect(url_for('settings_hub.hub'))

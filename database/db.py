@@ -143,6 +143,8 @@ def set_hub_setting(key, value, is_secret=False):
 
 def delete_hub_setting(key):
     """Delete a key from hub_settings. Return True on success, False on error."""
+    conn = None
+    cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -152,4 +154,8 @@ def delete_hub_setting(key):
         conn.close()
         return True
     except Exception:
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
         return False
